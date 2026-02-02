@@ -1,0 +1,72 @@
+package com.example.crowdmeasure.data.prefs
+
+import android.content.Context
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.preferencesDataStore
+import com.example.crowdmeasure.domain.repo.AppSettings
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import java.util.UUID
+
+private val Context.dataStore by preferencesDataStore(name = "crowdmeasure_prefs")
+
+class AppPreferences(private val context: Context) {
+
+    companion object {
+        const val CONSENT_VERSION = 1
+        const val DEFAULT_ENDPOINT = "https://example.com/measure" // placeholder; still used for HTTPS timing only
+        const val DEFAULT_RETENTION_DAYS = 7
+        const val DEFAULT_AUTORUN_HOURS = 6
+    }
+
+    val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
+        val installId = prefs[DataStoreKeys.INSTALL_ID] ?: ""
+        AppSettings(
+            consentAccepted = prefs[DataStoreKeys.CONSENT_ACCEPTED] ?: false,
+            consentVersion = CONSENT_VERSION,
+            collectionEnabled = prefs[DataStoreKeys.COLLECTION_ENABLED] ?: false,
+            endpointUrl = prefs[DataStoreKeys.ENDPOINT_URL] ?: DEFAULT_ENDPOINT,
+            collectOnlyWifi = prefs[DataStoreKeys.COLLECT_ONLY_WIFI] ?: false,
+            autoRunEnabled = prefs[DataStoreKeys.AUTO_RUN_ENABLED] ?: false,
+            autoRunIntervalHours = prefs[DataStoreKeys.AUTO_RUN_INTERVAL_HOURS] ?: DEFAULT_AUTORUN_HOURS,
+            retentionDays = prefs[DataStoreKeys.RETENTION_DAYS] ?: DEFAULT_RETENTION_DAYS,
+            installId = installId
+        )
+    }
+
+    suspend fun ensureInstallId() {
+        context.dataStore.edit { prefs ->
+            val existing = prefs[DataStoreKeys.INSTALL_ID]
+            if (existing.isNullOrBlank()) {
+                prefs[DataStoreKeys.INSTALL_ID] = UUID.randomUUID().toString()
+            }
+        }
+    }
+
+    suspend fun setConsentAccepted(accepted: Boolean) {
+        context.dataStore.edit { it[DataStoreKeys.CONSENT_ACCEPTED] = accepted }
+    }
+
+    suspend fun setCollectionEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[DataStoreKeys.COLLECTION_ENABLED] = enabled }
+    }
+
+    suspend fun setEndpointUrl(url: String) {
+        context.dataStore.edit { it[DataStoreKeys.ENDPOINT_URL] = url.trim() }
+    }
+
+    suspend fun setCollectOnlyWifi(enabled: Boolean) {
+        context.dataStore.edit { it[DataStoreKeys.COLLECT_ONLY_WIFI] = enabled }
+    }
+
+    suspend fun setAutoRun(enabled: Boolean, intervalHours: Int) {
+        context.dataStore.edit {
+            it[DataStoreKeys.AUTO_RUN_ENABLED] = enabled
+            it[DataStoreKeys.AUTO_RUN_INTERVAL_HOURS] = intervalHours.coerceIn(1, 168)
+        }
+    }
+
+    suspend fun setRetentionDays(days: Int) {
+        context.dataStore.edit { it[DataStoreKeys.RETENTION_DAYS] = days.coerceIn(1, 60) }
+    }
+}
