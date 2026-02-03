@@ -35,11 +35,12 @@ class HomeViewModel @Inject constructor(
             val res = runMeasurement()
             res.fold(
                 onSuccess = { m ->
-                    repo.insert(m)
-                    _runState.value = UiState.Success(Unit)
+                    runCatching { repo.insert(m) }
+                        .onSuccess { _runState.value = UiState.Success(Unit) }
+                        .onFailure { e -> _runState.value = UiState.Error(e.message ?: "Save failed", e) }
                 },
                 onFailure = { e ->
-                    _runState.value = UiState.Error(e.message ?: "Measurement failed")
+                    _runState.value = UiState.Error(e.message ?: "Measurement failed", e)
                 }
             )
         }

@@ -278,12 +278,6 @@ private fun PrivacyAndPermissionsCard(
                 label = { Text("Location services are OFF — cell metrics may be empty") }
             )
             Spacer(Modifier.height(8.dp))
-        } else if (!fineGranted) {
-            AssistChip(
-                onClick = onGrantFine,
-                label = { Text("Samsung often requires Fine location for cell IDs/signal") }
-            )
-            Spacer(Modifier.height(8.dp))
         }
 
         PermissionRow(
