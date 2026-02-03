@@ -13,4 +13,5 @@ object DataStoreKeys {
     val AUTO_RUN_INTERVAL_HOURS = intPreferencesKey("auto_run_interval_hours")
     val RETENTION_DAYS = intPreferencesKey("retention_days")
     val INSTALL_ID = stringPreferencesKey("install_id")
+    val CONSENT_GATE_DISMISSED = booleanPreferencesKey("consent_gate_dismissed")
 }

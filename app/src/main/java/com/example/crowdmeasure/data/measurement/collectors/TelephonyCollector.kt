@@ -1,6 +1,5 @@
 package com.example.crowdmeasure.data.measurement.collectors
 
-import android.Manifest
 import android.content.Context
 import android.os.Build
 import android.telephony.CellIdentityNr
@@ -10,51 +9,94 @@ import android.telephony.CellInfoNr
 import android.telephony.CellSignalStrengthLte
 import android.telephony.CellSignalStrengthNr
 import android.telephony.TelephonyManager
+import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.annotation.RequiresPermission
 import androidx.core.content.getSystemService
 import com.example.crowdmeasure.domain.model.AvailabilityFlags
 import com.example.crowdmeasure.domain.model.CellInfo
 import com.example.crowdmeasure.domain.model.ServingCell
 import com.example.crowdmeasure.domain.model.SignalInfo
+import com.example.crowdmeasure.presentation.util.AppPermissions
+import com.example.crowdmeasure.presentation.util.AppPermissions.hasFineLocation
+import com.example.crowdmeasure.presentation.util.AppPermissions.isLocationServicesEnabled
 
 object TelephonyCollector {
 
     @RequiresApi(Build.VERSION_CODES.Q)
-    @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
     fun collect(context: Context): CellInfo {
-        val tm = context.getSystemService<TelephonyManager>()
+        val tm = context.getSystemService<TelephonyManager>() ?: return CellInfo()
 
-        val op = tm?.networkOperator
+        val op = tm.networkOperator
+        val phoneGranted = AppPermissions.hasPhoneState(context)
+
+        val dataType = if (phoneGranted) safe { tm.dataNetworkType } else null
+        val voiceType = if (phoneGranted) safe { tm.voiceNetworkType } else null
+
         val base = CellInfo(
-            carrierName = tm?.networkOperatorName,
-            mcc = op?.takeIf { it.length >= 3 }?.substring(0, 3),
-            mnc = op?.takeIf { it.length >= 5 }?.substring(3),
-            dataNetworkType = tm?.dataNetworkType?.let(::networkTypeName),
-            voiceNetworkType = tm?.voiceNetworkType?.let(::networkTypeName),
-            roaming = tm?.isNetworkRoaming
+            carrierName = safe { tm.networkOperatorName },
+            mcc = op.takeIf { it.length >= 3 }?.substring(0, 3),
+            mnc = op.takeIf { it.length >= 5 }?.substring(3),
+            dataNetworkType = dataType?.let(::networkTypeName),
+            voiceNetworkType = voiceType?.let(::networkTypeName),
+            roaming = safe { tm.isNetworkRoaming },
+            availability = AvailabilityFlags(
+                cellInfoAccessible = false,
+                idsAccessible = false,
+                signalAccessible = false
+            )
         )
 
-        // allCellInfo often requires location permission; handle gracefully.
+        val fineGranted = hasFineLocation(context)
+        val locationOn = isLocationServicesEnabled(context)
+
+        if (!fineGranted || !locationOn) {
+            return base.copy(
+                availability = base.availability.copy(
+                    cellInfoAccessible = false,
+                    idsAccessible = false,
+                    signalAccessible = false
+                )
+            )
+        }
+
         val infos: List<AndroidCellInfo> = try {
-            tm?.allCellInfo.orEmpty()
+            tm.allCellInfo.orEmpty()
         } catch (_: SecurityException) {
-            return base.copy(availability = AvailabilityFlags(cellInfoAccessible = false))
+            return base
         } catch (_: Throwable) {
-            return base.copy(availability = AvailabilityFlags(cellInfoAccessible = false))
+            return base
+        }
+
+        if (infos.isEmpty()) {
+            return base.copy(availability = base.availability.copy(cellInfoAccessible = true))
+        }
+
+        Log.d("TelephonyCollector", "cells=${infos.size}, registered=${infos.count { it.isRegistered }}")
+        infos.forEach {
+            Log.d("TelephonyCollector", "${it.javaClass.simpleName} dbm=${it.cellSignalStrength.dbm} reg=${it.isRegistered}")
         }
 
         val registered = infos.firstOrNull { it.isRegistered }
 
-        val (servingCell, signal, flags, rat) = parseRegisteredCell(registered)
+        val bestLte = infos.filterIsInstance<CellInfoLte>()
+            .maxByOrNull { it.cellSignalStrength.dbm }
+
+        val bestNr = infos.filterIsInstance<CellInfoNr>()
+            .maxByOrNull { it.cellSignalStrength.dbm }
+
+        val candidate = registered ?: bestLte ?: bestNr ?: infos.first()
+        val parsed = parseRegisteredCell(candidate)
 
         return base.copy(
-            registeredRat = rat,
-            servingCell = servingCell,
-            signal = signal,
-            availability = flags
+            registeredRat = parsed.rat,
+            servingCell = parsed.servingCell,
+            signal = parsed.signal,
+            availability = parsed.flags.copy(cellInfoAccessible = true)
         )
     }
+
+    private inline fun <T> safe(block: () -> T): T? =
+        try { block() } catch (_: SecurityException) { null } catch (_: Throwable) { null }
 
     private data class Parsed(
         val servingCell: ServingCell?,
@@ -63,7 +105,6 @@ object TelephonyCollector {
         val rat: String?
     )
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     private fun parseRegisteredCell(ci: AndroidCellInfo?): Parsed {
         if (ci == null) {
             return Parsed(
@@ -75,14 +116,9 @@ object TelephonyCollector {
         }
 
         return try {
-            when (ci) {
-                is CellInfoLte -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    parseLte(ci)
-                } else {
-                    TODO("VERSION.SDK_INT < R")
-                }
-
-                is CellInfoNr -> parseNr(ci)
+            when {
+                ci is CellInfoLte -> parseLte(ci)
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && ci is CellInfoNr -> parseNr(ci)
                 else -> Parsed(
                     servingCell = null,
                     signal = null,
@@ -100,31 +136,34 @@ object TelephonyCollector {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun parseLte(ci: CellInfoLte): Parsed {
         val id = ci.cellIdentity
         val sig: CellSignalStrengthLte = ci.cellSignalStrength
 
-        // Android telephony uses Int.MAX_VALUE for many "unknown" LTE identity fields.
-        fun Int.takeIfValidIntMax(): Int? = takeIf { it != Int.MAX_VALUE }
+        // Many identity fields come back as Int.MAX_VALUE when unknown
+        fun Int.valid(): Int? = takeIf { it != Int.MAX_VALUE }
+
+        // bands available only API 30+
+        val band: Int? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) id.bands.firstOrNull() else null
 
         val serving = ServingCell(
-            ci = id.ci.takeIfValidIntMax(),
-            tac = id.tac.takeIfValidIntMax(),
-            pci = id.pci.takeIfValidIntMax(),
-            earfcn =
-                id.earfcn.takeIfValidIntMax(),
-            band =
-                id.bands.firstOrNull()
+            ci = id.ci.valid(),
+            tac = id.tac.valid(),
+            pci = id.pci.valid(),
+            earfcn = id.earfcn.valid(),
+            band = band
         )
 
-        fun Int.takeIfValidSignal(): Int? = takeIf { it != CellSignalStrengthLte.SIGNAL_STRENGTH_NONE_OR_UNKNOWN && it != Int.MAX_VALUE }
+        // Signal fields can be Int.MAX_VALUE when unknown. Also some OEMs gate these.
+        fun Int.validSig(): Int? = takeIf { it != Int.MAX_VALUE }
 
         val signal = SignalInfo(
-            rsrp = sig.rsrp.takeIf { it != Int.MAX_VALUE },
-            rsrq = sig.rsrq.takeIf { it != Int.MAX_VALUE },
-            rssi = sig.rssi.takeIf { it != Int.MAX_VALUE },
-            sinr = sig.rssnr.takeIf { it != Int.MAX_VALUE }
+            rsrp = sig.rsrp.validSig(),
+            rsrq = sig.rsrq.validSig(),
+            rssi = sig.rssi.validSig(),
+            sinr = sig.rssnr.validSig()
         )
 
         return Parsed(
@@ -132,40 +171,32 @@ object TelephonyCollector {
             signal = signal,
             flags = AvailabilityFlags(
                 cellInfoAccessible = true,
-                idsAccessible = serving != ServingCell(),
-                signalAccessible = signal != SignalInfo()
+                idsAccessible = serving.ci != null || serving.tac != null || serving.pci != null || serving.earfcn != null || serving.band != null,
+                signalAccessible = signal.rsrp != null || signal.rsrq != null || signal.rssi != null || signal.sinr != null
             ),
             rat = "LTE"
         )
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun parseNr(ci: CellInfoNr): Parsed {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            return Parsed(
-                servingCell = null,
-                signal = null,
-                flags = AvailabilityFlags(cellInfoAccessible = true),
-                rat = "NR"
-            )
-        }
-
         val id = ci.cellIdentity as? CellIdentityNr
         val sig = ci.cellSignalStrength as? CellSignalStrengthNr
 
-        fun Int.takeIfValidIntMax(): Int? = takeIf { it != Int.MAX_VALUE }
-        fun Long.takeIfValidLongMax(): Long? = takeIf { it != Long.MAX_VALUE }
+        fun Int.valid(): Int? = takeIf { it != Int.MAX_VALUE }
+        fun Long.valid(): Long? = takeIf { it != Long.MAX_VALUE }
 
         val serving = ServingCell(
-            nci = id?.nci?.takeIfValidLongMax(),
-            tac = id?.tac?.takeIfValidIntMax(),
-            pci = id?.pci?.takeIfValidIntMax(),
-            nrarfcn = id?.nrarfcn?.takeIfValidIntMax()
+            nci = id?.nci?.valid(),
+            tac = id?.tac?.valid(),
+            pci = id?.pci?.valid(),
+            nrarfcn = id?.nrarfcn?.valid()
         )
 
         val signal = SignalInfo(
-            rsrp = sig?.ssRsrp?.takeIf { it != Int.MAX_VALUE },
-            rsrq = sig?.ssRsrq?.takeIf { it != Int.MAX_VALUE },
-            sinr = sig?.ssSinr?.takeIf { it != Int.MAX_VALUE },
+            rsrp = sig?.ssRsrp?.valid(),
+            rsrq = sig?.ssRsrq?.valid(),
+            sinr = sig?.ssSinr?.valid(),
             rssi = null
         )
 

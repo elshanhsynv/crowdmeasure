@@ -1,17 +1,25 @@
 package com.example.crowdmeasure.data.measurement.collectors
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.PowerManager
 import androidx.core.content.getSystemService
 import com.example.crowdmeasure.domain.model.ContextInfo
 import com.example.crowdmeasure.domain.model.TransportType
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
+import com.example.crowdmeasure.presentation.util.AppPermissions
 
 object ContextCollector {
 
-    fun collect(context: Context): ContextInfo {
+    /**
+     * Collects "context" fields. Coarse location is optional and best-effort:
+     * - only attempted if permission granted
+     * - may still be null if location services off / no fix available
+     */
+    suspend fun collect(context: Context): ContextInfo {
         val cm = context.getSystemService<ConnectivityManager>()
         val active = cm?.activeNetwork
         val caps = cm?.getNetworkCapabilities(active)
@@ -31,17 +39,16 @@ object ContextCollector {
 
         val pm = context.getSystemService<PowerManager>()
         val batterySaver = pm?.isPowerSaveMode ?: false
-
-        val bm = context.getSystemService<BatteryManager>()
-        val charging = bm?.isCharging ?: false
-
         val screenOn = pm?.isInteractive ?: true
 
-        // We only run from foreground UI or an explicit WorkManager job (auto-run enabled).
-        // In both cases, set foreground=false for worker; but we don't know here, so assume true.
-        // The worker will override if needed by passing foreground=false in a future extension.
+        val charging = isCharging(context)
+
+        val coarseLoc = if (AppPermissions.hasCoarseLocation(context)) {
+            LocationCollector.tryGetCoarseOneShot(context)
+        } else null
+
         return ContextInfo(
-            coarseLocation = null,
+            coarseLocation = coarseLoc,
             transport = transport,
             validatedInternet = validated,
             captivePortal = captive,
@@ -54,12 +61,9 @@ object ContextCollector {
         )
     }
 
-    private val BatteryManager.isCharging: Boolean
-        get() {
-            val status = getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS)
-            // BATTERY_PROPERTY_STATUS returns 0 on many devices; fallback using isCharging not available.
-            // Safer: check plugged state:
-            val plugged = getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) // not plugged; ignore
-            return status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-        }
+    private fun isCharging(context: Context): Boolean {
+        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val status = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        return status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+    }
 }

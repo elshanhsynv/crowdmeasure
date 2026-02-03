@@ -17,4 +17,5 @@ class UserSessionRepositoryImpl(
     override suspend fun setCollectOnlyWifi(enabled: Boolean) = prefs.setCollectOnlyWifi(enabled)
     override suspend fun setAutoRun(enabled: Boolean, intervalHours: Int) = prefs.setAutoRun(enabled, intervalHours)
     override suspend fun setRetentionDays(days: Int) = prefs.setRetentionDays(days)
+    override suspend fun setConsentGateDismissed(enabled: Boolean) = prefs.setConsentGateDismissed(enabled)
 }

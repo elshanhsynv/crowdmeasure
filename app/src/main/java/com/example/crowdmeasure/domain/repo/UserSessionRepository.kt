@@ -11,7 +11,8 @@ data class AppSettings(
     val autoRunEnabled: Boolean,
     val autoRunIntervalHours: Int,
     val retentionDays: Int,
-    val installId: String
+    val installId: String,
+    val consentGateDismissed: Boolean,
 )
 
 interface UserSessionRepository {
@@ -22,4 +23,6 @@ interface UserSessionRepository {
     suspend fun setCollectOnlyWifi(enabled: Boolean)
     suspend fun setAutoRun(enabled: Boolean, intervalHours: Int)
     suspend fun setRetentionDays(days: Int)
+
+    suspend fun setConsentGateDismissed(enabled: Boolean)
 }

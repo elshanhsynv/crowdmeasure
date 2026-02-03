@@ -12,8 +12,6 @@ object DeviceCollector {
     fun collect(): DeviceSnapshot {
         val androidVersion = "${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"
         val model = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
-        // appVersion will be filled by BuildConfig at callsite? We keep it simple and pass from BuildConfig in UI.
-        // But we can read it safely via reflection fallback; here we just return placeholder and override in header via BuildConfig.
         return DeviceSnapshot(
             appVersion = safeBuildConfigVersionName(),
             androidVersion = androidVersion,

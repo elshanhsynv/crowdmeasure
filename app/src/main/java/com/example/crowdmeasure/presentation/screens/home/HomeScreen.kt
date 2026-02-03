@@ -39,7 +39,7 @@ fun HomeScreen(
         modifier = Modifier.padding(contentPadding).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (settings?.consentAccepted != true || settings.collectionEnabled != true) {
+        if (settings?.consentAccepted != true || !settings.collectionEnabled) {
             SectionCard {
                 Text("Collection is disabled", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(6.dp))
@@ -63,7 +63,7 @@ fun HomeScreen(
                 UiState.Idle -> Text("Idle")
                 UiState.Loading -> Text("Running…")
                 is UiState.Success -> Text("Saved locally.")
-                is UiState.Error -> Text("Error: ${(runState as UiState.Error).message}")
+                is UiState.Error -> Text("Error: ${runState.message}")
             }
         }
 

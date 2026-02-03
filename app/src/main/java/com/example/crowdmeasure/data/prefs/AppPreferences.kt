@@ -14,7 +14,7 @@ class AppPreferences(private val context: Context) {
 
     companion object {
         const val CONSENT_VERSION = 1
-        const val DEFAULT_ENDPOINT = "https://example.com/measure" // placeholder; still used for HTTPS timing only
+        const val DEFAULT_ENDPOINT = "https://google.com"
         const val DEFAULT_RETENTION_DAYS = 7
         const val DEFAULT_AUTORUN_HOURS = 6
     }
@@ -30,7 +30,8 @@ class AppPreferences(private val context: Context) {
             autoRunEnabled = prefs[DataStoreKeys.AUTO_RUN_ENABLED] ?: false,
             autoRunIntervalHours = prefs[DataStoreKeys.AUTO_RUN_INTERVAL_HOURS] ?: DEFAULT_AUTORUN_HOURS,
             retentionDays = prefs[DataStoreKeys.RETENTION_DAYS] ?: DEFAULT_RETENTION_DAYS,
-            installId = installId
+            installId = installId,
+            consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: false,
         )
     }
 
@@ -68,5 +69,14 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setRetentionDays(days: Int) {
         context.dataStore.edit { it[DataStoreKeys.RETENTION_DAYS] = days.coerceIn(1, 60) }
+    }
+
+    suspend fun setConsentGateDismissed(dismissed: Boolean) {
+        context.dataStore.edit { it[DataStoreKeys.CONSENT_GATE_DISMISSED] = dismissed }
+    }
+
+    // Optional: when user deletes data, you may want gate to appear again
+    suspend fun resetConsentGateDismissed() {
+        context.dataStore.edit { it[DataStoreKeys.CONSENT_GATE_DISMISSED] = false }
     }
 }

@@ -1,6 +1,8 @@
 package com.example.crowdmeasure.data.measurement
 
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.example.crowdmeasure.data.measurement.collectors.ContextCollector
 import com.example.crowdmeasure.data.measurement.collectors.DeviceCollector
 import com.example.crowdmeasure.data.measurement.collectors.LocationCollector
@@ -24,6 +26,7 @@ class MeasurementRunner(
     private val io: CoroutineDispatcher
 ) {
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     suspend fun runOnce(): Result<Measurement> = withContext(io) {
         try {
             prefs.ensureInstallId()

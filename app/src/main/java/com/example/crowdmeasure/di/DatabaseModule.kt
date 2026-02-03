@@ -21,7 +21,7 @@ object DatabaseModule {
     fun provideDb(@ApplicationContext context: Context): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, "crowdmeasure.db")
             .addMigrations(*Migrations.ALL)
-            .fallbackToDestructiveMigrationOnDowngrade()
+            .fallbackToDestructiveMigrationOnDowngrade(false)
             .build()
     }
 
