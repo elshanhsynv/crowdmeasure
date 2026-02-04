@@ -38,4 +38,13 @@ interface MeasurementDao {
 
     @Query("UPDATE measurements SET recordState = :state WHERE measurementId = :id")
     suspend fun updateRecordState(id: String, state: String)
+
+    @Query("SELECT COUNT(*) FROM measurements WHERE recordState = :state")
+    suspend fun countByState(state: String): Int
+
+    @Query("SELECT * FROM measurements WHERE recordState = :state ORDER BY timestampUtcMs DESC LIMIT :limit")
+    suspend fun getByState(state: String, limit: Int): List<MeasurementEntity>
+
+    @Query("UPDATE measurements SET recordState = :newState WHERE measurementId IN (:ids)")
+    suspend fun updateState(ids: List<String>, newState: String)
 }

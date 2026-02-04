@@ -38,11 +38,13 @@ fun HomeScreen(
     val queue = vm.queueCount.collectAsState().value
     val runState = vm.runState.collectAsState().value
     val settings = vm.settings.collectAsState().value
+    val uploadState = vm.uploadState.collectAsState().value
 
     val consentAccepted = settings?.consentAccepted == true
     val collectionEnabled = settings?.collectionEnabled == true
     val canCollect = consentAccepted && collectionEnabled
     val isRunning = runState is UiState.Loading
+    val uploading = uploadState is UiState.Loading
 
     Column(
         modifier = Modifier
@@ -88,6 +90,38 @@ fun HomeScreen(
             description = "Measurements waiting to upload"
         ) {
             MetricRow(label = "Queued records", value = queue.toString())
+            Spacer(Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Button(
+                    onClick = vm::uploadNow,
+                    enabled = canCollect && queue > 0 && !uploading
+                ) { Text(if (uploading) "Uploading…" else "Upload now") }
+
+                OutlinedButton(
+                    onClick = { /* optional: open Settings or show info */ },
+                    enabled = true
+                ) { Text("Info") }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            val uploadText = when (uploadState) {
+                UiState.Idle -> ""
+                UiState.Loading -> "Uploading to Firestore…"
+                is UiState.Success -> "Uploaded ${uploadState.data} item(s)."
+                is UiState.Error -> "Upload error: ${uploadState.message}"
+            }
+            if (uploadText.isNotBlank()) {
+                Text(
+                    text = uploadText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
         }
 
         SectionCard(
@@ -179,7 +213,6 @@ private fun MetricRow(label: String, value: String) {
 
 @Composable
 private fun rememberDateFormat(): SimpleDateFormat {
-    // Recreated per composition is fine, but this avoids repeated allocations.
     return androidx.compose.runtime.remember {
         SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
     }

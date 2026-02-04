@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "595993104547",
+    "project_id": "crowdmeasure-7af7f",
+    "storage_bucket": "crowdmeasure-7af7f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:595993104547:android:b93bfda819c032816a6f16",
+        "android_client_info": {
+          "package_name": "com.example.crowdmeasure"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJEbTqO8Uc4QF1KV1l4oq5lC2jjiy2L6U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

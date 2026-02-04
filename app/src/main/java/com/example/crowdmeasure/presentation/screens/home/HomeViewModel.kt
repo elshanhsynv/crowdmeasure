@@ -17,6 +17,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val runMeasurement: RunMeasurementUseCase,
     private val repo: MeasurementRepository,
+    private val uploadNow: UploadNowUseCase,
     session: UserSessionRepository
 ) : ViewModel() {
 
@@ -27,6 +28,9 @@ class HomeViewModel @Inject constructor(
     private var currentJob: Job? = null
     private val _runState = kotlinx.coroutines.flow.MutableStateFlow<UiState<Unit>>(UiState.Idle)
     val runState = _runState.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState.Idle)
+
+    private val _uploadState = MutableStateFlow<UiState<Int>>(UiState.Idle)
+    val uploadState: StateFlow<UiState<Int>> = _uploadState.asStateFlow()
 
     fun startMeasurement() {
         if (currentJob?.isActive == true) return
@@ -50,5 +54,14 @@ class HomeViewModel @Inject constructor(
         currentJob?.cancel()
         currentJob = null
         _runState.value = UiState.Idle
+    }
+
+    fun uploadNow() = viewModelScope.launch {
+        _uploadState.value = UiState.Loading
+        val res = uploadNow()
+        res.fold(
+            onSuccess = { count -> _uploadState.value = UiState.Success(count) },
+            onFailure = { e -> _uploadState.value = UiState.Error(e.message ?: "Upload failed") }
+        )
     }
 }

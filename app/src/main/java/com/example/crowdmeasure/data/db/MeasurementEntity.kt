@@ -10,5 +10,5 @@ data class MeasurementEntity(
     val transport: String,
     val feedbackTag: String?,
     val json: String,
-    val recordState: String // see domain RecordState
+    val recordState: String
 )
