@@ -10,7 +10,7 @@ interface MeasurementRepository {
     fun observeQueueCount(): Flow<Int>
     fun observeHistory(limit: Int, feedbackTag: String?): Flow<List<Measurement>>
     suspend fun getMeasurementById(id: String): Measurement?
-    suspend fun deleteAll()
+    suspend fun deleteAll(): Result<Unit>
     suspend fun deleteOlderThan(cutoffUtcMs: Long): Int
     suspend fun getLastN(limit: Int): List<Measurement>
 }

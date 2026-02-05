@@ -19,9 +19,15 @@ class MaintenanceWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val settings = sessionRepo.settings.first()
-        val cutoff = System.currentTimeMillis() - settings.retentionDays.toLong() * 24L * 60L * 60L * 1000L
-        measurementRepo.deleteOlderThan(cutoff)
-        return Result.success()
+        return try {
+            val settings = sessionRepo.settings.first()
+            val days = settings.retentionDays.coerceAtLeast(1)
+            val cutoff = System.currentTimeMillis() - days.toLong() * 24L * 60L * 60L * 1000L
+            measurementRepo.deleteOlderThan(cutoff)
+            Result.success()
+        } catch (t: Throwable) {
+            WorkerLog.w("MaintenanceWorker", "cleanup failed; retrying", t)
+            Result.retry()
+        }
     }
 }

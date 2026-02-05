@@ -9,10 +9,12 @@ data class AppSettings(
     val endpointUrl: String,
     val collectOnlyWifi: Boolean,
     val autoRunEnabled: Boolean,
-    val autoRunIntervalHours: Int,
+    val autoRunIntervalMinutes: Int,
     val retentionDays: Int,
     val installId: String,
     val consentGateDismissed: Boolean,
+    val firestoreUploadsEnabled: Boolean
+
 )
 
 interface UserSessionRepository {
@@ -21,8 +23,8 @@ interface UserSessionRepository {
     suspend fun setCollectionEnabled(enabled: Boolean)
     suspend fun setEndpointUrl(url: String)
     suspend fun setCollectOnlyWifi(enabled: Boolean)
-    suspend fun setAutoRun(enabled: Boolean, intervalHours: Int)
+    suspend fun setAutoRun(enabled: Boolean, intervalMinutes: Int)
     suspend fun setRetentionDays(days: Int)
-
     suspend fun setConsentGateDismissed(enabled: Boolean)
+    suspend fun setFirestoreUploadsEnabled(enabled: Boolean)
 }

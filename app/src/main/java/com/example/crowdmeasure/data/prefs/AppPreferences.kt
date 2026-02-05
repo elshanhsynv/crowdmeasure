@@ -2,25 +2,29 @@ package com.example.crowdmeasure.data.prefs
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
 import com.example.crowdmeasure.domain.repo.AppSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
-
-private val Context.dataStore by preferencesDataStore(name = "crowdmeasure_prefs")
+import kotlinx.coroutines.flow.first
 
 class AppPreferences(private val context: Context) {
+
+    suspend fun settingsFirst(): AppSettings = settings.first()
 
     companion object {
         const val CONSENT_VERSION = 1
         const val DEFAULT_ENDPOINT = "https://google.com"
         const val DEFAULT_RETENTION_DAYS = 7
-        const val DEFAULT_AUTORUN_HOURS = 6
+        const val DEFAULT_AUTORUN_MINUTES = 15
     }
+
+
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         val installId = prefs[DataStoreKeys.INSTALL_ID] ?: ""
+        val minutes = prefs[DataStoreKeys.AUTO_RUN_INTERVAL_MINUTES] ?: DEFAULT_AUTORUN_MINUTES
+
         AppSettings(
             consentAccepted = prefs[DataStoreKeys.CONSENT_ACCEPTED] ?: false,
             consentVersion = CONSENT_VERSION,
@@ -28,10 +32,11 @@ class AppPreferences(private val context: Context) {
             endpointUrl = prefs[DataStoreKeys.ENDPOINT_URL] ?: DEFAULT_ENDPOINT,
             collectOnlyWifi = prefs[DataStoreKeys.COLLECT_ONLY_WIFI] ?: false,
             autoRunEnabled = prefs[DataStoreKeys.AUTO_RUN_ENABLED] ?: false,
-            autoRunIntervalHours = prefs[DataStoreKeys.AUTO_RUN_INTERVAL_HOURS] ?: DEFAULT_AUTORUN_HOURS,
+            autoRunIntervalMinutes = minutes.coerceIn(15, 7 * 24 * 60),
             retentionDays = prefs[DataStoreKeys.RETENTION_DAYS] ?: DEFAULT_RETENTION_DAYS,
             installId = installId,
             consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: false,
+            firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: false,
         )
     }
 
@@ -60,12 +65,13 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { it[DataStoreKeys.COLLECT_ONLY_WIFI] = enabled }
     }
 
-    suspend fun setAutoRun(enabled: Boolean, intervalHours: Int) {
+    suspend fun setAutoRun(enabled: Boolean, intervalMinutes: Int) {
         context.dataStore.edit {
             it[DataStoreKeys.AUTO_RUN_ENABLED] = enabled
-            it[DataStoreKeys.AUTO_RUN_INTERVAL_HOURS] = intervalHours.coerceIn(1, 168)
+            it[DataStoreKeys.AUTO_RUN_INTERVAL_MINUTES] = intervalMinutes.coerceIn(15, 7 * 24 * 60)
         }
     }
+
 
     suspend fun setRetentionDays(days: Int) {
         context.dataStore.edit { it[DataStoreKeys.RETENTION_DAYS] = days.coerceIn(1, 60) }
@@ -78,5 +84,9 @@ class AppPreferences(private val context: Context) {
     // Optional: when user deletes data, you may want gate to appear again
     suspend fun resetConsentGateDismissed() {
         context.dataStore.edit { it[DataStoreKeys.CONSENT_GATE_DISMISSED] = false }
+    }
+
+    suspend fun setFirestoreUploadsEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] = enabled }
     }
 }

@@ -1,0 +1,64 @@
+package com.example.crowdmeasure.presentation.screens.history
+
+import androidx.compose.runtime.Immutable
+import com.example.crowdmeasure.presentation.util.UiState
+
+@Immutable
+data class MeasurementDetailUiState(
+    val loadState: UiState<MeasurementDetailUi> = UiState.Loading,
+    val revealed: Set<RevealKey> = emptySet()
+) {
+    val measurement: MeasurementDetailUi?
+        get() = (loadState as? UiState.Success)?.data
+}
+
+@Immutable
+data class MeasurementDetailUi(
+    val id: String,
+    val timeText: String,
+    val feedbackTag: String? = null,
+
+    // Sections
+    val header: List<Pair<String, String>>,
+    val context: List<Pair<String, String>>,
+    val diagnostics: List<Pair<String, String>>?,
+    val wifi: List<Pair<String, String>>?,
+    val cell: List<Pair<String, String>>?,
+    val performance: PerformanceUi,
+
+    // Sensitive data (masked by default)
+    val endpointId: String?,
+    val coarseLocationText: String?,
+    val cellIdsText: String?
+)
+
+@Immutable
+data class PerformanceUi(
+    val protocol: String,
+    val dns: String,
+    val tcp: String,
+    val tls: String,
+    val ttfb: String,
+    val rttAvg: String,
+    val rttP95: String,
+    val jitter: String,
+    val loss: String,
+
+    // NEW
+    val httpStatus: String,
+    val serverRegion: String,
+    val stallsCount: String,
+    val maxStall: String,
+    val down: String,
+    val up: String,
+    val downP95: String,
+    val downStdDev: String,
+    val upP95: String,
+    val upStdDev: String
+)
+
+enum class RevealKey {
+    Endpoint,
+    Location,
+    CellIds
+}

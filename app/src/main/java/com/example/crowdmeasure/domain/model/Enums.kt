@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 enum class TransportType { WIFI, CELL, OTHER, NONE }
 
 @Serializable
-enum class RecordState { PENDING, READY_TO_UPLOAD, UPLOADED, FAILED }
+enum class RecordState { PENDING, UPLOADED, FAILED }
 
 @Serializable
 enum class ProtocolType { HTTP1_1, HTTP2, UNKNOWN }

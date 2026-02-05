@@ -4,147 +4,446 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ListItem
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.crowdmeasure.presentation.ui.components.states.EmptyState
+import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
+import com.example.crowdmeasure.presentation.util.UiState
 
 @Composable
 fun HistoryScreen(
     contentPadding: PaddingValues,
-    onOpenDetail: (String) -> Unit,
-    vm: HistoryViewModel = hiltViewModel()
+    onNavigateToDetail: (String) -> Unit,
+    viewModel: HistoryViewModel = hiltViewModel()
 ) {
-    val items = vm.items.collectAsState().value
-    var tagText by remember { mutableStateOf("") }
-    val fmt = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
+    HistoryContent(
+        contentPadding = contentPadding,
+        state = uiState,
+        onQueryChange = viewModel::onQueryChange,
+        onClearFilter = viewModel::clearFilter,
+        onRefresh = viewModel::refresh,
+        onNavigateToDetail = onNavigateToDetail
+    )
+}
+
+@Composable
+private fun HistoryContent(
+    contentPadding: PaddingValues,
+    state: HistoryUiState,
+    onQueryChange: (String) -> Unit,
+    onClearFilter: () -> Unit,
+    onRefresh: () -> Unit,
+    onNavigateToDetail: (String) -> Unit
+) {
+    val spacing = LocalSpacing.current
+
+    LazyColumn(
         modifier = Modifier
+            .fillMaxSize()
             .padding(contentPadding)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars),
+        contentPadding = PaddingValues(
+            horizontal = spacing.screenPadding,
+            vertical = spacing.sm
+        ),
+        verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
     ) {
-        // Filter card
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            tonalElevation = 1.dp
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "History",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = "Filter by feedback tag (optional).",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = tagText,
-                    onValueChange = {
-                        tagText = it
-                        vm.setTag(it)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    label = { Text("Feedback tag") },
-                    supportingText = {
-                        Text("Showing ${items.size} record(s)")
-                    }
-                )
-            }
+        // Search filter (always visible at top)
+        item(key = "search") {
+            SearchField(
+                query = state.queryText,
+                onQueryChange = onQueryChange,
+                onClear = onClearFilter,
+                resultCount = state.items?.size
+            )
         }
 
-        // List
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            tonalElevation = 1.dp
-        ) {
-            if (items.isEmpty()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "No measurements found.",
-                        style = MaterialTheme.typography.bodyMedium
+        // Content based on state
+        when (val itemsState = state.itemsState) {
+            UiState.Loading -> {
+                item(key = "loading") {
+                    LoadingState()
+                }
+            }
+
+            is UiState.Error -> {
+                item(key = "error") {
+                    ErrorState(
+                        message = itemsState.message,
+                        onRetry = onRefresh
                     )
-                    Spacer(Modifier.height(4.dp))
+                }
+            }
+
+            is UiState.Success -> {
+                val items = itemsState.data
+
+                if (items.isEmpty()) {
+                    item(key = "empty") {
+                        HistoryEmptyState(
+                            hasFilter = state.appliedTag != null,
+                            onClearFilter = onClearFilter
+                        )
+                    }
+                } else {
+                    // List header
+                    item(key = "list_header") {
+                        ListHeader(count = items.size)
+                    }
+
+                    // Measurement items
+                    items(
+                        items = items,
+                        key = { it.id }
+                    ) { item ->
+                        MeasurementListItem(
+                            item = item,
+                            onClick = { onNavigateToDetail(item.id) }
+                        )
+                    }
+                }
+            }
+
+            UiState.Idle -> { /* Should not happen */ }
+        }
+
+        // Bottom spacing
+        item(key = "bottom_spacer") {
+            Spacer(Modifier.height(spacing.lg))
+        }
+    }
+}
+
+@Composable
+private fun SearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
+    resultCount: Int?
+) {
+    val spacing = LocalSpacing.current
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(spacing.xs)
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Search...") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            trailingIcon = {
+                if (query.isNotBlank()) {
+                    IconButton(onClick = onClear) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Clear search"
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = MaterialTheme.shapes.large
+        )
+
+        if (resultCount != null) {
+            Text(
+                text = when (resultCount) {
+                    0 -> "No results"
+                    1 -> "1 measurement"
+                    else -> "$resultCount measurements"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = spacing.md)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ListHeader(count: Int) {
+    val spacing = LocalSpacing.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = spacing.xs),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Recent Measurements",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = "$count",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+
+@Composable
+private fun MeasurementListItem(
+    item: HistoryItemUi,
+    onClick: () -> Unit
+) {
+    val spacing = LocalSpacing.current
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(spacing.cardPadding),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Main content
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(spacing.xs)
+            ) {
+                // Timestamp
+                Text(
+                    text = item.timeText,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                // Transport + metrics
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(spacing.md)
+                ) {
                     Text(
-                        text = "Try clearing the filter or run a new measurement.",
+                        text = item.transportText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "RTT ${item.rttText}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "TTFB ${item.ttfbText}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(0.dp)
+
+                // Location indicator + feedback tag
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(
-                        items = items,
-                        key = { it.header.measurementId }
-                    ) { m ->
-                        val timeText = fmt.format(Date(m.header.timestampUtcMs))
-                        val transportText = m.context.transport?.toString() ?: "-" // safest
-                        val rttText = m.performance.rttAvgMs?.let { "$it ms" } ?: "-"
-                        val ttfbText = m.performance.ttfbMs?.let { "$it ms" } ?: "-"
+                    if (item.hasLocation) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.LocationOn,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                            Text(
+                                text = "Location",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
 
-                        val loc = m.context.coarseLocation
-                        val locText = loc?.let {
-                            "${it.lat}, ${it.lon} (~${it.accuracyMeters}m)"
-                        } ?: "-"
-
-                        ListItem(
-                            headlineContent = { Text(timeText) },
-                            supportingContent = {
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(
-                                        text = "Transport: $transportText",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = "RTT avg: $rttText   •   TTFB: $ttfbText",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = "Coarse location: $locText",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenDetail(m.header.measurementId) }
-                                .padding(horizontal = 4.dp)
+                    item.feedbackTag?.let { tag ->
+                        if (item.hasLocation) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = tag,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        Divider()
                     }
                 }
+            }
+
+            // Chevron
+            Spacer(Modifier.width(spacing.sm))
+            Icon(
+                imageVector = Icons.Filled.ChevronRight,
+                contentDescription = "View details",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun LoadingState() {
+    val spacing = LocalSpacing.current
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(spacing.xl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(spacing.sm)
+        ) {
+            Text(
+                text = "Loading measurements...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun ErrorState(
+    message: String,
+    onRetry: () -> Unit
+) {
+    val spacing = LocalSpacing.current
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(spacing.cardPadding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(spacing.md)
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            TextButton(onClick = onRetry) {
+                Text("Retry")
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryEmptyState(
+    hasFilter: Boolean,
+    onClearFilter: () -> Unit
+) {
+    val spacing = LocalSpacing.current
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(spacing.xl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(spacing.md)
+        ) {
+            if (hasFilter) {
+                // No results for this search
+                EmptyState(
+                    message = "No matching measurements",
+                    subtitle = "Try a different search term or clear the filter"
+                )
+                TextButton(onClick = onClearFilter) {
+                    Text("Clear Filter")
+                }
+            } else {
+                // No measurements at all
+                EmptyState(
+                    message = "No measurements yet",
+                    subtitle = "Run your first measurement from the Home screen"
+                )
             }
         }
     }

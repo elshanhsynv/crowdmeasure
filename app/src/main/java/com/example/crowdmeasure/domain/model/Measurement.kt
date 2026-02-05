@@ -9,5 +9,6 @@ data class Measurement(
     val cell: CellInfo? = null,
     val wifi: WifiInfo? = null,
     val performance: PerformanceInfo,
+    val diagnostics: DiagnosticsInfo? = null,
     val feedbackTag: String? = null
 )

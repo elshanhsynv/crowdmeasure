@@ -35,26 +35,39 @@ class MeasurementRepositoryImpl(
     }
 
     override fun observeLastMeasurement(): Flow<Measurement?> =
-        dao.observeLast().map { it?.let { Converters.jsonToMeasurement(it.json) } }
+        dao.observeLast().map { e ->
+            e?.let {
+                runCatching { Converters.jsonToMeasurement(it.json) }.getOrNull()
+            }
+        }
 
     override fun observeQueueCount(): Flow<Int> = dao.observeQueueCount()
 
     override fun observeHistory(limit: Int, feedbackTag: String?): Flow<List<Measurement>> {
-        val flow = if (feedbackTag.isNullOrBlank()) dao.observeHistory(limit) else dao.observeHistoryByTag(limit, feedbackTag)
-        return flow.map { list -> list.map { Converters.jsonToMeasurement(it.json) } }
+        val src = if (feedbackTag.isNullOrBlank()) {
+            dao.observeHistory(limit)
+        } else {
+            dao.observeHistoryByTag(limit, feedbackTag)
+        }
+
+        return src.map { list ->
+            list.mapNotNull { e -> runCatching { Converters.jsonToMeasurement(e.json) }.getOrNull() }
+        }
     }
 
     override suspend fun getMeasurementById(id: String): Measurement? = withContext(io) {
-        dao.getById(id)?.let { Converters.jsonToMeasurement(it.json) }
+        dao.getById(id)?.let { runCatching { Converters.jsonToMeasurement(it.json) }.getOrNull() }
     }
 
-    override suspend fun deleteAll() = withContext(io) { dao.deleteAll() }
+    override suspend fun deleteAll(): Result<Unit> = withContext(io) {
+        runCatching { dao.deleteAll() }
+    }
 
     override suspend fun deleteOlderThan(cutoffUtcMs: Long): Int = withContext(io) {
         dao.deleteOlderThan(cutoffUtcMs)
     }
 
     override suspend fun getLastN(limit: Int): List<Measurement> = withContext(io) {
-        dao.getLastN(limit).map { Converters.jsonToMeasurement(it.json) }
+        dao.getLastN(limit).mapNotNull { e -> runCatching { Converters.jsonToMeasurement(e.json) }.getOrNull() }
     }
 }

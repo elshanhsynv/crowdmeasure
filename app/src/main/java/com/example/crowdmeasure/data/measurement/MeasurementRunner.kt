@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import com.example.crowdmeasure.data.measurement.collectors.ContextCollector
 import com.example.crowdmeasure.data.measurement.collectors.DeviceCollector
+import com.example.crowdmeasure.data.measurement.collectors.DiagnosticsCollector
 import com.example.crowdmeasure.data.measurement.collectors.LocationCollector
 import com.example.crowdmeasure.data.measurement.collectors.PerformanceTester
 import com.example.crowdmeasure.data.measurement.collectors.TelephonyCollector
@@ -14,6 +15,7 @@ import com.example.crowdmeasure.data.prefs.AppPreferences
 import com.example.crowdmeasure.domain.model.Measurement
 import com.example.crowdmeasure.domain.model.ProtocolType
 import com.example.crowdmeasure.domain.model.SnapshotHeader
+import com.example.crowdmeasure.domain.model.TransportType
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -28,29 +30,34 @@ class MeasurementRunner(
 
     @RequiresApi(Build.VERSION_CODES.Q)
     suspend fun runOnce(): Result<Measurement> = withContext(io) {
-        try {
+        runCatching {
             prefs.ensureInstallId()
             val settings = prefs.settings.first()
 
             // HARD opt-in gate: no consent, no collection.
-            if (!settings.consentAccepted || !settings.collectionEnabled) {
-                return@withContext Result.failure(IllegalStateException("Consent not accepted or collection disabled."))
+            check(settings.consentAccepted && settings.collectionEnabled) {
+                "Consent not accepted or collection disabled."
             }
 
             val device = DeviceCollector.collect()
-            val ctx = ContextCollector.collect(context)
+
+            // Collect base context first (no location inside yet)
+            val ctxBase = ContextCollector.collect(context)
 
             // Respect "Collect only on Wi-Fi"
-            if (settings.collectOnlyWifi && ctx.transport.name != "WIFI") {
-                return@withContext Result.failure(IllegalStateException("Collect only on Wi-Fi is enabled."))
+            if (settings.collectOnlyWifi && ctxBase.transport != TransportType.WIFI) {
+                throw IllegalStateException("Collect only on Wi-Fi is enabled.")
             }
 
+            // Location one-shot (optional). Only do it once.
             val coarseLocation = LocationCollector.tryGetCoarseOneShot(context)
-            val ctxWithLoc = ctx.copy(coarseLocation = coarseLocation)
+            val ctx = ctxBase.copy(coarseLocation = coarseLocation)
 
-            val wifi = if (ctxWithLoc.transport.name == "WIFI") WifiCollector.collect(context) else null
-            val cell = if (ctxWithLoc.transport.name == "CELL") TelephonyCollector.collect(context) else null
+            // Transport-specific collectors
+            val wifi = if (ctx.transport == TransportType.WIFI) WifiCollector.collect(context) else null
+            val cell = if (ctx.transport == TransportType.CELL) TelephonyCollector.collect(context) else null
 
+            // Performance test (light probe)
             val endpointUrl = settings.endpointUrl
             val http = okHttpClientProvider.create()
             val perf = PerformanceTester.run(
@@ -59,6 +66,8 @@ class MeasurementRunner(
                 endpointId = endpointUrl,
                 protocolHint = ProtocolType.UNKNOWN
             )
+
+            val diagnostics = DiagnosticsCollector.collect(context)
 
             val measurementId = UUID.randomUUID().toString()
             val header = SnapshotHeader(
@@ -70,18 +79,15 @@ class MeasurementRunner(
                 userConsentVersion = settings.consentVersion
             )
 
-            Result.success(
-                Measurement(
-                    header = header,
-                    context = ctxWithLoc,
-                    cell = cell,
-                    wifi = wifi,
-                    performance = perf,
-                    feedbackTag = null
-                )
+            Measurement(
+                header = header,
+                context = ctx,
+                cell = cell,
+                wifi = wifi,
+                performance = perf,
+                diagnostics = diagnostics,
+                feedbackTag = null
             )
-        } catch (t: Throwable) {
-            Result.failure(t)
         }
     }
 }

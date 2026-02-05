@@ -6,5 +6,7 @@ import javax.inject.Inject
 class SetAutoRunUseCase @Inject constructor(
     private val session: UserSessionRepository
 ) {
-    suspend operator fun invoke(enabled: Boolean, intervalHours: Int) = session.setAutoRun(enabled, intervalHours)
+    suspend operator fun invoke(enabled: Boolean, intervalMinutes: Int) {
+        session.setAutoRun(enabled, intervalMinutes)
+    }
 }

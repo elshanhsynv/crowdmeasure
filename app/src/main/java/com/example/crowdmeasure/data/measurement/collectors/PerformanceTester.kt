@@ -21,6 +21,12 @@ object PerformanceTester {
         var protocol: ProtocolType = ProtocolType.UNKNOWN
     )
 
+    private data class ProbeResult(
+        val rttMs: Long,
+        val httpStatus: Int?,
+        val serverRegion: String?
+    )
+
     fun run(
         okHttp: OkHttpClient,
         endpointUrl: String,
@@ -42,11 +48,19 @@ object PerformanceTester {
                 dnsStart = now()
             }
 
-            override fun dnsEnd(call: okhttp3.Call, domainName: String, inetAddressList: List<java.net.InetAddress>) {
+            override fun dnsEnd(
+                call: okhttp3.Call,
+                domainName: String,
+                inetAddressList: List<java.net.InetAddress>
+            ) {
                 timings.dnsMs = delta(dnsStart)
             }
 
-            override fun connectStart(call: okhttp3.Call, inetSocketAddress: java.net.InetSocketAddress, proxy: java.net.Proxy) {
+            override fun connectStart(
+                call: okhttp3.Call,
+                inetSocketAddress: java.net.InetSocketAddress,
+                proxy: java.net.Proxy
+            ) {
                 connectStart = now()
             }
 
@@ -91,9 +105,29 @@ object PerformanceTester {
         var failures = 0
         val attempts = 8
 
+        var firstHttpStatus: Int? = null
+        var firstServerRegion: String? = null
+
+        // "stall" heuristic: RTT exceeds threshold (tweak for your needs)
+        val stallThresholdMs = 1500L
+        var stalls = 0
+        var maxStallMs: Long? = null
+
         for (i in 0 until attempts) {
-            val rtt = singleRequestRtt(client, endpointUrl)
-            if (rtt == null) failures++ else samples += rtt
+            val res = singleRequestProbe(client, endpointUrl)
+            if (res == null) {
+                failures++
+            } else {
+                samples += res.rttMs
+
+                if (firstHttpStatus == null) firstHttpStatus = res.httpStatus
+                if (firstServerRegion == null) firstServerRegion = res.serverRegion
+
+                if (res.rttMs >= stallThresholdMs) {
+                    stalls++
+                    maxStallMs = maxOf(maxStallMs ?: 0L, res.rttMs)
+                }
+            }
         }
 
         val rttAvg = samples.takeIf { it.isNotEmpty() }?.average()?.roundToLong()
@@ -113,12 +147,27 @@ object PerformanceTester {
             packetLossPct = lossPct,
             downMbps = null,
             upMbps = null,
+
+            // NEW: throughput stability (not measured here)
+            downP95Mbps = null,
+            downStdDevMbps = null,
+            upP95Mbps = null,
+            upStdDevMbps = null,
+
+            // NEW: UX pain (heuristic based on RTT probes)
+            stallsCount = stalls.takeIf { samples.isNotEmpty() },
+            maxStallMs = maxStallMs,
+
+            // NEW: server signals
+            httpStatus = firstHttpStatus,
+            serverRegion = firstServerRegion,
+
             testPayloadBytes = null,
             protocol = timings.protocol
         )
     }
 
-    private fun singleRequestRtt(client: OkHttpClient, url: String): Long? {
+    private fun singleRequestProbe(client: OkHttpClient, url: String): ProbeResult? {
         val req = Request.Builder()
             .url(url)
             .get()
@@ -131,13 +180,42 @@ object PerformanceTester {
                 // consume minimal; don't download body
                 resp.body?.source()?.request(1)
                 val end = now()
-                (end - start).coerceAtLeast(0)
+
+                val status = resp.code
+                val region = extractServerRegion(resp.headers)
+
+                ProbeResult(
+                    rttMs = (end - start).coerceAtLeast(0),
+                    httpStatus = status,
+                    serverRegion = region
+                )
             }
         } catch (_: IOException) {
             null
         } catch (_: Throwable) {
             null
         }
+    }
+
+    private fun extractServerRegion(headers: okhttp3.Headers): String? {
+        // Best-effort. Works only if your endpoint/CDN provides these headers.
+        // Cloudflare: CF-RAY (e.g. "7c1...-AMS")
+        headers["cf-ray"]?.let { v ->
+            val dash = v.lastIndexOf('-')
+            if (dash in 1 until v.length - 1) return v.substring(dash + 1)
+        }
+
+        // CloudFront: X-Amz-Cf-Pop (e.g. "FRA56-P1")
+        headers["x-amz-cf-pop"]?.let { return it }
+
+        // Fastly: X-Served-By or X-Cache (varies)
+        headers["x-served-by"]?.let { return it.split(' ').firstOrNull() }
+
+        // Akamai: X-Akamai-Edgescape (format varies)
+        headers["x-akamai-edgescape"]?.let { return it }
+
+        // Generic: Server header (not really “region”, but can be useful)
+        return headers["server"]
     }
 
     private fun now(): Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())

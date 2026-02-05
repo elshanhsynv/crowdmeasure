@@ -6,5 +6,5 @@ import javax.inject.Inject
 class DeleteAllDataUseCase @Inject constructor(
     private val repo: MeasurementRepository
 ) {
-    suspend operator fun invoke() = repo.deleteAll()
+    suspend operator fun invoke(): Result<Unit> = repo.deleteAll()
 }

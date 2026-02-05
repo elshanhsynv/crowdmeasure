@@ -8,7 +8,6 @@ class SetConsentAcceptedUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(accepted: Boolean) {
         session.setConsentAccepted(accepted)
-        // If consent is revoked, collection must be disabled too (privacy rule).
         if (!accepted) session.setCollectionEnabled(false)
     }
 }

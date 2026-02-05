@@ -27,7 +27,7 @@ class Exporter(
             val file = File(dir, "${filePrefix}_$ts.json")
 
             val root = JSONObject().apply {
-                put("schema_version", 1)
+                put("schema_version", 2) // UPDATED
                 put("exported_at_utc_ms", System.currentTimeMillis())
                 put("count", measurements.size)
                 put("measurements", JSONArray().apply {
@@ -74,18 +74,49 @@ class Exporter(
             })
         }
 
+        val diagnostics = m.diagnostics?.let { d ->
+            JSONObject().apply {
+                putOpt("thermal_status", d.thermalStatus)
+                putOpt("doze_mode", d.dozeMode)
+                putOpt("data_saver_enabled", d.dataSaverEnabled)
+                putOpt("handover_count", d.handoverCount)
+                putOpt("handover_during_test", d.handoverDuringTest)
+                putOpt("public_ip_hash", d.publicIpHash)
+                putOpt("asn", d.asn)
+                putOpt("isp_name", d.ispName)
+            }
+        }
+
         val perf = JSONObject().apply {
             put("endpoint_id", m.performance.endpointId)
+
             putOpt("dns_ms", m.performance.dnsMs)
             putOpt("tcp_ms", m.performance.tcpMs)
             putOpt("tls_ms", m.performance.tlsMs)
             putOpt("ttfb_ms", m.performance.ttfbMs)
+
             putOpt("rtt_avg_ms", m.performance.rttAvgMs)
             putOpt("rtt_p95_ms", m.performance.rttP95Ms)
             putOpt("jitter_ms", m.performance.jitterMs)
             putOpt("packet_loss_pct", m.performance.packetLossPct)
+
             putOpt("down_mbps", m.performance.downMbps)
             putOpt("up_mbps", m.performance.upMbps)
+
+            // NEW: stability
+            putOpt("down_p95_mbps", m.performance.downP95Mbps)
+            putOpt("down_stddev_mbps", m.performance.downStdDevMbps)
+            putOpt("up_p95_mbps", m.performance.upP95Mbps)
+            putOpt("up_stddev_mbps", m.performance.upStdDevMbps)
+
+            // NEW: stalls
+            putOpt("stalls_count", m.performance.stallsCount)
+            putOpt("max_stall_ms", m.performance.maxStallMs)
+
+            // NEW: server signals
+            putOpt("http_status", m.performance.httpStatus)
+            putOpt("server_region", m.performance.serverRegion)
+
             putOpt("test_payload_bytes", m.performance.testPayloadBytes)
             put("protocol", m.performance.protocol)
         }
@@ -93,9 +124,13 @@ class Exporter(
         val wifi = m.wifi?.let { w ->
             JSONObject().apply {
                 putOpt("rssi", w.rssi)
-                putOpt("link_speed_mbps", w.linkSpeedMbps)
+                putOpt("link_speed_mbps", w.linkSpeedMbps) // kept
+                putOpt("tx_link_speed_mbps", w.txLinkSpeedMbps)
+                putOpt("rx_link_speed_mbps", w.rxLinkSpeedMbps)
                 putOpt("frequency_mhz", w.frequencyMhz)
                 putOpt("channel_width_mhz", w.channelWidthMhz)
+                putOpt("standard", w.standard?.name)
+                putOpt("bssid_hash", w.bssidHash)
             }
         }
 
@@ -108,6 +143,10 @@ class Exporter(
                 putOpt("voice_network_type", c.voiceNetworkType)
                 putOpt("roaming", c.roaming)
                 putOpt("registered_rat", c.registeredRat)
+
+                // NEW
+                putOpt("nr_state", c.nrState?.name)
+
                 putOpt("serving_cell", c.servingCell?.let { sc ->
                     JSONObject().apply {
                         putOpt("ci", sc.ci)
@@ -117,16 +156,55 @@ class Exporter(
                         putOpt("earfcn", sc.earfcn)
                         putOpt("nrarfcn", sc.nrarfcn)
                         putOpt("band", sc.band)
+
+                        // NEW
+                        putOpt("bandwidth_mhz", sc.bandwidthMhz)
                     }
                 })
+
                 putOpt("signal", c.signal?.let { s ->
                     JSONObject().apply {
                         putOpt("rsrp", s.rsrp)
                         putOpt("rsrq", s.rsrq)
                         putOpt("sinr", s.sinr)
                         putOpt("rssi", s.rssi)
+
+                        // NEW
+                        putOpt("cqi", s.cqi)
+                        putOpt("timing_advance", s.timingAdvance)
                     }
                 })
+
+                // NEW
+                putOpt("radio_metrics", c.radioMetrics?.let { rm ->
+                    JSONObject().apply {
+                        putOpt("mimo_layers", rm.mimoLayers)
+                        putOpt("lte_cqi", rm.lteCqi)
+                        putOpt("nr_cqi", rm.nrCqi)
+                    }
+                })
+
+                // NEW
+                putOpt("aggregation", c.aggregation?.let { ag ->
+                    JSONObject().apply {
+                        putOpt("active", ag.active)
+                        put("secondary_cells", JSONArray().apply {
+                            ag.secondaryCells.forEach { scell ->
+                                put(JSONObject().apply {
+                                    putOpt("band", scell.band)
+                                    putOpt("earfcn", scell.earfcn)
+                                    putOpt("nrarfcn", scell.nrarfcn)
+                                    putOpt("pci", scell.pci)
+                                    putOpt("rsrp", scell.rsrp)
+                                    putOpt("rsrq", scell.rsrq)
+                                    putOpt("sinr", scell.sinr)
+                                    putOpt("bandwidth_mhz", scell.bandwidthMhz)
+                                })
+                            }
+                        })
+                    }
+                })
+
                 put("availability", JSONObject().apply {
                     put("cellInfoAccessible", c.availability.cellInfoAccessible)
                     put("idsAccessible", c.availability.idsAccessible)
@@ -141,8 +219,7 @@ class Exporter(
             putOpt("wifi", wifi)
             putOpt("cell", cell)
             put("performance", perf)
-            // If you have feedback tags in your model, keep it only if it already exists.
-            // (Not adding new fields beyond your current schema.)
+            putOpt("diagnostics", diagnostics) // NEW
         }
     }
 }

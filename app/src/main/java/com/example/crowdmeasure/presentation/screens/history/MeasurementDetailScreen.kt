@@ -5,273 +5,426 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.crowdmeasure.presentation.ui.components.SectionCard
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.crowdmeasure.presentation.ui.components.DetailSectionCard
+import com.example.crowdmeasure.presentation.ui.components.MetricGridRow
+import com.example.crowdmeasure.presentation.ui.components.MetricRow
+import com.example.crowdmeasure.presentation.ui.components.SectionDivider
+import com.example.crowdmeasure.presentation.ui.components.privacy.SensitiveValueRow
+import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
+import com.example.crowdmeasure.presentation.util.UiState
 
 @Composable
 fun MeasurementDetailScreen(
     id: String,
     contentPadding: PaddingValues,
-    onBack: () -> Unit,
-    vm: MeasurementDetailViewModel = hiltViewModel()
+    onNavigateBack: () -> Unit,
+    viewModel: MeasurementDetailViewModel = hiltViewModel<MeasurementDetailViewModel>()
 ) {
-    LaunchedEffect(id) { vm.load(id) }
-    val item = vm.item.collectAsState().value
+    LaunchedEffect(id) {
+        viewModel.load(id)
+    }
 
-    val fmt = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US) }
-    val scroll = rememberScrollState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
+    MeasurementDetailContent(
+        contentPadding = contentPadding,
+        state = uiState,
+        onToggleReveal = viewModel::toggleReveal,
+        onRetry = { viewModel.load(id) }
+    )
+}
+
+@Composable
+private fun MeasurementDetailContent(
+    contentPadding: PaddingValues,
+    state: MeasurementDetailUiState,
+    onToggleReveal: (RevealKey) -> Unit,
+    onRetry: () -> Unit
+) {
+    val spacing = LocalSpacing.current
+
+    LazyColumn(
         modifier = Modifier
+            .fillMaxSize()
             .padding(contentPadding)
-            .verticalScroll(scroll)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars),
+        contentPadding = PaddingValues(
+            horizontal = spacing.screenPadding,
+            vertical = spacing.sm
+        ),
+        verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
     ) {
-        // Top header (more compact than a full-width button)
-        HeaderBar(
-            title = "Measurement details",
-            subtitle = id,
-            onBack = onBack
-        )
+        when (val loadState = state.loadState) {
+            UiState.Loading -> {
+                item(key = "loading") {
+                    LoadingState()
+                }
+            }
 
-        if (item == null) {
-            SectionCard(
-                title = "Not found",
-                description = "This measurement may have been deleted."
+            is UiState.Error -> {
+                item(key = "error") {
+                    ErrorState(
+                        message = loadState.message,
+                        onRetry = onRetry
+                    )
+                }
+            }
+
+            is UiState.Success -> {
+                val measurement = loadState.data
+
+                item(key = "summary") {
+                    SummarySection(measurement = measurement)
+                }
+
+                // Device section
+                item(key = "device") {
+                    DeviceSection(pairs = measurement.header)
+                }
+
+                // Context section (includes location)
+                item(key = "context") {
+                    ContextSection(
+                        pairs = measurement.context,
+                        locationText = measurement.coarseLocationText,
+                        locationRevealed = state.revealed.contains(RevealKey.Location),
+                        onToggleLocation = { onToggleReveal(RevealKey.Location) }
+                    )
+                }
+
+                measurement.diagnostics?.let { diagPairs ->
+                    item(key = "diagnostics") {
+                        DiagnosticsSection(pairs = diagPairs)
+                    }
+                }
+
+
+                // Wi-Fi section (if present)
+                measurement.wifi?.let { wifiPairs ->
+                    item(key = "wifi") {
+                        WifiSection(pairs = wifiPairs)
+                    }
+                }
+
+                // Cellular section (if present)
+                measurement.cell?.let { cellPairs ->
+                    item(key = "cell") {
+                        CellularSection(
+                            pairs = cellPairs,
+                            cellIdsText = measurement.cellIdsText,
+                            cellIdsRevealed = state.revealed.contains(RevealKey.CellIds),
+                            onToggleCellIds = { onToggleReveal(RevealKey.CellIds) }
+                        )
+                    }
+                }
+
+                // Performance section
+                item(key = "performance") {
+                    PerformanceSection(
+                        performance = measurement.performance,
+                        endpointId = measurement.endpointId,
+                        endpointRevealed = state.revealed.contains(RevealKey.Endpoint),
+                        onToggleEndpoint = { onToggleReveal(RevealKey.Endpoint) }
+                    )
+                }
+            }
+
+            UiState.Idle -> { /* Should not happen */ }
+        }
+
+        // Bottom spacing
+        item(key = "bottom_spacer") {
+            Spacer(Modifier.height(spacing.xl))
+        }
+    }
+}
+
+@Composable
+private fun SummarySection(measurement: MeasurementDetailUi) {
+    val spacing = LocalSpacing.current
+
+    DetailSectionCard(
+        title = "Measurement Summary",
+        description = measurement.timeText
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            // ID (de-emphasized, monospace)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    "Try going back and selecting another item.",
+                    text = "ID",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = measurement.id.take(12) + "...",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            return
-        }
 
-        // Header
-        SectionCard(
-            title = "Header",
-            description = fmt.format(Date(item.header.timestampUtcMs))
-        ) {
-            KeyValue("Measurement ID", item.header.measurementId)
-            KeyValue("App version", item.header.appVersion ?: "-")
-            KeyValue("Android", item.header.androidVersion ?: "-")
-            KeyValue("Device", item.header.deviceModel ?: "-")
-            KeyValue("Consent version", item.header.userConsentVersion.toString() ?: "-")
-        }
-
-        // Context
-        SectionCard(title = "Context") {
-            // transport might be enum/sealed: always stringify safely
-            KeyValue("Transport", item.context.transport?.toString() ?: "-")
-            KeyValue("Validated", item.context.validatedInternet?.toString() ?: "-")
-            KeyValue("Captive portal", item.context.captivePortal?.toString() ?: "-")
-            KeyValue("Metered", item.context.metered?.toString() ?: "-")
-            KeyValue("VPN", item.context.vpnPresent?.toString() ?: "-")
-
-            Spacer(Modifier.height(6.dp))
-
-            KeyValue("Battery saver", item.context.batterySaver.toString())
-            KeyValue("Charging", item.context.charging.toString())
-            KeyValue("Screen on", item.context.screenOn.toString())
-
-            val loc = item.context.coarseLocation
-            KeyValue(
-                "Coarse location",
-                loc?.let { "${it.lat}, ${it.lon} (~${it.accuracyMeters}m)" } ?: "-"
-            )
-        }
-
-        // Wi-Fi (optional)
-        item.wifi?.let { w ->
-            SectionCard(title = "Wi-Fi") {
-                KeyValue("RSSI", w.rssi?.let { "$it dBm" } ?: "-")
-                KeyValue("Link speed", w.linkSpeedMbps?.let { "$it Mbps" } ?: "-")
-                KeyValue("Frequency", w.frequencyMhz?.let { "$it MHz" } ?: "-")
-                KeyValue("Channel width", w.channelWidthMhz?.let { "$it MHz" } ?: "-")
+            // Feedback tag (if present)
+            measurement.feedbackTag?.let { tag ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Tag",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = tag,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
             }
         }
+    }
+}
 
-        // Cell (optional)
-        item.cell?.let { c ->
-            SectionCard(title = "Cell") {
-                KeyValue("Carrier", c.carrierName ?: "-")
-                KeyValue("MCC / MNC", "${c.mcc ?: "-"} / ${c.mnc ?: "-"}")
-                KeyValue("Data type", c.dataNetworkType ?: "-")
-                KeyValue("Voice type", c.voiceNetworkType ?: "-")
-                KeyValue("Roaming", c.roaming?.toString() ?: "-")
-                KeyValue("Registered RAT", c.registeredRat ?: "-")
+@Composable
+private fun DeviceSection(pairs: List<Pair<String, String>>) {
+    DetailSectionCard(
+        title = "Device & App",
+        description = "Environment information"
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            pairs.forEach { (label, value) ->
+                MetricRow(label, value)
+            }
+        }
+    }
+}
 
-                Spacer(Modifier.height(6.dp))
+@Composable
+private fun ContextSection(
+    pairs: List<Pair<String, String>>,
+    locationText: String?,
+    locationRevealed: Boolean,
+    onToggleLocation: () -> Unit
+) {
+    val spacing = LocalSpacing.current
 
-                val sc = c.servingCell
-                KeyValue("CI", sc?.ci?.toString() ?: "-")
-                KeyValue("NCI", sc?.nci?.toString() ?: "-")
-                KeyValue("TAC", sc?.tac?.toString() ?: "-")
-                KeyValue("PCI", sc?.pci?.toString() ?: "-")
-                KeyValue("EARFCN", sc?.earfcn?.toString() ?: "-")
-                KeyValue("NRARFCN", sc?.nrarfcn?.toString() ?: "-")
-                KeyValue("Band", sc?.band?.toString() ?: "-")
+    DetailSectionCard(
+        title = "Network Context",
+        description = "Connection and device state"
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            pairs.forEach { (label, value) ->
+                MetricRow(label, value)
+            }
 
-                Spacer(Modifier.height(6.dp))
-
-                val sig = c.signal
-                KeyValue("RSRP", sig?.rsrp?.toString() ?: "-")
-                KeyValue("RSRQ", sig?.rsrq?.toString() ?: "-")
-                KeyValue("SINR", sig?.sinr?.toString() ?: "-")
-                KeyValue("RSSI", sig?.rssi?.toString() ?: "-")
-
-                Spacer(Modifier.height(6.dp))
-
-                KeyValue(
-                    "Availability",
-                    "cellInfo=${c.availability.cellInfoAccessible}, ids=${c.availability.idsAccessible}, signal=${c.availability.signalAccessible}"
+            // Sensitive: Location
+//            if (locationText != null) {
+                SectionDivider()
+                SensitiveValueRow(
+                    label = "Coarse Location",
+                    value = locationText,
+                    revealed = locationRevealed,
+                    onToggleReveal = onToggleLocation
                 )
+//            }
+        }
+    }
+}
+
+@Composable
+private fun DiagnosticsSection(pairs: List<Pair<String, String>>) {
+    val spacing = LocalSpacing.current
+
+    DetailSectionCard(
+        title = "Diagnostics",
+        description = "Device and system constraints"
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            pairs.forEach { (label, value) -> MetricRow(label, value) }
+        }
+    }
+}
+
+
+@Composable
+private fun WifiSection(pairs: List<Pair<String, String>>) {
+    val spacing = LocalSpacing.current
+
+    DetailSectionCard(
+        title = "Wi-Fi",
+        description = "Wireless network details"
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            pairs.forEach { (label, value) ->
+                MetricRow(label, value)
             }
         }
-
-        // Performance
-        SectionCard(title = "Performance") {
-            val p = item.performance
-            KeyValue("Endpoint", p.endpointId ?: "-")
-            KeyValue("Protocol", p.protocol?.toString() ?: "-")
-
-            Spacer(Modifier.height(6.dp))
-
-            GroupRow(
-                leftLabel = "DNS",
-                leftValue = p.dnsMs?.let { "$it ms" } ?: "-",
-                rightLabel = "TCP",
-                rightValue = p.tcpMs?.let { "$it ms" } ?: "-"
-            )
-            GroupRow(
-                leftLabel = "TLS",
-                leftValue = p.tlsMs?.let { "$it ms" } ?: "-",
-                rightLabel = "TTFB",
-                rightValue = p.ttfbMs?.let { "$it ms" } ?: "-"
-            )
-
-            Spacer(Modifier.height(6.dp))
-
-            GroupRow(
-                leftLabel = "RTT avg",
-                leftValue = p.rttAvgMs?.let { "$it ms" } ?: "-",
-                rightLabel = "RTT p95",
-                rightValue = p.rttP95Ms?.let { "$it ms" } ?: "-"
-            )
-
-            GroupRow(
-                leftLabel = "Jitter",
-                leftValue = p.jitterMs?.let { "$it ms" } ?: "-",
-                rightLabel = "Loss",
-                rightValue = p.packetLossPct?.let { "$it %" } ?: "-"
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
     }
 }
 
 @Composable
-private fun HeaderBar(
-    title: String,
-    subtitle: String,
-    onBack: () -> Unit
+private fun CellularSection(
+    pairs: List<Pair<String, String>>,
+    cellIdsText: String?,
+    cellIdsRevealed: Boolean,
+    onToggleCellIds: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+    val spacing = LocalSpacing.current
+
+    DetailSectionCard(
+        title = "Cellular Network",
+        description = "Mobile carrier and signal"
     ) {
-        OutlinedButton(onClick = onBack) { Text("Back") }
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            // Regular cell metrics
+            pairs.forEach { (label, value) ->
+                MetricRow(label, value)
+            }
 
-        Spacer(Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            // Sensitive: Cell IDs
+//            if (cellIdsText != null) {
+                SectionDivider()
+                SensitiveValueRow(
+                    label = "Cell Identifiers",
+                    value = cellIdsText,
+                    revealed = cellIdsRevealed,
+                    onToggleReveal = onToggleCellIds
+                )
+//            }
         }
     }
 }
 
-@Composable
-private fun KeyValue(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
-        )
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
 
 @Composable
-private fun GroupRow(
-    leftLabel: String,
-    leftValue: String,
-    rightLabel: String,
-    rightValue: String
+private fun PerformanceSection(
+    performance: PerformanceUi,
+    endpointId: String?,
+    endpointRevealed: Boolean,
+    onToggleEndpoint: () -> Unit
 ) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        GroupCell(label = leftLabel, value = leftValue, modifier = Modifier.weight(1f))
-        Spacer(Modifier.width(12.dp))
-        GroupCell(label = rightLabel, value = rightValue, modifier = Modifier.weight(1f))
+    val spacing = LocalSpacing.current
+
+    DetailSectionCard(
+        title = "Performance Metrics",
+        description = "Latency breakdown and statistics"
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+
+            if (endpointId != null) {
+                SensitiveValueRow(
+                    label = "Endpoint",
+                    value = endpointId,
+                    revealed = endpointRevealed,
+                    onToggleReveal = onToggleEndpoint
+                )
+                SectionDivider()
+            }
+
+            MetricRow("Protocol", performance.protocol)
+
+            // NEW: server info (always shown; values may be "—")
+            MetricGridRow("HTTP Status", performance.httpStatus, "Server Region", performance.serverRegion)
+
+            SectionDivider()
+
+            Text(
+                text = "Connection Establishment",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            MetricGridRow("DNS", performance.dns, "TCP", performance.tcp)
+            MetricGridRow("TLS", performance.tls, "TTFB", performance.ttfb)
+
+            SectionDivider()
+
+            Text(
+                text = "Latency Statistics",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            MetricGridRow("RTT Average", performance.rttAvg, "RTT P95", performance.rttP95)
+            MetricGridRow("Jitter", performance.jitter, "Packet Loss", performance.loss)
+
+            // NEW: stalls
+            SectionDivider()
+            Text(
+                text = "Stability",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            MetricGridRow("Stalls", performance.stallsCount, "Max Stall", performance.maxStall)
+
+            // NEW: throughput (may be "—" if you don’t run speed tests)
+            SectionDivider()
+            Text(
+                text = "Throughput",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            MetricGridRow("Down", performance.down, "Up", performance.up)
+            MetricGridRow("Down P95", performance.downP95, "Down StdDev", performance.downStdDev)
+            MetricGridRow("Up P95", performance.upP95, "Up StdDev", performance.upStdDev)
+        }
     }
 }
 
 @Composable
-private fun GroupCell(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
+private fun LoadingState() {
+    DetailSectionCard(title = "Loading...") {
         Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
+            text = "Fetching measurement details...",
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
+    }
+}
+
+@Composable
+private fun ErrorState(
+    message: String,
+    onRetry: () -> Unit
+) {
+    val spacing = LocalSpacing.current
+
+    DetailSectionCard(
+        title = "Error",
+        description = "Couldn't load measurement"
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(spacing.md),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+            FilledTonalButton(onClick = onRetry) {
+                Text("Retry")
+            }
+        }
     }
 }

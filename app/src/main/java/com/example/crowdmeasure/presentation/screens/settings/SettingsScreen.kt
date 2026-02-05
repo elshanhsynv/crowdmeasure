@@ -11,378 +11,649 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.crowdmeasure.presentation.ui.components.SectionCard
-import com.example.crowdmeasure.presentation.util.UiState
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.crowdmeasure.domain.repo.AppSettings
+import com.example.crowdmeasure.presentation.ui.components.AssistiveHint
+import com.example.crowdmeasure.presentation.ui.components.BackgroundReliabilityCard
+import com.example.crowdmeasure.presentation.ui.components.BackgroundWorkStatusCard
+import com.example.crowdmeasure.presentation.ui.components.PermissionRow
+import com.example.crowdmeasure.presentation.ui.components.SettingsSectionCard
+import com.example.crowdmeasure.presentation.ui.components.SettingSwitchRow
+import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 import com.example.crowdmeasure.presentation.util.AppPermissions
+import com.example.crowdmeasure.presentation.util.SystemSettingsIntents
+import com.example.crowdmeasure.presentation.util.UiState
 
+/**
+ * Settings screen with tabbed organization.
+ *
+ * Tabs:
+ * 1. Privacy - Consent, permissions, uploads
+ * 2. Collection - Endpoint, intervals, Wi-Fi only, auto-run
+ * 3. Data - Export, delete
+ *
+ * Design:
+ * - Tabs for better organization (not long scroll)
+ * - Clear sections within each tab
+ * - Consistent card styling
+ * - Permission state management
+ */
 @Composable
 fun SettingsScreen(
     contentPadding: PaddingValues,
-    vm: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel<SettingsViewModel>()
 ) {
-    val ctx = LocalContext.current
-    val settings = vm.settings.collectAsState().value
+    val spacing = LocalSpacing.current
 
-    var endpoint by remember(settings?.endpointUrl) { mutableStateOf(settings?.endpointUrl ?: "") }
-    var autoHoursText by remember(settings?.autoRunIntervalHours) {
-        mutableStateOf((settings?.autoRunIntervalHours ?: 6).toString())
-    }
-    var exportNText by remember { mutableStateOf("50") }
+    // State
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val backgroundWorkState by viewModel.backgroundWorkState.collectAsStateWithLifecycle()
+    val exportState by viewModel.exportState.collectAsStateWithLifecycle()
+    val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
 
-    // Permission states (refreshable)
-    var coarseGranted by remember { mutableStateOf(AppPermissions.hasCoarseLocation(ctx)) }
-    var fineGranted by remember { mutableStateOf(hasFineLocation(ctx)) }
-    var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(ctx)) }
-    var locationServicesOn by remember { mutableStateOf(isLocationServicesEnabled(ctx)) }
+    // Tab state (preserved across config changes)
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
-    fun refreshPermissionStates() {
-        coarseGranted = AppPermissions.hasCoarseLocation(ctx)
-        fineGranted = hasFineLocation(ctx)
-        phoneGranted = AppPermissions.hasPhoneState(ctx)
-        locationServicesOn = isLocationServicesEnabled(ctx)
-    }
-
-    val requestCoarse = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { refreshPermissionStates() }
-
-    val requestFine = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { refreshPermissionStates() }
-
-    val requestPhone = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { refreshPermissionStates() }
-
+    // Ensure maintenance scheduled on launch
     LaunchedEffect(Unit) {
-        vm.ensureMaintenanceScheduled()
-        refreshPermissionStates()
+        viewModel.ensureMaintenanceScheduled()
     }
 
     Column(
         modifier = Modifier
+            .fillMaxSize()
             .padding(contentPadding)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
-        PrivacyAndPermissionsCard(
-            consentAccepted = settings?.consentAccepted ?: false,
-            collectionEnabled = settings?.collectionEnabled ?: false,
-            onConsentChange = vm::setConsent,
-            onCollectionChange = vm::setCollection,
-            coarseGranted = coarseGranted,
-            fineGranted = fineGranted,
-            phoneGranted = phoneGranted,
-            locationServicesOn = locationServicesOn,
-            onGrantCoarse = { requestCoarse.launch(Manifest.permission.ACCESS_COARSE_LOCATION) },
-            onGrantFine = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
-            onGrantPhone = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) },
-            onRefresh = ::refreshPermissionStates
+        // Tab row
+        SettingsTabRow(
+            selectedTab = selectedTab,
+            onTabSelected = { selectedTab = it }
         )
 
-        SectionCard {
-            Text("Test endpoint", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
+        // Tab content
+        when (selectedTab) {
+            0 -> PrivacyTab(
+                settings = settings,
+                onConsentChange = viewModel::setConsent,
+                onCollectionChange = viewModel::setCollection,
+                onFirestoreUploadsChange = viewModel::setFirestoreUploads
+            )
+            1 -> CollectionTab(
+                settings = settings,
+                backgroundWorkState = backgroundWorkState,
+                onSaveEndpoint = viewModel::saveEndpoint,
+                onCollectOnlyWifiChange = viewModel::setCollectOnlyWifi,
+                onAutoRunChange = viewModel::setAutoRun,
+                onRunNow = viewModel::runAutoRunNow,
+                onReschedule = viewModel::rescheduleBackgroundWork
+            )
+            2 -> DataTab(
+                exportState = exportState,
+                deleteState = deleteState,
+                onExport = viewModel::exportData,
+                onClearExportState = viewModel::clearExportState,
+                onDelete = viewModel::deleteAllData,
+                onClearDeleteState = viewModel::clearDeleteState
+            )
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Tab Row
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun SettingsTabRow(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    val tabs = listOf(
+        SettingsTab("Privacy", Icons.Filled.Security),
+        SettingsTab("Collection", Icons.Filled.Settings),
+        SettingsTab("Data", Icons.Filled.Code)
+    )
+
+    SecondaryTabRow(
+        selectedTabIndex = selectedTab,
+        divider = { HorizontalDivider() },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        tabs.forEachIndexed { index, tab ->
+            Tab(
+                selected = selectedTab == index,
+                onClick = { onTabSelected(index) },
+                text = { Text(tab.title) },
+                icon = {
+                    Icon(
+                        imageVector = tab.icon,
+                        contentDescription = null
+                    )
+                }
+            )
+        }
+    }
+}
+
+private data class SettingsTab(
+    val title: String,
+    val icon: ImageVector
+)
+
+// ══════════════════════════════════════════════════════════════════════
+// Privacy Tab
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun PrivacyTab(
+    settings: AppSettings?,
+    onConsentChange: (Boolean) -> Unit,
+    onCollectionChange: (Boolean) -> Unit,
+    onFirestoreUploadsChange: (Boolean) -> Unit
+) {
+    val spacing = LocalSpacing.current
+    val context = LocalContext.current
+
+    // Permission state
+    var coarseGranted by remember { mutableStateOf(AppPermissions.hasCoarseLocation(context)) }
+    var fineGranted by remember { mutableStateOf(hasFineLocation(context)) }
+    var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(context)) }
+    var locationServicesOn by remember { mutableStateOf(isLocationServicesEnabled(context)) }
+
+    fun refreshPermissions() {
+        coarseGranted = AppPermissions.hasCoarseLocation(context)
+        fineGranted = hasFineLocation(context)
+        phoneGranted = AppPermissions.hasPhoneState(context)
+        locationServicesOn = isLocationServicesEnabled(context)
+    }
+
+    // Permission launchers
+    val requestCoarse = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { refreshPermissions() }
+
+    val requestFine = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { refreshPermissions() }
+
+    val requestPhone = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { refreshPermissions() }
+
+    LaunchedEffect(Unit) {
+        refreshPermissions()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = spacing.screenPadding)
+            .padding(vertical = spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
+    ) {
+        // Consent & Collection
+        SettingsSectionCard(
+            title = "Consent & Collection",
+            description = "Control what data is collected and uploaded"
+        ) {
+            AssistiveHint(
+                text = "CrowdMeasure collects network measurements only when you opt in. " +
+                        "Optional permissions improve measurement quality."
+            )
+
+            Divider()
+
+            SettingSwitchRow(
+                title = "I Understand and Agree",
+                subtitle = "Required before enabling collection",
+                checked = settings?.consentAccepted ?: false,
+                onCheckedChange = onConsentChange
+            )
+
+            Divider()
+
+            SettingSwitchRow(
+                title = "Enable Data Collection",
+                subtitle = "Allows measurement collection in the background",
+                checked = settings?.collectionEnabled ?: false,
+                enabled = settings?.consentAccepted == true,
+                onCheckedChange = onCollectionChange
+            )
+
+            Divider()
+
+            SettingSwitchRow(
+                title = "Enable Firestore Uploads",
+                subtitle = "Uploads queued measurements when you tap 'Upload now'",
+                checked = settings?.firestoreUploadsEnabled ?: false,
+                enabled = settings?.consentAccepted == true && settings?.collectionEnabled == true,
+                onCheckedChange = onFirestoreUploadsChange
+            )
+        }
+
+        // Permissions
+        SettingsSectionCard(
+            title = "Optional Permissions",
+            description = "Improve measurement quality"
+        ) {
+            // Location services warning
+            if (!locationServicesOn) {
+                AssistChip(
+                    onClick = { refreshPermissions() },
+                    label = {
+                        Text("⚠️ Location services OFF — cell metrics may be empty")
+                    }
+                )
+                Spacer(Modifier.height(spacing.sm))
+            }
+
+            PermissionRow(
+                title = "Coarse Location",
+                subtitle = "Adds approximate coordinates to measurements",
+                granted = coarseGranted,
+                enabled = settings?.consentAccepted == true,
+                onRequest = { requestCoarse.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }
+            )
+
+            Divider()
+
+            PermissionRow(
+                title = "Fine Location",
+                subtitle = "Required for detailed cell signal on some devices (e.g., Samsung)",
+                granted = fineGranted,
+                enabled = settings?.consentAccepted == true,
+                onRequest = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
+            )
+
+            Divider()
+
+            PermissionRow(
+                title = "Phone State",
+                subtitle = "Enables additional cell metrics on some devices",
+                granted = phoneGranted,
+                enabled = settings?.consentAccepted == true,
+                onRequest = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) }
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = { refreshPermissions() }) {
+                    Text("Refresh Status")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(spacing.xl))
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Collection Tab
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun CollectionTab(
+    settings: AppSettings?,
+    backgroundWorkState: BackgroundWorkUiState,
+    onSaveEndpoint: (String) -> Unit,
+    onCollectOnlyWifiChange: (Boolean) -> Unit,
+    onAutoRunChange: (Boolean, Int) -> Unit,
+    onRunNow: () -> Unit,
+    onReschedule: () -> Unit
+) {
+    val spacing = LocalSpacing.current
+    val context = LocalContext.current
+
+    var endpoint by remember(settings?.endpointUrl) {
+        mutableStateOf(settings?.endpointUrl ?: "")
+    }
+
+    var intervalText by remember(settings?.autoRunIntervalMinutes) {
+        mutableStateOf((settings?.autoRunIntervalMinutes ?: 15).toString())
+    }
+
+    val autoRunAllowed = settings?.consentAccepted == true && settings?.collectionEnabled == true
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = spacing.screenPadding)
+            .padding(vertical = spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
+    ) {
+        // Test Endpoint
+        SettingsSectionCard(
+            title = "Test Endpoint",
+            description = "HTTPS URL to test network performance against"
+        ) {
             OutlinedTextField(
                 value = endpoint,
                 onValueChange = { endpoint = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("HTTPS URL") },
+                placeholder = { Text("https://api.example.com") },
                 singleLine = true,
-                supportingText = { Text("Must be HTTPS.") }
+                supportingText = { Text("Must start with https://") }
             )
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = { vm.saveEndpoint(endpoint) }) { Text("Save") }
-        }
 
-        SectionCard {
-            Text("Collection rules", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-
-            val wifiOnly = settings?.collectOnlyWifi ?: false
-            SettingSwitchRow(
-                title = "Collect only on Wi-Fi",
-                subtitle = "Avoid mobile data usage",
-                checked = wifiOnly,
-                onCheckedChange = vm::setCollectOnlyWifi
-            )
-        }
-
-        SectionCard {
-            Text("Auto-run", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-
-            val enabled = settings?.autoRunEnabled ?: false
-            val consentAccepted = settings?.consentAccepted == true
-            val collectionEnabled = settings?.collectionEnabled == true
-            val autoRunAllowed = consentAccepted && collectionEnabled
-
-            if (!autoRunAllowed) {
-                Text("Enable consent and data collection to allow auto-run.")
-                Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { onSaveEndpoint(endpoint) },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Save Endpoint")
             }
+        }
+
+        // Collection Rules
+        SettingsSectionCard(
+            title = "Collection Rules",
+            description = "Control when measurements are collected"
+        ) {
+            SettingSwitchRow(
+                title = "Collect Only on Wi-Fi",
+                subtitle = "Avoid mobile data usage for measurements",
+                checked = settings?.collectOnlyWifi ?: false,
+                onCheckedChange = onCollectOnlyWifiChange
+            )
+        }
+
+        // Auto-Run Configuration
+        SettingsSectionCard(
+            title = "Auto-Run Configuration",
+            description = if (!autoRunAllowed) {
+                "Enable consent and collection to configure auto-run"
+            } else {
+                "Run measurements automatically in the background"
+            }
+        ) {
+            val intervalMinutes = intervalText.toIntOrNull()
+            val isValid = intervalMinutes != null && intervalMinutes in 15..10_080
 
             SettingSwitchRow(
-                title = "Enable auto-run",
+                title = "Enable Auto-Run",
                 subtitle = "Runs collection periodically in the background",
-                checked = enabled,
+                checked = settings?.autoRunEnabled ?: false,
                 enabled = autoRunAllowed,
-                onCheckedChange = {
-                    val hours = autoHoursText.toIntOrNull()?.coerceIn(1, 999) ?: 6
-                    vm.setAutoRunEnabled(it, hours)
+                onCheckedChange = { enabled ->
+                    val safeInterval = intervalMinutes?.coerceIn(15, 10_080) ?: 15
+                    onAutoRunChange(enabled, safeInterval)
                 }
             )
 
-            Spacer(Modifier.height(8.dp))
+            Divider()
 
             OutlinedTextField(
-                value = autoHoursText,
-                onValueChange = { autoHoursText = it.filter(Char::isDigit).take(3) },
-                label = { Text("Every X hours") },
+                value = intervalText,
+                onValueChange = { text ->
+                    intervalText = text.filter(Char::isDigit).take(5)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Interval (minutes)") },
+                placeholder = { Text("15") },
+                isError = intervalText.isNotEmpty() && !isValid,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
-                supportingText = { Text("Common values: 6, 12, 24") },
-                modifier = Modifier.fillMaxWidth()
+                supportingText = {
+                    Text(
+                        when {
+                            intervalText.isEmpty() -> "Enter interval (15–10080 minutes)"
+                            !isValid -> "Must be between 15 and 10080"
+                            else -> "Examples: 15 (15min), 60 (1hr), 360 (6hr)"
+                        }
+                    )
+                },
+                enabled = autoRunAllowed
             )
-
-            Spacer(Modifier.height(8.dp))
 
             Button(
                 onClick = {
-                    val hours = autoHoursText.toIntOrNull()?.coerceIn(1, 999) ?: 6
-                    vm.setAutoRunEnabled(enabled, hours)
+                    val safeInterval = intervalMinutes?.coerceIn(15, 10_080) ?: 15
+                    onAutoRunChange(settings?.autoRunEnabled ?: false, safeInterval)
                 },
-                enabled = autoRunAllowed
-            ) { Text("Apply interval") }
+                enabled = autoRunAllowed && (intervalText.isEmpty() || isValid),
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Apply Interval")
+            }
         }
 
-        SectionCard {
-            Text("Export", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
+        // Background Work Status
+        BackgroundWorkStatusCard(
+            state = backgroundWorkState,
+            onRunNow = onRunNow,
+            onReschedule = onReschedule
+        )
 
+        // Background Reliability
+        BackgroundReliabilityCard(
+            onFixScheduling = onReschedule,
+            onOpenBatterySettings = {
+                SystemSettingsIntents.openBatteryOptimizationSettings(context)
+            }
+        )
+
+        Spacer(Modifier.height(spacing.xl))
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Data Tab
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun DataTab(
+    exportState: UiState<Unit>,
+    deleteState: UiState<Unit>,
+    onExport: (Context, Int) -> Unit,
+    onClearExportState: () -> Unit,
+    onDelete: () -> Unit,
+    onClearDeleteState: () -> Unit
+) {
+    val spacing = LocalSpacing.current
+    val context = LocalContext.current
+
+    var exportCount by remember { mutableStateOf("50") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = spacing.screenPadding)
+            .padding(vertical = spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
+    ) {
+        SettingsSectionCard(
+            title = "Export Data",
+            description = "Export measurements as JSON for analysis"
+        ) {
             OutlinedTextField(
-                value = exportNText,
-                onValueChange = { exportNText = it.filter(Char::isDigit).take(5) },
-                label = { Text("Export last N records") },
+                value = exportCount,
+                onValueChange = { text ->
+                    exportCount = text.filter(Char::isDigit).take(5)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Number of records") },
+                placeholder = { Text("50") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
+                supportingText = {
+                    Text("Export last N measurements (1–10000)")
+                }
+            )
+
+            FilledTonalButton(
+                onClick = {
+                    val count = exportCount.toIntOrNull()?.coerceIn(1, 10_000) ?: 50
+                    onExport(context, count)
+                },
                 modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Button(onClick = {
-                val n = exportNText.toIntOrNull()?.coerceIn(1, 10_000) ?: 50
-                vm.exportLastN(ctx, n)
-            }) { Text("Export to JSON & share") }
-
-            Spacer(Modifier.height(8.dp))
-
-            when (val st = vm.exportState.collectAsState().value) {
-                UiState.Idle -> {}
-                UiState.Loading -> Text("Exporting…")
-                is UiState.Success -> Text("Share sheet opened.")
-                is UiState.Error -> Text("Export error: ${st.message}")
-            }
-        }
-
-        SectionCard {
-            Text("Delete my data", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = vm::deleteMyData) { Text("Delete local DB data") }
-        }
-    }
-}
-
-@Composable
-private fun PrivacyAndPermissionsCard(
-    consentAccepted: Boolean,
-    collectionEnabled: Boolean,
-    onConsentChange: (Boolean) -> Unit,
-    onCollectionChange: (Boolean) -> Unit,
-    coarseGranted: Boolean,
-    fineGranted: Boolean,
-    phoneGranted: Boolean,
-    locationServicesOn: Boolean,
-    onGrantCoarse: () -> Unit,
-    onGrantFine: () -> Unit,
-    onGrantPhone: () -> Unit,
-    onRefresh: () -> Unit
-) {
-    SectionCard {
-        Text("Privacy & permissions", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            "CrowdMeasure collects network/performance measurements only when you opt in. " +
-                    "Optional permissions improve measurement quality.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        SettingSwitchRow(
-            title = "I agree and opt in",
-            subtitle = "Required before enabling collection",
-            checked = consentAccepted,
-            onCheckedChange = onConsentChange
-        )
-
-        Divider()
-
-        SettingSwitchRow(
-            title = "Enable data collection",
-            subtitle = "Allows background measurement collection",
-            checked = collectionEnabled,
-            enabled = consentAccepted,
-            onCheckedChange = onCollectionChange
-        )
-
-        Spacer(Modifier.height(10.dp))
-
-        // Helpful status hint for Samsung-style gating
-        if (!locationServicesOn) {
-            AssistChip(
-                onClick = onRefresh,
-                label = { Text("Location services are OFF — cell metrics may be empty") }
-            )
-            Spacer(Modifier.height(8.dp))
-        }
-
-        PermissionRow(
-            title = "Location (approximate)",
-            subtitle = "Adds coarse coordinates to a measurement",
-            granted = coarseGranted,
-            enabled = consentAccepted,
-            onRequest = onGrantCoarse
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        PermissionRow(
-            title = "Location (precise)",
-            subtitle = "Often required to read detailed serving cell / signal (Samsung)",
-            granted = fineGranted,
-            enabled = consentAccepted,
-            onRequest = onGrantFine
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        PermissionRow(
-            title = "Phone state",
-            subtitle = "Enables additional cell metrics on some devices",
-            granted = phoneGranted,
-            enabled = consentAccepted,
-            onRequest = onGrantPhone,
-            buttonText = "Grant"
-        )
-
-        Spacer(Modifier.height(4.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onRefresh) { Text("Refresh") }
-        }
-    }
-}
-
-@Composable
-private fun SettingSwitchRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    enabled: Boolean = true
-) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = { Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                enabled = enabled
-            )
-        }
-    )
-}
-
-@Composable
-private fun PermissionRow(
-    title: String,
-    subtitle: String,
-    granted: Boolean,
-    enabled: Boolean,
-    onRequest: () -> Unit,
-    buttonText: String = "Grant"
-) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = {
-            Column {
-                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = if (granted) "Status: Granted" else "Status: Not granted",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        trailingContent = {
-            OutlinedButton(
-                onClick = onRequest,
-                enabled = enabled && !granted
             ) {
-                Text(if (granted) "Granted" else buttonText)
+                Text("Export & Share JSON")
+            }
+
+            // Export status
+            when (exportState) {
+                UiState.Idle -> { /* Nothing */ }
+                UiState.Loading -> {
+                    Text(
+                        text = "Exporting...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                is UiState.Success -> {
+                    Text(
+                        text = "✓ Exported successfully",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    LaunchedEffect(Unit) {
+                        kotlinx.coroutines.delay(3000)
+                        onClearExportState()
+                    }
+                }
+                is UiState.Error -> {
+                    Text(
+                        text = "⚠️ ${exportState.message}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    TextButton(onClick = onClearExportState) {
+                        Text("Dismiss")
+                    }
+                }
             }
         }
-    )
+
+        SettingsSectionCard(
+            title = "Delete Local Data",
+            description = "Permanently delete all measurements from this device"
+        ) {
+            AssistiveHint(
+                text = "⚠️ This action cannot be undone. All local measurements will be deleted."
+            )
+
+            Button(
+                onClick = onDelete,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
+            ) {
+                Text("Delete All Data")
+            }
+
+            // Delete status
+            when (deleteState) {
+                UiState.Idle -> { /* Nothing */ }
+                UiState.Loading -> {
+                    Text(
+                        text = "Deleting...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                is UiState.Success -> {
+                    Text(
+                        text = "✓ All data deleted",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    LaunchedEffect(Unit) {
+                        kotlinx.coroutines.delay(3000)
+                        onClearDeleteState()
+                    }
+                }
+                is UiState.Error -> {
+                    Text(
+                        text = "⚠️ ${deleteState.message}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    TextButton(onClick = onClearDeleteState) {
+                        Text("Dismiss")
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(spacing.xl))
+    }
 }
 
-private fun hasFineLocation(context: Context): Boolean =
-    ContextCompat.checkSelfPermission(
+// ══════════════════════════════════════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════════════════════════════════════
+
+private fun hasFineLocation(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(
         context,
         Manifest.permission.ACCESS_FINE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
+}
 
 private fun isLocationServicesEnabled(context: Context): Boolean {
-    val lm = context.getSystemService<LocationManager>() ?: return false
+    val locationManager = context.getSystemService<LocationManager>() ?: return false
     return try {
-        lm.isLocationEnabled
+        locationManager.isLocationEnabled
     } catch (_: Throwable) {
-        val gps = runCatching { lm.isProviderEnabled(LocationManager.GPS_PROVIDER) }.getOrDefault(false)
-        val net = runCatching { lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) }.getOrDefault(false)
-        gps || net
+        val gps = runCatching {
+            locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+        }.getOrDefault(false)
+        val network = runCatching {
+            locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        }.getOrDefault(false)
+        gps || network
     }
 }

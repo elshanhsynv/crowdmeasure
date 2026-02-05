@@ -1,11 +1,11 @@
-package com.example.crowdmeasure.data.repo
+package com.example.crowdmeasure.domain.repo
 
 import com.example.crowdmeasure.data.db.MeasurementDao
-import com.example.crowdmeasure.data.db.RecordState
 import com.example.crowdmeasure.data.prefs.AppPreferences
-import com.example.crowdmeasure.domain.repo.UploadRepository
+import com.example.crowdmeasure.domain.model.RecordState
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -16,17 +16,18 @@ class UploadRepositoryFirestore @Inject constructor(
 ) : UploadRepository {
 
     override suspend fun uploadPending(limit: Int): Result<Int> = runCatching {
-        // Hard gate: require consent/collection enabled (privacy)
         val settings = prefs.settingsFirst()
-        if (!settings.consentAccepted || !settings.collectionEnabled) {
-            return@runCatching 0
-        }
+        if (!settings.firestoreUploadsEnabled) return@runCatching 0
+        if (!settings.consentAccepted || !settings.collectionEnabled) return@runCatching 0
+
 
         prefs.ensureInstallId()
         val installId = prefs.settingsFirst().installId
 
-        val pending = dao.getByState(RecordState.PENDING, limit)
+        val pending = dao.getUploadCandidates( limit)
         if (pending.isEmpty()) return@runCatching 0
+
+
 
         val batch = firestore.batch()
 
@@ -50,7 +51,8 @@ class UploadRepositoryFirestore @Inject constructor(
 
         batch.commit().await()
 
-        dao.updateState(pending.map { it.measurementId }, RecordState.UPLOADED)
+
+        dao.updateState(pending.map { it.measurementId }, RecordState.UPLOADED.name)
         pending.size
     }
 
@@ -72,14 +74,14 @@ class UploadRepositoryFirestore @Inject constructor(
             out[k] = when (v) {
                 JSONObject.NULL -> null
                 is JSONObject -> v.toMap()
-                is org.json.JSONArray -> v.toList()
+                is JSONArray -> v.toList()
                 else -> v
             }
         }
         return out
     }
 
-    private fun org.json.JSONArray.toList(): List<Any?> {
+    private fun JSONArray.toList(): List<Any?> {
         val out = ArrayList<Any?>(length())
         for (i in 0 until length()) {
             val v = get(i)
@@ -87,7 +89,7 @@ class UploadRepositoryFirestore @Inject constructor(
                 when (v) {
                     JSONObject.NULL -> null
                     is JSONObject -> v.toMap()
-                    is org.json.JSONArray -> v.toList()
+                    is JSONArray -> v.toList()
                     else -> v
                 }
             )
