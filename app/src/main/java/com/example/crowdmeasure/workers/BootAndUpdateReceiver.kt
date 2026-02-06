@@ -11,7 +11,7 @@ import androidx.work.WorkManager
 class BootAndUpdateReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
-        WorkManagerInit.ensureInitialized(context)
+//        WorkManagerInit.ensureInitialized(context)
 
         val req = OneTimeWorkRequestBuilder<WorkRescheduleWorker>()
             .setConstraints(Constraints.NONE)

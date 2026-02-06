@@ -1,3 +1,4 @@
+// workers/WorkRescheduleWorker.kt
 package com.example.crowdmeasure.workers
 
 import android.content.Context
@@ -20,15 +21,9 @@ class WorkRescheduleWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return try {
             val s = sessionRepo.settings.first()
-            scheduler.scheduleMaintenanceDaily()
-            val allowed = s.consentAccepted && s.collectionEnabled && s.autoRunEnabled
-            if (allowed) {
-                scheduler.scheduleAutoRun(s.autoRunIntervalMinutes.toLong(), s.collectOnlyWifi)
-            } else {
-                scheduler.cancelAutoRun()
-            }
+            scheduler.rescheduleFromSettings(settings = s, kickoffOnceIfAllowed = false)
             Result.success()
-        } catch (t: Throwable) {
+        } catch (_: Throwable) {
             Result.retry()
         }
     }

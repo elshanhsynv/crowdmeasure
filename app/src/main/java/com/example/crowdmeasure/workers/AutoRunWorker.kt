@@ -29,7 +29,6 @@ class AutoRunWorker @AssistedInject constructor(
         try {
             val settings = sessionRepo.settings.first()
 
-            // Hard privacy gate
             val allowed = settings.autoRunEnabled && settings.consentAccepted && settings.collectionEnabled
             if (!allowed) {
                 statusStore.markAutoRunEnd(
@@ -42,8 +41,6 @@ class AutoRunWorker @AssistedInject constructor(
                 return Result.success()
             }
 
-            // === Min-interval gate (prevents early/duplicate runs) ===
-            // Use scheduled interval; fall back to settings; clamp to WM min.
             val scheduledMinutes = statusStore.autoRunStatus.first().lastScheduleMinutes
                 .takeIf { it > 0 }
                 ?: settings.autoRunIntervalMinutes
@@ -52,8 +49,7 @@ class AutoRunWorker @AssistedInject constructor(
             val intervalMs = intervalMinutes * 60_000L
             val lastOk = statusStore.getLastSuccessUtcMs()
 
-            // Tolerance: if OS fires a bit earlier, skip (prevents "twice in an hour")
-            val toleranceMs = 60_000L // 1 minute
+            val toleranceMs = 60_000L
 
             if (lastOk > 0 && (now - lastOk) < (intervalMs - toleranceMs)) {
                 statusStore.markAutoRunEnd(
@@ -66,7 +62,6 @@ class AutoRunWorker @AssistedInject constructor(
                 return Result.success()
             }
 
-            // 1) Run measurement
             val measurement = measurementRepo.runSingleMeasurement().getOrElse {
                 statusStore.markAutoRunEnd(
                     nowUtcMs = System.currentTimeMillis(),
@@ -78,7 +73,6 @@ class AutoRunWorker @AssistedInject constructor(
                 return Result.retry()
             }
 
-            // 2) Insert into DB
             runCatching { measurementRepo.insert(measurement) }.onFailure {
                 statusStore.markAutoRunEnd(
                     nowUtcMs = System.currentTimeMillis(),
@@ -90,7 +84,6 @@ class AutoRunWorker @AssistedInject constructor(
                 return Result.retry()
             }
 
-            // 3) Upload (best-effort)
             var uploaded = 0
             var uploadError: String? = null
 

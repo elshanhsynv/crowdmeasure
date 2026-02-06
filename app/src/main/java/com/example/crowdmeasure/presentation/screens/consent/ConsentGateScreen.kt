@@ -4,10 +4,21 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +42,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
@@ -57,7 +69,10 @@ import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 import com.example.crowdmeasure.presentation.util.AppPermissions
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.times
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 
@@ -93,7 +108,7 @@ fun ConsentGateScreen(
     visible: Boolean,
     onComplete: () -> Unit,
     onDismiss: () -> Unit,
-    viewModel: ConsentGateViewModel,
+    viewModel: ConsentGateViewModel = hiltViewModel<ConsentGateViewModel>(),
 ) {
     // ═══════════════════════════════════════════════════════════
     // State
@@ -165,11 +180,12 @@ fun ConsentGateScreen(
 
                     PrivacyPromiseCard()
 
-                    ConsentControlsCard(
-                        consentAccepted = consentAccepted,
-                        collectionEnabled = collectionEnabled,
-                        onConsentChange = viewModel::setConsent,
-                        onCollectionChange = viewModel::setCollection,
+                    ConsentSwitchItem(
+                        title = "I understand and agree",
+                        subtitle = "Required to participate in crowdsourced measurements",
+                        checked = consentAccepted,
+                        onCheckedChange = viewModel::setConsent,
+                        enabled = true
                     )
 
                     OptionalPermissionsCard(
@@ -186,6 +202,21 @@ fun ConsentGateScreen(
                         onRequestPhoneState = {
                             requestPhoneState.launch(Manifest.permission.READ_PHONE_STATE)
                         }
+                    )
+
+//                    ConsentControlsCard(
+//                        consentAccepted = consentAccepted,
+//                        collectionEnabled = collectionEnabled,
+//                        onConsentChange = viewModel::setConsent,
+//                        onCollectionChange = viewModel::setCollection,
+//                    )
+
+                    ConsentSwitchItem(
+                        title = "Enable data collection",
+                        subtitle = "Start collecting network measurements in the background",
+                        checked = collectionEnabled,
+                        onCheckedChange = viewModel::setCollection,
+                        enabled = consentAccepted
                     )
 
                     ConsentHints(
@@ -409,13 +440,13 @@ private fun OptionalPermissionsCard(
             verticalArrangement = Arrangement.spacedBy(spacing.md)
         ) {
             Text(
-                text = "Optional Permissions",
+                text = "Permissions",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Text(
-                text = "These permissions improve measurement quality but are not required. You can grant them now or later in Settings.",
+                text = "These permissions improve measurement quality. You can grant them now or later in Settings.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -451,7 +482,6 @@ private fun OptionalPermissionsCard(
         }
     }
 }
-
 @Composable
 private fun PermissionItem(
     icon: ImageVector,
@@ -508,15 +538,56 @@ private fun PermissionItem(
         }
 
         if (!granted) {
+            val infinite = rememberInfiniteTransition(label = "grant_attention")
+
+            val pulse by infinite.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 1100, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "pulse"
+            )
+
+            val borderWidth by animateDpAsState(
+                targetValue = if (enabled) (1.dp + (pulse * 2.dp)) else 1.dp,
+                label = "borderWidth"
+            )
+
+            val scale by animateFloatAsState(
+                targetValue = if (enabled) 1.03f else 1f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "scale"
+            )
+
+            val borderColor = if (enabled) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.55f + 0.35f * pulse)
+            } else {
+                MaterialTheme.colorScheme.outline
+            }
+
             OutlinedButton(
                 onClick = onRequest,
-                enabled = enabled
+                enabled = enabled,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                },
+                border = BorderStroke(borderWidth, borderColor),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (enabled)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                    else
+                        Color.Transparent
+                ),
             ) {
                 Text("Grant")
             }
         }
     }
 }
+
 
 @Composable
 private fun ConsentHints(
@@ -587,20 +658,30 @@ private fun ConsentActions(
 }
 
 
+//@Preview
+//@Composable
+//private fun ConsentGateScreenPreview() {
+//    ConsentGateScreen(
+//        visible = true,
+//        onComplete = {},
+//        onDismiss = {},
+//        viewModel = hiltViewModel()
+//    )
+//}
+
+
+
 @Preview
 @Composable
-private fun ConsentGateScreenPreview() {
-    ConsentGateScreen(
-        visible = true,
-        onComplete = {},
-        onDismiss = {},
-        viewModel = hiltViewModel()
+private fun OptionalPermissionsCardPreview() {
+    OptionalPermissionsCard(
+        fineLocationGranted = false,
+        phoneStateGranted = false,
+        enabled = true,
+        onRequestFineLocation = {},
+        onRequestPhoneState = {}
     )
 }
-
-
-
-
 
 
 

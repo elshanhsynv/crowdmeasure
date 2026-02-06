@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,11 +63,14 @@ import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.presentation.ui.components.AssistiveHint
 import com.example.crowdmeasure.presentation.ui.components.BackgroundReliabilityCard
 import com.example.crowdmeasure.presentation.ui.components.BackgroundWorkStatusCard
+import com.example.crowdmeasure.presentation.ui.components.BannerTone
+import com.example.crowdmeasure.presentation.ui.components.InfoBanner
 import com.example.crowdmeasure.presentation.ui.components.PermissionRow
 import com.example.crowdmeasure.presentation.ui.components.SettingsSectionCard
 import com.example.crowdmeasure.presentation.ui.components.SettingSwitchRow
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 import com.example.crowdmeasure.presentation.util.AppPermissions
+import com.example.crowdmeasure.presentation.util.AppPermissions.isLocationServicesEnabled
 import com.example.crowdmeasure.presentation.util.SystemSettingsIntents
 import com.example.crowdmeasure.presentation.util.UiState
 
@@ -76,12 +81,6 @@ import com.example.crowdmeasure.presentation.util.UiState
  * 1. Privacy - Consent, permissions, uploads
  * 2. Collection - Endpoint, intervals, Wi-Fi only, auto-run
  * 3. Data - Export, delete
- *
- * Design:
- * - Tabs for better organization (not long scroll)
- * - Clear sections within each tab
- * - Consistent card styling
- * - Permission state management
  */
 @Composable
 fun SettingsScreen(
@@ -200,7 +199,6 @@ private fun PrivacyTab(
     val spacing = LocalSpacing.current
     val context = LocalContext.current
 
-    // Permission state
     var coarseGranted by remember { mutableStateOf(AppPermissions.hasCoarseLocation(context)) }
     var fineGranted by remember { mutableStateOf(hasFineLocation(context)) }
     var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(context)) }
@@ -213,7 +211,6 @@ private fun PrivacyTab(
         locationServicesOn = isLocationServicesEnabled(context)
     }
 
-    // Permission launchers
     val requestCoarse = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { refreshPermissions() }
@@ -248,7 +245,7 @@ private fun PrivacyTab(
                         "Optional permissions improve measurement quality."
             )
 
-            Divider()
+            HorizontalDivider()
 
             SettingSwitchRow(
                 title = "I Understand and Agree",
@@ -257,7 +254,7 @@ private fun PrivacyTab(
                 onCheckedChange = onConsentChange
             )
 
-            Divider()
+            HorizontalDivider()
 
             SettingSwitchRow(
                 title = "Enable Data Collection",
@@ -267,7 +264,7 @@ private fun PrivacyTab(
                 onCheckedChange = onCollectionChange
             )
 
-            Divider()
+            HorizontalDivider()
 
             SettingSwitchRow(
                 title = "Enable Firestore Uploads",
@@ -278,12 +275,10 @@ private fun PrivacyTab(
             )
         }
 
-        // Permissions
         SettingsSectionCard(
             title = "Optional Permissions",
             description = "Improve measurement quality"
         ) {
-            // Location services warning
             if (!locationServicesOn) {
                 AssistChip(
                     onClick = { refreshPermissions() },
@@ -302,7 +297,7 @@ private fun PrivacyTab(
                 onRequest = { requestCoarse.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }
             )
 
-            Divider()
+            HorizontalDivider()
 
             PermissionRow(
                 title = "Fine Location",
@@ -312,7 +307,7 @@ private fun PrivacyTab(
                 onRequest = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
             )
 
-            Divider()
+            HorizontalDivider()
 
             PermissionRow(
                 title = "Phone State",
@@ -339,7 +334,6 @@ private fun PrivacyTab(
 // ══════════════════════════════════════════════════════════════════════
 // Collection Tab
 // ══════════════════════════════════════════════════════════════════════
-
 @Composable
 private fun CollectionTab(
     settings: AppSettings?,
@@ -353,15 +347,24 @@ private fun CollectionTab(
     val spacing = LocalSpacing.current
     val context = LocalContext.current
 
-    var endpoint by remember(settings?.endpointUrl) {
-        mutableStateOf(settings?.endpointUrl ?: "")
-    }
+    val endpointInitial = settings?.endpointUrl.orEmpty()
+    var endpoint by rememberSaveable(endpointInitial) { mutableStateOf(endpointInitial) }
 
-    var intervalText by remember(settings?.autoRunIntervalMinutes) {
-        mutableStateOf((settings?.autoRunIntervalMinutes ?: 15).toString())
-    }
+    val intervalInitial = (settings?.autoRunIntervalMinutes ?: 20).toString()
+    var intervalText by rememberSaveable(intervalInitial) { mutableStateOf(intervalInitial) }
 
-    val autoRunAllowed = settings?.consentAccepted == true && settings?.collectionEnabled == true
+    val autoRunAllowed = settings?.consentAccepted == true && settings.collectionEnabled
+    val currentInterval = settings?.autoRunIntervalMinutes ?: 20
+
+    val parsedInterval by remember(intervalText) {
+        derivedStateOf { intervalText.toIntOrNull() }
+    }
+    val intervalValid by remember(parsedInterval) {
+        derivedStateOf { parsedInterval != null && parsedInterval in 15..10_080 }
+    }
+    val intervalChanged by remember(parsedInterval, currentInterval) {
+        derivedStateOf { parsedInterval != null && parsedInterval != currentInterval }
+    }
 
     Column(
         modifier = Modifier
@@ -371,10 +374,9 @@ private fun CollectionTab(
             .padding(vertical = spacing.sm),
         verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
     ) {
-        // Test Endpoint
         SettingsSectionCard(
             title = "Test Endpoint",
-            description = "HTTPS URL to test network performance against"
+            description = "HTTPS URL used for network performance checks"
         ) {
             OutlinedTextField(
                 value = endpoint,
@@ -383,54 +385,57 @@ private fun CollectionTab(
                 label = { Text("HTTPS URL") },
                 placeholder = { Text("https://api.example.com") },
                 singleLine = true,
-                supportingText = { Text("Must start with https://") }
+                supportingText = { Text("Use a stable HTTPS endpoint (no personal tokens).") }
             )
 
-            Button(
-                onClick = { onSaveEndpoint(endpoint) },
-                modifier = Modifier.align(Alignment.End)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
             ) {
-                Text("Save Endpoint")
+                Button(
+                    onClick = { onSaveEndpoint(endpoint) },
+                    enabled = endpoint.startsWith("https://")
+                ) { Text("Save") }
             }
         }
 
-        // Collection Rules
         SettingsSectionCard(
             title = "Collection Rules",
-            description = "Control when measurements are collected"
+            description = "Control when background work is allowed to use network"
         ) {
             SettingSwitchRow(
-                title = "Collect Only on Wi-Fi",
-                subtitle = "Avoid mobile data usage for measurements",
+                title = "Wi-Fi only",
+                subtitle = "Avoid using mobile data",
                 checked = settings?.collectOnlyWifi ?: false,
                 onCheckedChange = onCollectOnlyWifiChange
             )
         }
 
-        // Auto-Run Configuration
         SettingsSectionCard(
-            title = "Auto-Run Configuration",
-            description = if (!autoRunAllowed) {
-                "Enable consent and collection to configure auto-run"
-            } else {
-                "Run measurements automatically in the background"
-            }
+            title = "Auto-Run",
+            description = "Periodic background measurements"
         ) {
-            val intervalMinutes = intervalText.toIntOrNull()
-            val isValid = intervalMinutes != null && intervalMinutes in 15..10_080
+            if (!autoRunAllowed) {
+                InfoBanner(
+                    title = "To enable Auto-Run, accept consent and enable collection.",
+                    body = "You can opt out at any time.",
+                    tone = BannerTone.Warning
+                )
+                Spacer(Modifier.height(spacing.sm))
+            }
 
             SettingSwitchRow(
                 title = "Enable Auto-Run",
-                subtitle = "Runs collection periodically in the background",
-                checked = settings?.autoRunEnabled ?: false,
+                subtitle = "Runs periodically in the background",
+                checked = settings?.autoRunEnabled ?: true,
                 enabled = autoRunAllowed,
                 onCheckedChange = { enabled ->
-                    val safeInterval = intervalMinutes?.coerceIn(15, 10_080) ?: 15
+                    val safeInterval = (parsedInterval ?: currentInterval).coerceIn(15, 10_080)
                     onAutoRunChange(enabled, safeInterval)
                 }
             )
 
-            Divider()
+            Spacer(Modifier.height(spacing.sm))
 
             OutlinedTextField(
                 value = intervalText,
@@ -439,42 +444,49 @@ private fun CollectionTab(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Interval (minutes)") },
-                placeholder = { Text("15") },
-                isError = intervalText.isNotEmpty() && !isValid,
+                placeholder = { Text("20") },
+                isError = intervalText.isNotEmpty() && !intervalValid,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
+                enabled = autoRunAllowed,
                 supportingText = {
                     Text(
                         when {
-                            intervalText.isEmpty() -> "Enter interval (15–10080 minutes)"
-                            !isValid -> "Must be between 15 and 10080"
-                            else -> "Examples: 15 (15min), 60 (1hr), 360 (6hr)"
+                            intervalText.isEmpty() -> "15–10080 minutes"
+                            !intervalValid -> "Enter a value between 15 and 10080"
+                            else -> "Example: 20 (default), 60 (hourly), 360 (6 hours)"
                         }
                     )
-                },
-                enabled = autoRunAllowed
+                }
             )
 
-            Button(
-                onClick = {
-                    val safeInterval = intervalMinutes?.coerceIn(15, 10_080) ?: 15
-                    onAutoRunChange(settings?.autoRunEnabled ?: false, safeInterval)
-                },
-                enabled = autoRunAllowed && (intervalText.isEmpty() || isValid),
-                modifier = Modifier.align(Alignment.End)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
             ) {
-                Text("Apply Interval")
+                TextButton(
+                    onClick = { intervalText = currentInterval.toString() },
+                    enabled = autoRunAllowed && intervalText.isNotBlank() && intervalText != currentInterval.toString()
+                ) { Text("Reset") }
+
+                Spacer(Modifier.width(spacing.sm))
+
+                Button(
+                    onClick = {
+                        val safeInterval = (parsedInterval ?: currentInterval).coerceIn(15, 10_080)
+                        onAutoRunChange(settings?.autoRunEnabled ?: true, safeInterval)
+                    },
+                    enabled = autoRunAllowed && intervalValid && intervalChanged
+                ) { Text("Apply") }
             }
         }
 
-        // Background Work Status
         BackgroundWorkStatusCard(
             state = backgroundWorkState,
             onRunNow = onRunNow,
             onReschedule = onReschedule
         )
 
-        // Background Reliability
         BackgroundReliabilityCard(
             onFixScheduling = onReschedule,
             onOpenBatterySettings = {
@@ -643,17 +655,3 @@ private fun hasFineLocation(context: Context): Boolean {
     ) == PackageManager.PERMISSION_GRANTED
 }
 
-private fun isLocationServicesEnabled(context: Context): Boolean {
-    val locationManager = context.getSystemService<LocationManager>() ?: return false
-    return try {
-        locationManager.isLocationEnabled
-    } catch (_: Throwable) {
-        val gps = runCatching {
-            locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-        }.getOrDefault(false)
-        val network = runCatching {
-            locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-        }.getOrDefault(false)
-        gps || network
-    }
-}

@@ -1,8 +1,9 @@
+// workers/WorkScheduler.kt
 package com.example.crowdmeasure.workers
 
 import androidx.work.*
 import com.example.crowdmeasure.data.prefs.WorkerStatusStore
-import kotlinx.coroutines.flow.Flow
+import com.example.crowdmeasure.domain.repo.AppSettings
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.concurrent.TimeUnit
@@ -17,19 +18,21 @@ class WorkScheduler @Inject constructor(
 
     companion object {
         const val AUTO_RUN_NAME = "auto_run_measurement"
+        const val AUTO_RUN_KICKOFF_NAME = "auto_run_measurement_kickoff"
         const val MAINTENANCE_NAME = "maintenance_cleanup"
         const val RESCHEDULE_NAME = "reschedule_background_work"
 
         private const val MIN_PERIODIC_MINUTES = 15L
+
         const val TAG_RESCHEDULE = "reschedule"
         const val TAG_AUTORUN = "autorun"
         const val TAG_MAINTENANCE = "maintenance"
     }
 
-    fun observeAutoRunWorkInfo(): Flow<WorkInfo?> =
+    fun observeAutoRunWorkInfo() =
         workManager.getWorkInfosForUniqueWorkFlow(AUTO_RUN_NAME).map { it.firstOrNull() }
 
-    fun observeMaintenanceWorkInfo(): Flow<WorkInfo?> =
+    fun observeMaintenanceWorkInfo() =
         workManager.getWorkInfosForUniqueWorkFlow(MAINTENANCE_NAME).map { it.firstOrNull() }
 
     fun scheduleMaintenanceDaily() {
@@ -48,6 +51,37 @@ class WorkScheduler @Inject constructor(
             ExistingPeriodicWorkPolicy.UPDATE,
             req
         )
+    }
+
+    /**
+     * Single source of truth:
+     * - schedules maintenance always
+     * - schedules periodic auto-run only when allowed
+     * - optionally enqueues an immediate one-time kickoff to match user expectation
+     */
+    suspend fun rescheduleFromSettings(
+        settings: AppSettings,
+        kickoffOnceIfAllowed: Boolean
+    ) {
+        scheduleMaintenanceDaily()
+
+        val allowed =
+            settings.consentAccepted && settings.collectionEnabled && settings.autoRunEnabled
+        if (!allowed) {
+            cancelAutoRun()
+            // also cancel kickoff if previously enqueued
+            workManager.cancelUniqueWork(AUTO_RUN_KICKOFF_NAME)
+            return
+        }
+
+        scheduleAutoRun(
+            intervalMinutes = settings.autoRunIntervalMinutes.toLong(),
+            wifiOnly = settings.collectOnlyWifi
+        )
+
+        if (kickoffOnceIfAllowed) {
+            kickoffAutoRunOnce(settings.collectOnlyWifi)
+        }
     }
 
     suspend fun scheduleAutoRun(intervalMinutes: Long, wifiOnly: Boolean) {
@@ -74,6 +108,24 @@ class WorkScheduler @Inject constructor(
         )
 
         statusStore.rememberSchedule(safeMinutes, wifiOnly)
+    }
+
+    fun kickoffAutoRunOnce(wifiOnly: Boolean) {
+        val constraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+            .build()
+
+        val req = OneTimeWorkRequestBuilder<AutoRunWorker>()
+            .setConstraints(constraints)
+            .addTag("${TAG_AUTORUN}_kickoff")
+            .build()
+
+        workManager.enqueueUniqueWork(
+            "auto_run_measurement_kickoff",
+            ExistingWorkPolicy.REPLACE,
+            req
+        )
     }
 
     fun cancelAutoRun() {
@@ -105,3 +157,5 @@ class WorkScheduler @Inject constructor(
         workManager.enqueue(req)
     }
 }
+
+

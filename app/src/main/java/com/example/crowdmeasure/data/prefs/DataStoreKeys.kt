@@ -13,18 +13,13 @@ object DataStoreKeys {
     val INSTALL_ID = stringPreferencesKey("install_id")
     val CONSENT_GATE_DISMISSED = booleanPreferencesKey("consent_gate_dismissed")
     val FIRESTORE_UPLOADS_ENABLED = booleanPreferencesKey("firestore_uploads_enabled")
-
     val AUTORUN_LAST_START_UTC_MS = longPreferencesKey("autorun_last_start_utc_ms")
     val AUTORUN_LAST_END_UTC_MS = longPreferencesKey("autorun_last_end_utc_ms")
     val AUTORUN_LAST_RESULT = stringPreferencesKey("autorun_last_result")
     val AUTORUN_LAST_ERROR = stringPreferencesKey("autorun_last_error")
     val AUTORUN_LAST_UPLOADED_COUNT = intPreferencesKey("autorun_last_uploaded_count")
     val AUTORUN_LAST_MEASUREMENT_ID = stringPreferencesKey("autorun_last_measurement_id")
-
-    // Prevent early/duplicate execution
     val AUTORUN_LAST_SUCCESS_UTC_MS = longPreferencesKey("autorun_last_success_utc_ms")
-
-    // Remember last schedule to avoid reschedule-reset loops
     val AUTORUN_LAST_SCHEDULE_MINUTES = intPreferencesKey("autorun_last_schedule_minutes")
     val AUTORUN_LAST_SCHEDULE_WIFI_ONLY = booleanPreferencesKey("autorun_last_schedule_wifi_only")
 }

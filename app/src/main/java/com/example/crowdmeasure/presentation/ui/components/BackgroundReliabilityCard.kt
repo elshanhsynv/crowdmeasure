@@ -7,9 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 
-/**
- * Card with tips for improving background reliability.
- */
 @Composable
 fun BackgroundReliabilityCard(
     onFixScheduling: () -> Unit,

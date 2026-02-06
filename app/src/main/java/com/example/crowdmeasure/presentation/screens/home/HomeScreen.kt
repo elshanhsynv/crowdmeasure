@@ -20,27 +20,33 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.presentation.ui.components.AppCard
 import com.example.crowdmeasure.presentation.ui.components.BannerTone
 import com.example.crowdmeasure.presentation.ui.components.InfoBanner
 import com.example.crowdmeasure.presentation.ui.components.MetricRow
-import com.example.crowdmeasure.presentation.ui.components.states.EmptyState
+import com.example.crowdmeasure.presentation.ui.components.states.AppEmptyState
 import com.example.crowdmeasure.presentation.ui.components.states.InlineStatusText
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
+import com.example.crowdmeasure.presentation.util.AppPermissions
+import com.example.crowdmeasure.presentation.util.LocationServicesBanner
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -144,8 +150,14 @@ private fun HomeContent(
 @Composable
 private fun PermissionWarnings(state: HomeUiState) {
     val spacing = LocalSpacing.current
+    val locationServicesOn = AppPermissions.isLocationServicesEnabled(LocalContext.current)
+
 
     Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+        LocationServicesBanner {
+            /* Nothing */
+        }
+
         // Critical: No consent or collection disabled
         if (!state.canCollect) {
             InfoBanner(
@@ -330,9 +342,9 @@ private fun LastMeasurementCard(
 
         if (measurement == null) {
             // Empty state
-            EmptyState(
-                message = "No measurements yet",
-                subtitle = "Start your first measurement above"
+            AppEmptyState(
+                title = "No measurements yet",
+                description = "Tap 'Start measurement' to begin",
             )
         } else {
             // Measurement preview

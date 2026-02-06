@@ -16,7 +16,7 @@ class AppPreferences(private val context: Context) {
         const val CONSENT_VERSION = 1
         const val DEFAULT_ENDPOINT = "https://google.com"
         const val DEFAULT_RETENTION_DAYS = 7
-        const val DEFAULT_AUTORUN_MINUTES = 15
+        const val DEFAULT_AUTORUN_MINUTES = 20
     }
 
 
@@ -31,12 +31,12 @@ class AppPreferences(private val context: Context) {
             collectionEnabled = prefs[DataStoreKeys.COLLECTION_ENABLED] ?: false,
             endpointUrl = prefs[DataStoreKeys.ENDPOINT_URL] ?: DEFAULT_ENDPOINT,
             collectOnlyWifi = prefs[DataStoreKeys.COLLECT_ONLY_WIFI] ?: false,
-            autoRunEnabled = prefs[DataStoreKeys.AUTO_RUN_ENABLED] ?: false,
+            autoRunEnabled = prefs[DataStoreKeys.AUTO_RUN_ENABLED] ?: true,
             autoRunIntervalMinutes = minutes.coerceIn(15, 7 * 24 * 60),
             retentionDays = prefs[DataStoreKeys.RETENTION_DAYS] ?: DEFAULT_RETENTION_DAYS,
             installId = installId,
             consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: false,
-            firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: false,
+            firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: true,
         )
     }
 
@@ -71,8 +71,6 @@ class AppPreferences(private val context: Context) {
             it[DataStoreKeys.AUTO_RUN_INTERVAL_MINUTES] = intervalMinutes.coerceIn(15, 7 * 24 * 60)
         }
     }
-
-
     suspend fun setRetentionDays(days: Int) {
         context.dataStore.edit { it[DataStoreKeys.RETENTION_DAYS] = days.coerceIn(1, 60) }
     }
@@ -81,7 +79,6 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { it[DataStoreKeys.CONSENT_GATE_DISMISSED] = dismissed }
     }
 
-    // Optional: when user deletes data, you may want gate to appear again
     suspend fun resetConsentGateDismissed() {
         context.dataStore.edit { it[DataStoreKeys.CONSENT_GATE_DISMISSED] = false }
     }

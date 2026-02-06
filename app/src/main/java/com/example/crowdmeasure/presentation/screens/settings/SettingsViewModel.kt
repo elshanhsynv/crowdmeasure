@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -117,21 +118,23 @@ class SettingsViewModel @Inject constructor(
     fun setConsent(accepted: Boolean) {
         viewModelScope.launch {
             setConsentAcceptedUseCase(accepted)
-            if (!accepted) {
-                workScheduler.cancelAutoRun()
-            }
+//            rescheduleAfterSettingsChange(kickoffIfAllowed = accepted)
         }
     }
 
     fun setCollection(enabled: Boolean) {
         viewModelScope.launch {
             setCollectionEnabledUseCase(enabled)
-            if (!enabled) {
-                workScheduler.cancelAutoRun()
-            }
+            rescheduleAfterSettingsChange(kickoffIfAllowed = enabled)
         }
     }
 
+    fun setCollectOnlyWifi(enabled: Boolean) {
+        viewModelScope.launch {
+            setCollectOnlyWifiUseCase(enabled)
+            rescheduleAfterSettingsChange(kickoffIfAllowed = false)
+        }
+    }
     fun setFirestoreUploads(enabled: Boolean) {
         viewModelScope.launch {
             setFirestoreUploadsEnabledUseCase(enabled)
@@ -143,46 +146,41 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setCollectOnlyWifi(enabled: Boolean) {
-        viewModelScope.launch {
-            setCollectOnlyWifiUseCase(enabled)
-            val currentSettings = settings.value ?: return@launch
-            if (currentSettings.autoRunEnabled && currentSettings.consentAccepted && currentSettings.collectionEnabled) {
-                workScheduler.scheduleAutoRun(
-                    intervalMinutes = currentSettings.autoRunIntervalMinutes.toLong(),
-                    wifiOnly = enabled
-                )
-            }
-        }
-    }
-
     fun setAutoRun(enabled: Boolean, intervalMinutes: Int) {
         viewModelScope.launch {
-            val currentSettings = settings.value
-            val allowed = currentSettings?.consentAccepted == true &&
-                    currentSettings.collectionEnabled
-
             val safeInterval = intervalMinutes.coerceIn(15, 10_080)
+            val currentSettings = settings.value
+            val allowedByConsentAndCollection =
+                currentSettings?.consentAccepted == true && currentSettings.collectionEnabled
 
-            if (!allowed) {
+            if (!allowedByConsentAndCollection) {
                 setAutoRunUseCase(false, safeInterval)
                 workScheduler.cancelAutoRun()
                 return@launch
             }
-
             setAutoRunUseCase(enabled, safeInterval)
-
-            if (enabled) {
-                workScheduler.scheduleAutoRun(
-                    intervalMinutes = safeInterval.toLong(),
-                    wifiOnly = currentSettings?.collectOnlyWifi == true
-                )
-            } else {
-                workScheduler.cancelAutoRun()
-            }
+            rescheduleAfterSettingsChange(kickoffIfAllowed = enabled)
         }
     }
 
+    private suspend fun rescheduleAfterSettingsChange(kickoffIfAllowed: Boolean) {
+        val s = userSessionRepository.settings.first()
+
+        workScheduler.scheduleMaintenanceDaily()
+
+        val allowed = s.consentAccepted && s.collectionEnabled && s.autoRunEnabled
+        if (allowed) {
+            workScheduler.scheduleAutoRun(
+                intervalMinutes = s.autoRunIntervalMinutes.toLong(),
+                wifiOnly = s.collectOnlyWifi
+            )
+            if (kickoffIfAllowed) {
+                workScheduler.kickoffAutoRunOnce(wifiOnly = s.collectOnlyWifi)
+            }
+        } else {
+            workScheduler.cancelAutoRun()
+        }
+    }
     fun runAutoRunNow() {
         workScheduler.runAutoRunOnceNowDebug(ignoreConstraints = true)
     }

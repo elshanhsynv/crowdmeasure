@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.dp
 @Immutable
 data class Spacing(
     // ═══════════════════════════════════════════════════════════
-    // Base Scale (4dp increments)
+    // Base Scale
     // ═══════════════════════════════════════════════════════════
     val none: Dp = 0.dp,
     val xxs: Dp = 2.dp,      // Tight spacing (icon + text)

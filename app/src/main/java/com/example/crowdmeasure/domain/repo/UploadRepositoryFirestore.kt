@@ -7,6 +7,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 class UploadRepositoryFirestore @Inject constructor(
@@ -31,6 +34,12 @@ class UploadRepositoryFirestore @Inject constructor(
 
         val batch = firestore.batch()
 
+        val currentTimeMillis = System.currentTimeMillis()
+        val instant = Instant.ofEpochMilli(currentTimeMillis)
+        val zonedDateTime = instant.atZone(ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss")
+        val humanReadableTime = zonedDateTime.format(formatter)
+
         pending.forEach { e ->
             val payloadMap = jsonToMap(e.json)
 
@@ -43,7 +52,7 @@ class UploadRepositoryFirestore @Inject constructor(
                     "timestamp_utc_ms" to e.timestampUtcMs,
                     "transport" to e.transport,
                     "feedback_tag" to e.feedbackTag,
-                    "uploaded_at_utc_ms" to System.currentTimeMillis(),
+                    "uploaded_at" to humanReadableTime,
                     "payload" to payloadMap
                 )
             )

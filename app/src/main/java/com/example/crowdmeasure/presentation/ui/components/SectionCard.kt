@@ -12,9 +12,9 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SectionCard(
+    modifier: Modifier = Modifier,
     title: String? = null,
     description: String? = null,
-    modifier: Modifier = Modifier,
     headerTrailing: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {

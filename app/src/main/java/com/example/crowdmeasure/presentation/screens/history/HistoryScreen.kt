@@ -1,5 +1,6 @@
 package com.example.crowdmeasure.presentation.screens.history
 
+import AppSearchBar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,7 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.crowdmeasure.presentation.ui.components.states.EmptyState
+import com.example.crowdmeasure.presentation.ui.components.states.AppEmptyState
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 import com.example.crowdmeasure.presentation.util.UiState
 
@@ -155,50 +156,58 @@ private fun SearchField(
     onClear: () -> Unit,
     resultCount: Int?
 ) {
-    val spacing = LocalSpacing.current
+    AppSearchBar(
+        query = query,
+        onQueryChange = onQueryChange,
+        onClear = onClear
+    )
 
-    Column(
-        verticalArrangement = Arrangement.spacedBy(spacing.xs)
-    ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Search...") },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            trailingIcon = {
-                if (query.isNotBlank()) {
-                    IconButton(onClick = onClear) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Clear search"
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            shape = MaterialTheme.shapes.large
-        )
 
-        if (resultCount != null) {
-            Text(
-                text = when (resultCount) {
-                    0 -> "No results"
-                    1 -> "1 measurement"
-                    else -> "$resultCount measurements"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = spacing.md)
-            )
-        }
-    }
+
+//    val spacing = LocalSpacing.current
+//
+//    Column(
+//        verticalArrangement = Arrangement.spacedBy(spacing.xs)
+//    ) {
+//        OutlinedTextField(
+//            value = query,
+//            onValueChange = onQueryChange,
+//            modifier = Modifier.fillMaxWidth(),
+//            placeholder = { Text("Search...") },
+//            leadingIcon = {
+//                Icon(
+//                    imageVector = Icons.Filled.Search,
+//                    contentDescription = null,
+//                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+//                )
+//            },
+//            trailingIcon = {
+//                if (query.isNotBlank()) {
+//                    IconButton(onClick = onClear) {
+//                        Icon(
+//                            imageVector = Icons.Filled.Close,
+//                            contentDescription = "Clear search"
+//                        )
+//                    }
+//                }
+//            },
+//            singleLine = true,
+//            shape = MaterialTheme.shapes.large
+//        )
+//
+//        if (resultCount != null) {
+//            Text(
+//                text = when (resultCount) {
+//                    0 -> "No results"
+//                    1 -> "1 measurement"
+//                    else -> "$resultCount measurements"
+//                },
+//                style = MaterialTheme.typography.bodySmall,
+//                color = MaterialTheme.colorScheme.onSurfaceVariant,
+//                modifier = Modifier.padding(horizontal = spacing.md)
+//            )
+//        }
+//    }
 }
 
 @Composable
@@ -431,18 +440,22 @@ private fun HistoryEmptyState(
         ) {
             if (hasFilter) {
                 // No results for this search
-                EmptyState(
-                    message = "No matching measurements",
-                    subtitle = "Try a different search term or clear the filter"
+                AppEmptyState(
+                    title = "No results",
+                    description = "Clear filter to see all measurements",
+                    icon = Icons.Filled.Close,
+                    action = {
+                        TextButton(onClick = onClearFilter) {
+                            Text("Clear filter")
+                        }
+                    }
                 )
-                TextButton(onClick = onClearFilter) {
-                    Text("Clear Filter")
-                }
             } else {
                 // No measurements at all
-                EmptyState(
-                    message = "No measurements yet",
-                    subtitle = "Run your first measurement from the Home screen"
+                AppEmptyState(
+                    title = "No measurements yet",
+                    description = "Tap 'Start measurement' to begin",
+                    icon = Icons.Filled.Search
                 )
             }
         }

@@ -69,6 +69,9 @@ dependencies {
 
     implementation("androidx.startup:startup-runtime:1.1.1")
 
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation(libs.androidx.compose.animation.core)
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

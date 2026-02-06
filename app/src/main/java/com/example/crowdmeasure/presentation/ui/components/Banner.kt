@@ -65,7 +65,7 @@ fun InfoBanner(
         modifier = modifier.fillMaxWidth(),
         color = containerColor,
         shape = MaterialTheme.shapes.large,
-        tonalElevation = spacing.none  // Flat for banners
+        tonalElevation = spacing.none
     ) {
         Row(
             modifier = Modifier.padding(spacing.cardPadding),
@@ -87,7 +87,6 @@ fun InfoBanner(
                     color = contentColor
                 )
             }
-
             trailing?.invoke()
         }
     }

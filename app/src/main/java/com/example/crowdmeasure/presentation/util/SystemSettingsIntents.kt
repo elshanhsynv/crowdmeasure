@@ -17,7 +17,6 @@ object SystemSettingsIntents {
 
         val candidates = listOf(
             Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
-            // Fallback: App details page (always exists)
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                 data = Uri.fromParts("package", appContext.packageName, null)
             }

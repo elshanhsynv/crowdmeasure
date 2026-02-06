@@ -20,8 +20,6 @@ class CrowdMeasureApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
-        // Initialize WorkManager before anything uses it
         val factory = EntryPointAccessors.fromApplication(
             this,
             WorkManagerFactoryEntryPoint::class.java
@@ -33,8 +31,6 @@ class CrowdMeasureApp : Application() {
             .build()
 
         WorkManager.initialize(this, config)
-
-        // Now safe to schedule
         workScheduler.enqueueRescheduleWorker()
     }
 }
