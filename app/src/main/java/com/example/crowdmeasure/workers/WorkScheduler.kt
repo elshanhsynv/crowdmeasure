@@ -19,14 +19,22 @@ class WorkScheduler @Inject constructor(
     companion object {
         const val AUTO_RUN_NAME = "auto_run_measurement"
         const val AUTO_RUN_KICKOFF_NAME = "auto_run_measurement_kickoff"
+        const val AUTO_RUN_DEBUG_ONCE_NAME = "auto_run_measurement_debug_once"
         const val MAINTENANCE_NAME = "maintenance_cleanup"
         const val RESCHEDULE_NAME = "reschedule_background_work"
 
         private const val MIN_PERIODIC_MINUTES = 15L
+        private const val MIN_FLEX_MINUTES = 5L
 
         const val TAG_RESCHEDULE = "reschedule"
         const val TAG_AUTORUN = "autorun"
         const val TAG_MAINTENANCE = "maintenance"
+
+        private val ACTIVE_STATES = setOf(
+            WorkInfo.State.ENQUEUED,
+            WorkInfo.State.RUNNING,
+            WorkInfo.State.BLOCKED
+        )
     }
 
     fun observeAutoRunWorkInfo() =
@@ -36,7 +44,12 @@ class WorkScheduler @Inject constructor(
         workManager.getWorkInfosForUniqueWorkFlow(MAINTENANCE_NAME).map { it.firstOrNull() }
 
     fun scheduleMaintenanceDaily() {
-        val req = PeriodicWorkRequestBuilder<MaintenanceWorker>(24, TimeUnit.HOURS)
+        val req = PeriodicWorkRequestBuilder<MaintenanceWorker>(
+            24,
+            TimeUnit.HOURS,
+            6,
+            TimeUnit.HOURS
+        )
             .setConstraints(
                 Constraints.Builder()
                     .setRequiresBatteryNotLow(true)
@@ -48,7 +61,7 @@ class WorkScheduler @Inject constructor(
 
         workManager.enqueueUniquePeriodicWork(
             MAINTENANCE_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE,
+            ExistingPeriodicWorkPolicy.KEEP,
             req
         )
     }
@@ -85,19 +98,29 @@ class WorkScheduler @Inject constructor(
     }
 
     suspend fun scheduleAutoRun(intervalMinutes: Long, wifiOnly: Boolean) {
-        val safeMinutes = intervalMinutes.coerceAtLeast(MIN_PERIODIC_MINUTES).toInt()
+        val safeMinutes = intervalMinutes.coerceAtLeast(MIN_PERIODIC_MINUTES)
+        val safeFlexMinutes = (safeMinutes / 3L).coerceAtLeast(MIN_FLEX_MINUTES)
 
         val last = statusStore.autoRunStatus.first()
-        if (last.lastScheduleMinutes == safeMinutes && last.lastScheduleWifiOnly == wifiOnly) return
+        val scheduleUnchanged =
+            last.lastScheduleMinutes == safeMinutes.toInt() &&
+                last.lastScheduleWifiOnly == wifiOnly
+        if (scheduleUnchanged && isWorkActive(AUTO_RUN_NAME)) return
 
         val constraints = Constraints.Builder()
             .setRequiresBatteryNotLow(true)
             .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
             .build()
 
-        val req = PeriodicWorkRequestBuilder<AutoRunWorker>(safeMinutes.toLong(), TimeUnit.MINUTES)
+        val req = PeriodicWorkRequestBuilder<AutoRunWorker>(
+            safeMinutes,
+            TimeUnit.MINUTES,
+            safeFlexMinutes,
+            TimeUnit.MINUTES
+        )
             .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
+            .setInputData(workDataOf(AutoRunWorker.KEY_TRIGGER_SOURCE to AutoRunWorker.TRIGGER_PERIODIC))
             .addTag(TAG_AUTORUN)
             .build()
 
@@ -107,7 +130,7 @@ class WorkScheduler @Inject constructor(
             req
         )
 
-        statusStore.rememberSchedule(safeMinutes, wifiOnly)
+        statusStore.rememberSchedule(safeMinutes.toInt(), wifiOnly)
     }
 
     fun kickoffAutoRunOnce(wifiOnly: Boolean) {
@@ -118,12 +141,14 @@ class WorkScheduler @Inject constructor(
 
         val req = OneTimeWorkRequestBuilder<AutoRunWorker>()
             .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
+            .setInputData(workDataOf(AutoRunWorker.KEY_TRIGGER_SOURCE to AutoRunWorker.TRIGGER_KICKOFF))
             .addTag("${TAG_AUTORUN}_kickoff")
             .build()
 
         workManager.enqueueUniqueWork(
-            "auto_run_measurement_kickoff",
-            ExistingWorkPolicy.REPLACE,
+            AUTO_RUN_KICKOFF_NAME,
+            ExistingWorkPolicy.KEEP,
             req
         )
     }
@@ -135,6 +160,12 @@ class WorkScheduler @Inject constructor(
     fun enqueueRescheduleWorker() {
         val req = OneTimeWorkRequestBuilder<WorkRescheduleWorker>()
             .setConstraints(Constraints.NONE)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
+            .setInputData(
+                workDataOf(
+                    WorkRescheduleWorker.KEY_TRIGGER_SOURCE to WorkRescheduleWorker.TRIGGER_APP_START
+                )
+            )
             .addTag(TAG_RESCHEDULE)
             .build()
 
@@ -151,11 +182,25 @@ class WorkScheduler @Inject constructor(
 
         val req = OneTimeWorkRequestBuilder<AutoRunWorker>()
             .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
+            .setInputData(workDataOf(AutoRunWorker.KEY_TRIGGER_SOURCE to AutoRunWorker.TRIGGER_DEBUG))
             .addTag("${TAG_AUTORUN}_debug_once")
             .build()
 
-        workManager.enqueue(req)
+        workManager.enqueueUniqueWork(
+            AUTO_RUN_DEBUG_ONCE_NAME,
+            ExistingWorkPolicy.REPLACE,
+            req
+        )
     }
+
+    private suspend fun isWorkActive(uniqueName: String): Boolean {
+        val workInfo = workManager.getWorkInfosForUniqueWorkFlow(uniqueName)
+            .first()
+            .firstOrNull()
+        return workInfo?.state in ACTIVE_STATES
+    }
+
 }
 
 

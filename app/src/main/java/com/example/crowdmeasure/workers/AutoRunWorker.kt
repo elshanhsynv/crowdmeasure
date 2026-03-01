@@ -4,115 +4,119 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.example.crowdmeasure.data.prefs.WorkerStatusStore
-import com.example.crowdmeasure.domain.repo.MeasurementRepository
-import com.example.crowdmeasure.domain.repo.UploadRepository
-import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CancellationException
 
 @HiltWorker
 class AutoRunWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
-    private val sessionRepo: UserSessionRepository,
-    private val measurementRepo: MeasurementRepository,
-    private val uploadRepo: UploadRepository,
+    private val autoRunWorkRepository: AutoRunWorkRepository,
     private val statusStore: WorkerStatusStore
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
         val now = System.currentTimeMillis()
-        statusStore.markAutoRunStart(now)
+        val trigger = inputData.getString(KEY_TRIGGER_SOURCE) ?: TRIGGER_UNKNOWN
 
-        try {
-            val settings = sessionRepo.settings.first()
+        runCatching { statusStore.markAutoRunStart(now) }
+            .onFailure { WorkerLog.w(TAG, "failed to persist worker start", it) }
+        WorkerLog.i(TAG, "start attempt=$runAttemptCount trigger=$trigger")
 
-            val allowed = settings.autoRunEnabled && settings.consentAccepted && settings.collectionEnabled
-            if (!allowed) {
-                statusStore.markAutoRunEnd(
-                    nowUtcMs = System.currentTimeMillis(),
-                    result = "SUCCESS",
-                    error = "gate_blocked",
-                    uploadedCount = 0,
-                    measurementId = null
-                )
-                return Result.success()
-            }
-
-            val scheduledMinutes = statusStore.autoRunStatus.first().lastScheduleMinutes
-                .takeIf { it > 0 }
-                ?: settings.autoRunIntervalMinutes
-
-            val intervalMinutes = scheduledMinutes.coerceAtLeast(15)
-            val intervalMs = intervalMinutes * 60_000L
-            val lastOk = statusStore.getLastSuccessUtcMs()
-
-            val toleranceMs = 60_000L
-
-            if (lastOk > 0 && (now - lastOk) < (intervalMs - toleranceMs)) {
-                statusStore.markAutoRunEnd(
-                    nowUtcMs = System.currentTimeMillis(),
-                    result = "SUCCESS",
-                    error = "skipped_recent_run",
-                    uploadedCount = 0,
-                    measurementId = null
-                )
-                return Result.success()
-            }
-
-            val measurement = measurementRepo.runSingleMeasurement().getOrElse {
-                statusStore.markAutoRunEnd(
-                    nowUtcMs = System.currentTimeMillis(),
-                    result = "RETRY",
-                    error = "measurement_failed",
-                    uploadedCount = 0,
-                    measurementId = null
-                )
-                return Result.retry()
-            }
-
-            runCatching { measurementRepo.insert(measurement) }.onFailure {
-                statusStore.markAutoRunEnd(
-                    nowUtcMs = System.currentTimeMillis(),
-                    result = "RETRY",
-                    error = "db_insert_failed",
-                    uploadedCount = 0,
-                    measurementId = null
-                )
-                return Result.retry()
-            }
-
-            var uploaded = 0
-            var uploadError: String? = null
-
-            if (settings.firestoreUploadsEnabled) {
-                uploadRepo.uploadPending(limit = 50).fold(
-                    onSuccess = { uploaded = it },
-                    onFailure = { uploadError = "upload_failed" }
-                )
-            }
-
-            statusStore.setLastSuccessUtcMs(System.currentTimeMillis())
-
-            statusStore.markAutoRunEnd(
-                nowUtcMs = System.currentTimeMillis(),
-                result = "SUCCESS",
-                error = uploadError,
-                uploadedCount = uploaded,
-                measurementId = null
+        return try {
+            val execution = autoRunWorkRepository.execute(
+                nowUtcMs = now,
+                runAttemptCount = runAttemptCount
             )
-            return Result.success()
-        } catch (_: Throwable) {
-            statusStore.markAutoRunEnd(
-                nowUtcMs = System.currentTimeMillis(),
-                result = "RETRY",
-                error = "unexpected_error",
+
+            val statusResult = when (execution.outcome) {
+                AutoRunExecution.Outcome.SUCCESS -> STATUS_SUCCESS
+                AutoRunExecution.Outcome.RETRY -> STATUS_RETRY
+                AutoRunExecution.Outcome.FAILURE -> STATUS_FAILURE
+            }
+
+            markEndSafely(
+                result = statusResult,
+                code = execution.code,
+                uploadedCount = execution.uploadedCount,
+                measurementId = execution.measurementId
+            )
+
+            when (execution.outcome) {
+                AutoRunExecution.Outcome.SUCCESS -> {
+                    if (execution.code != AutoRunWorkRepository.CODE_OK) {
+                        WorkerLog.i(TAG, "completed with non-fatal code=${execution.code}")
+                    }
+                    Result.success()
+                }
+                AutoRunExecution.Outcome.RETRY -> {
+                    WorkerLog.w(TAG, "retrying code=${execution.code}", execution.cause)
+                    Result.retry()
+                }
+                AutoRunExecution.Outcome.FAILURE -> {
+                    WorkerLog.e(TAG, "failing code=${execution.code}", execution.cause)
+                    Result.failure(workDataOf(KEY_ERROR_CODE to execution.code))
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            WorkerLog.w(TAG, "cancelled", cancelled)
+            throw cancelled
+        } catch (error: Exception) {
+            val retry = WorkRetryClassifier.shouldRetry(error, runAttemptCount)
+            val resultCode = CODE_UNEXPECTED_ERROR
+            markEndSafely(
+                result = if (retry) STATUS_RETRY else STATUS_FAILURE,
+                code = resultCode,
                 uploadedCount = 0,
                 measurementId = null
             )
-            return Result.retry()
+            if (retry) {
+                WorkerLog.w(TAG, "retrying unexpected error", error)
+                Result.retry()
+            } else {
+                WorkerLog.e(TAG, "failing unexpected error", error)
+                Result.failure(workDataOf(KEY_ERROR_CODE to resultCode))
+            }
         }
+    }
+
+    private suspend fun markEndSafely(
+        result: String,
+        code: String,
+        uploadedCount: Int,
+        measurementId: String?
+    ) {
+        runCatching {
+            statusStore.markAutoRunEnd(
+                nowUtcMs = System.currentTimeMillis(),
+                result = result,
+                error = code.toStatusError(),
+                uploadedCount = uploadedCount,
+                measurementId = measurementId
+            )
+        }.onFailure { WorkerLog.w(TAG, "failed to persist worker end", it) }
+    }
+
+    private fun String.toStatusError(): String? =
+        if (this == AutoRunWorkRepository.CODE_OK) null else this
+
+    companion object {
+        private const val TAG = "AutoRunWorker"
+
+        private const val STATUS_SUCCESS = "SUCCESS"
+        private const val STATUS_RETRY = "RETRY"
+        private const val STATUS_FAILURE = "FAILURE"
+
+        const val KEY_TRIGGER_SOURCE = "trigger_source"
+        const val KEY_ERROR_CODE = "error_code"
+        const val TRIGGER_PERIODIC = "periodic"
+        const val TRIGGER_KICKOFF = "kickoff"
+        const val TRIGGER_DEBUG = "debug"
+        const val TRIGGER_UNKNOWN = "unknown"
+
+        private const val CODE_UNEXPECTED_ERROR = "unexpected_error"
     }
 }
