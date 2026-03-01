@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +48,7 @@ import com.example.crowdmeasure.presentation.ui.components.states.InlineStatusTe
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 import com.example.crowdmeasure.presentation.util.AppPermissions
 import com.example.crowdmeasure.presentation.util.LocationServicesBanner
+import com.example.crowdmeasure.presentation.util.UiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -59,17 +61,6 @@ import java.util.Locale
  * - View last measurement preview
  * - Upload queue status and manual trigger
  * - Permission/settings warnings
- *
- * UX:
- * - Proper scrolling (fills available space, scrolls when needed)
- * - Bottom padding for nav bar
- * - Clear visual hierarchy
- * - Disabled states when permissions missing
- *
- * Performance:
- * - collectAsStateWithLifecycle (automatic lifecycle handling)
- * - Stable callbacks (ViewModel method references)
- * - Minimal recomposition (derived state in ViewModel)
  */
 @Composable
 fun HomeScreen(
@@ -140,18 +131,12 @@ private fun HomeContent(
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Section Components
-// ══════════════════════════════════════════════════════════════════════
-
 /**
  * Shows permission/settings warnings if collection is disabled.
  */
 @Composable
 private fun PermissionWarnings(state: HomeUiState) {
     val spacing = LocalSpacing.current
-    val locationServicesOn = AppPermissions.isLocationServicesEnabled(LocalContext.current)
-
 
     Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
         LocationServicesBanner {
@@ -203,7 +188,6 @@ private fun MeasurementCard(
             else -> "Capture current network performance data"
         }
     ) {
-        // Action buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(spacing.sm)
@@ -236,7 +220,6 @@ private fun MeasurementCard(
             }
         }
 
-        // Status indicator
         InlineStatusText(
             state = state.measurementState,
             successMessage = { "Measurement saved successfully" }
@@ -263,7 +246,6 @@ private fun UploadQueueCard(
             else -> "${state.queuedCount} measurements ready to upload"
         }
     ) {
-        // Queue count metric
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -285,7 +267,6 @@ private fun UploadQueueCard(
             )
         }
 
-        // Upload button
         FilledTonalButton(
             onClick = onUpload,
             enabled = state.canUpload,
@@ -306,7 +287,6 @@ private fun UploadQueueCard(
             )
         }
 
-        // Upload status
         InlineStatusText(
             state = state.uploadState,
             successMessage = { count ->
@@ -328,7 +308,6 @@ private fun LastMeasurementCard(
     state: HomeUiState,
     onOpenDetail: (String) -> Unit
 ) {
-    val spacing = LocalSpacing.current
 
     AppCard(
         title = "Last Measurement",
@@ -341,13 +320,11 @@ private fun LastMeasurementCard(
         val measurement = state.lastMeasurement
 
         if (measurement == null) {
-            // Empty state
             AppEmptyState(
                 title = "No measurements yet",
                 description = "Tap 'Start measurement' to begin",
             )
         } else {
-            // Measurement preview
             MeasurementPreview(
                 measurement = measurement,
                 onOpenDetail = onOpenDetail
@@ -423,11 +400,6 @@ private fun MeasurementPreview(
         }
     }
 }
-
-// ══════════════════════════════════════════════════════════════════════
-// Utilities
-// ══════════════════════════════════════════════════════════════════════
-
 /**
  * Format timestamp for display.
  * Shows date and time in local timezone.
@@ -435,4 +407,26 @@ private fun MeasurementPreview(
 private fun formatTimestamp(timestampMs: Long): String {
     val formatter = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
     return formatter.format(Date(timestampMs))
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    HomeContent(
+        contentPadding = PaddingValues(0.dp),
+        state = HomeUiState(
+//            consentAccepted = true,
+//            collectionEnabled = true,
+//            canCollect = true,
+//            uploadsEnabled = true,
+//            queuedCount = 0,
+//            lastMeasurement = null,
+//            measurementState = UiState.Idle,
+//            uploadState = UiState.Loading
+        ),
+        onStartMeasurement = {},
+        onStopMeasurement = {},
+        onUploadNow = {},
+        onNavigateToDetail = {}
+    )
 }

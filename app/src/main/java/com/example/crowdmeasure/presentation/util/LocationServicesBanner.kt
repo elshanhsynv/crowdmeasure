@@ -19,9 +19,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 import com.example.crowdmeasure.presentation.util.AppPermissions.locationServicesEnabledFlow
+import kotlinx.coroutines.flow.flowOf
 
 
 @Composable
@@ -30,10 +32,17 @@ fun LocationServicesBanner(
 ) {
     val context = LocalContext.current
     val spacing = LocalSpacing.current
+    val isPreview = LocalInspectionMode.current
 
-    val locationServicesOn by remember(context) {
-        locationServicesEnabledFlow(context)
-    }.collectAsState(initial = AppPermissions.isLocationServicesEnabled(context))
+    // Use LocalInspectionMode to avoid accessing LocationManager in Preview,
+    // which causes "Unsupported Service: location" AssertionError in LayoutLib.
+    val locationServicesOn by remember(context, isPreview) {
+        if (isPreview) {
+            flowOf(true)
+        } else {
+            locationServicesEnabledFlow(context)
+        }
+    }.collectAsState(initial = if (isPreview) true else AppPermissions.isLocationServicesEnabled(context))
 
     if (!locationServicesOn) {
         Surface(

@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
@@ -87,21 +88,59 @@ fun SettingsScreen(
     contentPadding: PaddingValues,
     viewModel: SettingsViewModel = hiltViewModel<SettingsViewModel>()
 ) {
-    val spacing = LocalSpacing.current
-
-    // State
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val backgroundWorkState by viewModel.backgroundWorkState.collectAsStateWithLifecycle()
     val exportState by viewModel.exportState.collectAsStateWithLifecycle()
     val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
 
-    // Tab state (preserved across config changes)
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-
-    // Ensure maintenance scheduled on launch
     LaunchedEffect(Unit) {
         viewModel.ensureMaintenanceScheduled()
     }
+
+    SettingsScreenContent(
+        contentPadding = contentPadding,
+        settings = settings,
+        exportState = exportState,
+        deleteState = deleteState,
+        backgroundWorkState = backgroundWorkState,
+        onSaveEndpoint = viewModel::saveEndpoint,
+        onCollectOnlyWifiChange = viewModel::setCollectOnlyWifi,
+        onAutoRunChange = viewModel::setAutoRun,
+        onRunNow = viewModel::runAutoRunNow,
+        onReschedule = viewModel::rescheduleBackgroundWork,
+        onExport = viewModel::exportData,
+        onClearExportState = viewModel::clearExportState,
+        onDelete = viewModel::deleteAllData,
+        onClearDeleteState = viewModel::clearDeleteState,
+        onSetConsent = viewModel::setConsent,
+        onSetCollection = viewModel::setCollection,
+        onSetFirestoreUploads = viewModel::setFirestoreUploads
+    )
+
+}
+
+@Composable
+private fun SettingsScreenContent(
+    contentPadding: PaddingValues,
+    settings: AppSettings?,
+    exportState: UiState<Unit>,
+    deleteState: UiState<Unit>,
+    backgroundWorkState: BackgroundWorkUiState,
+    onSaveEndpoint: (String) -> Unit,
+    onCollectOnlyWifiChange: (Boolean) -> Unit,
+    onAutoRunChange: (Boolean, Int) -> Unit,
+    onRunNow: () -> Unit,
+    onReschedule: () -> Unit,
+    onExport: (Context, Int) -> Unit,
+    onClearExportState: () -> Unit,
+    onDelete: () -> Unit,
+    onClearDeleteState: () -> Unit,
+    onSetConsent: (Boolean) -> Unit,
+    onSetCollection: (Boolean) -> Unit,
+    onSetFirestoreUploads: (Boolean) -> Unit
+) {
+
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -119,26 +158,28 @@ fun SettingsScreen(
         when (selectedTab) {
             0 -> PrivacyTab(
                 settings = settings,
-                onConsentChange = viewModel::setConsent,
-                onCollectionChange = viewModel::setCollection,
-                onFirestoreUploadsChange = viewModel::setFirestoreUploads
+                onConsentChange = onSetConsent,
+                onCollectionChange = onSetCollection,
+                onFirestoreUploadsChange = onSetFirestoreUploads
             )
+
             1 -> CollectionTab(
                 settings = settings,
                 backgroundWorkState = backgroundWorkState,
-                onSaveEndpoint = viewModel::saveEndpoint,
-                onCollectOnlyWifiChange = viewModel::setCollectOnlyWifi,
-                onAutoRunChange = viewModel::setAutoRun,
-                onRunNow = viewModel::runAutoRunNow,
-                onReschedule = viewModel::rescheduleBackgroundWork
+                onSaveEndpoint = onSaveEndpoint,
+                onCollectOnlyWifiChange = onCollectOnlyWifiChange,
+                onAutoRunChange = onAutoRunChange,
+                onRunNow = onRunNow,
+                onReschedule = onReschedule
             )
+
             2 -> DataTab(
                 exportState = exportState,
                 deleteState = deleteState,
-                onExport = viewModel::exportData,
-                onClearExportState = viewModel::clearExportState,
-                onDelete = viewModel::deleteAllData,
-                onClearDeleteState = viewModel::clearDeleteState
+                onExport = onExport,
+                onClearExportState = onClearExportState,
+                onDelete = onDelete,
+                onClearDeleteState = onClearDeleteState
             )
         }
     }
@@ -555,7 +596,9 @@ private fun DataTab(
 
             // Export status
             when (exportState) {
-                UiState.Idle -> { /* Nothing */ }
+                UiState.Idle -> { /* Nothing */
+                }
+
                 UiState.Loading -> {
                     Text(
                         text = "Exporting...",
@@ -563,6 +606,7 @@ private fun DataTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
                 is UiState.Success -> {
                     Text(
                         text = "✓ Exported successfully",
@@ -574,6 +618,7 @@ private fun DataTab(
                         onClearExportState()
                     }
                 }
+
                 is UiState.Error -> {
                     Text(
                         text = "⚠️ ${exportState.message}",
@@ -608,7 +653,9 @@ private fun DataTab(
 
             // Delete status
             when (deleteState) {
-                UiState.Idle -> { /* Nothing */ }
+                UiState.Idle -> { /* Nothing */
+                }
+
                 UiState.Loading -> {
                     Text(
                         text = "Deleting...",
@@ -616,6 +663,7 @@ private fun DataTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
                 is UiState.Success -> {
                     Text(
                         text = "✓ All data deleted",
@@ -627,6 +675,7 @@ private fun DataTab(
                         onClearDeleteState()
                     }
                 }
+
                 is UiState.Error -> {
                     Text(
                         text = "⚠️ ${deleteState.message}",
@@ -644,14 +693,34 @@ private fun DataTab(
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Helpers
-// ══════════════════════════════════════════════════════════════════════
-
 private fun hasFineLocation(context: Context): Boolean {
     return ContextCompat.checkSelfPermission(
         context,
         Manifest.permission.ACCESS_FINE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenPreview() {
+    SettingsScreenContent(
+        contentPadding = PaddingValues(),
+        settings = null,
+        exportState = UiState.Idle,
+        deleteState = UiState.Idle,
+        backgroundWorkState = BackgroundWorkUiState.loading(),
+        onSaveEndpoint = {},
+        onCollectOnlyWifiChange = {},
+        onAutoRunChange = { _, _ -> },
+        onRunNow = {},
+        onReschedule = {},
+        onExport = { _, _ -> },
+        onClearExportState = {},
+        onDelete = {},
+        onClearDeleteState = {},
+        onSetConsent = {},
+        onSetCollection = {},
+        onSetFirestoreUploads = {}
+    )
 }
 

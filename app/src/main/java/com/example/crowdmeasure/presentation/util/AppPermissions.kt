@@ -31,7 +31,13 @@ object AppPermissions {
         ) == PackageManager.PERMISSION_GRANTED
 
     fun isLocationServicesEnabled(context: Context): Boolean {
-        val locationManager = context.getSystemService<LocationManager>() ?: return false
+        // LayoutLib (Preview) doesn't support LocationManager and throws AssertionError
+        val locationManager = try {
+            context.getSystemService(LocationManager::class.java)
+        } catch (e: Throwable) {
+            null
+        } ?: return false
+
         return try {
             locationManager.isLocationEnabled
         } catch (_: Throwable) {
@@ -70,6 +76,3 @@ object AppPermissions {
         awaitClose { appContext.unregisterReceiver(receiver) }
     }.distinctUntilChanged()
 }
-
-
-

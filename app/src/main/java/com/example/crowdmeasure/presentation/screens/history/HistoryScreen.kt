@@ -26,9 +26,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,8 +34,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.presentation.ui.components.states.AppEmptyState
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
@@ -47,7 +46,7 @@ import com.example.crowdmeasure.presentation.util.UiState
 fun HistoryScreen(
     contentPadding: PaddingValues,
     onNavigateToDetail: (String) -> Unit,
-    viewModel: HistoryViewModel = hiltViewModel()
+    viewModel: HistoryViewModel = hiltViewModel<HistoryViewModel>()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -139,7 +138,8 @@ private fun HistoryContent(
                 }
             }
 
-            UiState.Idle -> { /* Should not happen */ }
+            UiState.Idle -> { /* Should not happen */
+            }
         }
 
         // Bottom spacing
@@ -161,53 +161,6 @@ private fun SearchField(
         onQueryChange = onQueryChange,
         onClear = onClear
     )
-
-
-
-//    val spacing = LocalSpacing.current
-//
-//    Column(
-//        verticalArrangement = Arrangement.spacedBy(spacing.xs)
-//    ) {
-//        OutlinedTextField(
-//            value = query,
-//            onValueChange = onQueryChange,
-//            modifier = Modifier.fillMaxWidth(),
-//            placeholder = { Text("Search...") },
-//            leadingIcon = {
-//                Icon(
-//                    imageVector = Icons.Filled.Search,
-//                    contentDescription = null,
-//                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-//                )
-//            },
-//            trailingIcon = {
-//                if (query.isNotBlank()) {
-//                    IconButton(onClick = onClear) {
-//                        Icon(
-//                            imageVector = Icons.Filled.Close,
-//                            contentDescription = "Clear search"
-//                        )
-//                    }
-//                }
-//            },
-//            singleLine = true,
-//            shape = MaterialTheme.shapes.large
-//        )
-//
-//        if (resultCount != null) {
-//            Text(
-//                text = when (resultCount) {
-//                    0 -> "No results"
-//                    1 -> "1 measurement"
-//                    else -> "$resultCount measurements"
-//                },
-//                style = MaterialTheme.typography.bodySmall,
-//                color = MaterialTheme.colorScheme.onSurfaceVariant,
-//                modifier = Modifier.padding(horizontal = spacing.md)
-//            )
-//        }
-//    }
 }
 
 @Composable
@@ -460,4 +413,21 @@ private fun HistoryEmptyState(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HistoryScreenPreview() {
+    HistoryContent(
+        contentPadding = PaddingValues(0.dp),
+        state = HistoryUiState(
+            itemsState = UiState.Success(
+                data = listOf()
+            )
+        ),
+        onQueryChange = {},
+        onClearFilter = {},
+        onRefresh = {},
+        onNavigateToDetail = {}
+    )
 }

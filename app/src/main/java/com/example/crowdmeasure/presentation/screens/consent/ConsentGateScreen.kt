@@ -2,6 +2,7 @@ package com.example.crowdmeasure.presentation.screens.consent
 
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -74,6 +75,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.times
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.crowdmeasure.domain.repo.AppSettings
 
 
 /**
@@ -110,34 +112,23 @@ fun ConsentGateScreen(
     onDismiss: () -> Unit,
     viewModel: ConsentGateViewModel = hiltViewModel<ConsentGateViewModel>(),
 ) {
-    // ═══════════════════════════════════════════════════════════
-    // State
-    // ═══════════════════════════════════════════════════════════
+
     val context = LocalContext.current
-    val spacing = LocalSpacing.current
     val settings = viewModel.settings.collectAsStateWithLifecycle().value
 
     val consentAccepted = settings?.consentAccepted ?: false
     val collectionEnabled = settings?.collectionEnabled ?: false
 
     // Permission state (refreshed when visible changes)
-    var coarseLocationGranted by remember { mutableStateOf(false) }
     var fineLocationGranted by remember { mutableStateOf(false) }
     var phoneStateGranted by remember { mutableStateOf(false) }
 
     LaunchedEffect(visible) {
         if (visible) {
-//            coarseLocationGranted = AppPermissions.hasCoarseLocation(context)
             fineLocationGranted = AppPermissions.hasFineLocation(context)
             phoneStateGranted = AppPermissions.hasPhoneState(context)
         }
     }
-
-    // Permission launchers
-//    val requestCoarseLocation = rememberLauncherForActivityResult(
-//        contract = ActivityResultContracts.RequestPermission(),
-//        onResult = { granted -> coarseLocationGranted = granted }
-//    )
 
     val requestFineLocation = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -149,6 +140,40 @@ fun ConsentGateScreen(
         onResult = { granted -> phoneStateGranted = granted }
     )
 
+    ConsentGateContent(
+        visible = visible,
+        onComplete = onComplete,
+        onDismiss = onDismiss,
+        consentAccepted = consentAccepted,
+        collectionEnabled = collectionEnabled,
+        onSetConsent = viewModel::setConsent,
+        onSetCollection = viewModel::setCollection,
+        fineLocationGranted = fineLocationGranted,
+        phoneStateGranted = phoneStateGranted,
+        onRequestFineLocation = {
+            requestFineLocation.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        },
+        onRequestPhoneState = {
+            requestPhoneState.launch(Manifest.permission.READ_PHONE_STATE)
+        }
+    )
+}
+
+@Composable
+private fun ConsentGateContent(
+    visible: Boolean,
+    onComplete: () -> Unit,
+    onDismiss: () -> Unit,
+    consentAccepted: Boolean,
+    collectionEnabled: Boolean,
+    onSetConsent: (Boolean) -> Unit,
+    onSetCollection: (Boolean) -> Unit,
+    fineLocationGranted: Boolean,
+    phoneStateGranted: Boolean,
+    onRequestFineLocation: () -> Unit,
+    onRequestPhoneState: () -> Unit
+) {
+    val spacing = LocalSpacing.current
     val canComplete = consentAccepted && collectionEnabled
 
     AnimatedVisibility(
@@ -184,46 +209,31 @@ fun ConsentGateScreen(
                         title = "I understand and agree",
                         subtitle = "Required to participate in crowdsourced measurements",
                         checked = consentAccepted,
-                        onCheckedChange = viewModel::setConsent,
+                        onCheckedChange = onSetConsent,
                         enabled = true
                     )
 
                     OptionalPermissionsCard(
-//                        coarseLocationGranted = coarseLocationGranted,
                         fineLocationGranted = fineLocationGranted,
                         phoneStateGranted = phoneStateGranted,
                         enabled = consentAccepted,
-                        onRequestFineLocation = {
-                            requestFineLocation.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                        },
-//                        onRequestCoarseLocation = {
-//                            requestCoarseLocation.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-//                        },
-                        onRequestPhoneState = {
-                            requestPhoneState.launch(Manifest.permission.READ_PHONE_STATE)
-                        }
+                        onRequestFineLocation = onRequestFineLocation,
+                        onRequestPhoneState = onRequestPhoneState
                     )
-
-//                    ConsentControlsCard(
-//                        consentAccepted = consentAccepted,
-//                        collectionEnabled = collectionEnabled,
-//                        onConsentChange = viewModel::setConsent,
-//                        onCollectionChange = viewModel::setCollection,
-//                    )
 
                     ConsentSwitchItem(
                         title = "Enable data collection",
                         subtitle = "Start collecting network measurements in the background",
                         checked = collectionEnabled,
-                        onCheckedChange = viewModel::setCollection,
+                        onCheckedChange = onSetCollection,
                         enabled = consentAccepted
                     )
 
                     ConsentHints(
                         consentAccepted = consentAccepted,
                         collectionEnabled = collectionEnabled,
-                        onAcceptConsent = { viewModel.setConsent(true) },
-                        onEnableCollection = { viewModel.setCollection(true) }
+                        onAcceptConsent = { onSetConsent(true) },
+                        onEnableCollection = { onSetCollection(true) }
                     )
 
                     Spacer(Modifier.height(spacing.xl))
@@ -482,6 +492,7 @@ private fun OptionalPermissionsCard(
         }
     }
 }
+
 @Composable
 private fun PermissionItem(
     icon: ImageVector,
@@ -610,6 +621,7 @@ private fun ConsentHints(
                     label = { Text("Tap 'I understand and agree' to continue") }
                 )
             }
+
             !collectionEnabled -> {
                 AssistChip(
                     onClick = onEnableCollection,
@@ -658,34 +670,33 @@ private fun ConsentActions(
 }
 
 
-//@Preview
-//@Composable
-//private fun ConsentGateScreenPreview() {
-//    ConsentGateScreen(
-//        visible = true,
-//        onComplete = {},
-//        onDismiss = {},
-//        viewModel = hiltViewModel()
-//    )
-//}
-
-
-
 @Preview
 @Composable
-private fun OptionalPermissionsCardPreview() {
-    OptionalPermissionsCard(
+private fun ConsentGateScreenPreview() {
+    ConsentGateContent(
+        visible = true,
+        onComplete = {},
+        onDismiss = {},
+        consentAccepted = false,
+        collectionEnabled = false,
+        onSetConsent = {},
+        onSetCollection = {},
         fineLocationGranted = false,
         phoneStateGranted = false,
-        enabled = true,
         onRequestFineLocation = {},
         onRequestPhoneState = {}
     )
 }
 
 
-
-
-
-
-
+//@Preview
+//@Composable
+//private fun OptionalPermissionsCardPreview() {
+//    OptionalPermissionsCard(
+//        fineLocationGranted = false,
+//        phoneStateGranted = false,
+//        enabled = true,
+//        onRequestFineLocation = {},
+//        onRequestPhoneState = {}
+//    )
+//}
