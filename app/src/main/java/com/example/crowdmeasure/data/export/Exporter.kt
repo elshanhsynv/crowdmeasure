@@ -22,7 +22,6 @@ class Exporter(
     ): Result<Uri> = withContext(Dispatchers.IO) {
         runCatching {
             val dir = File(context.cacheDir, "exports").apply { mkdirs() }
-
             val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val file = File(dir, "${filePrefix}_$ts.json")
 
@@ -89,34 +88,24 @@ class Exporter(
 
         val perf = JSONObject().apply {
             put("endpoint_id", m.performance.endpointId)
-
             putOpt("dns_ms", m.performance.dnsMs)
             putOpt("tcp_ms", m.performance.tcpMs)
             putOpt("tls_ms", m.performance.tlsMs)
             putOpt("ttfb_ms", m.performance.ttfbMs)
-
             putOpt("rtt_avg_ms", m.performance.rttAvgMs)
             putOpt("rtt_p95_ms", m.performance.rttP95Ms)
             putOpt("jitter_ms", m.performance.jitterMs)
             putOpt("packet_loss_pct", m.performance.packetLossPct)
-
             putOpt("down_mbps", m.performance.downMbps)
             putOpt("up_mbps", m.performance.upMbps)
-
-            // NEW: stability
             putOpt("down_p95_mbps", m.performance.downP95Mbps)
             putOpt("down_stddev_mbps", m.performance.downStdDevMbps)
             putOpt("up_p95_mbps", m.performance.upP95Mbps)
             putOpt("up_stddev_mbps", m.performance.upStdDevMbps)
-
-            // NEW: stalls
             putOpt("stalls_count", m.performance.stallsCount)
             putOpt("max_stall_ms", m.performance.maxStallMs)
-
-            // NEW: server signals
             putOpt("http_status", m.performance.httpStatus)
             putOpt("server_region", m.performance.serverRegion)
-
             putOpt("test_payload_bytes", m.performance.testPayloadBytes)
             put("protocol", m.performance.protocol)
         }
@@ -143,10 +132,7 @@ class Exporter(
                 putOpt("voice_network_type", c.voiceNetworkType)
                 putOpt("roaming", c.roaming)
                 putOpt("registered_rat", c.registeredRat)
-
-                // NEW
                 putOpt("nr_state", c.nrState?.name)
-
                 putOpt("serving_cell", c.servingCell?.let { sc ->
                     JSONObject().apply {
                         putOpt("ci", sc.ci)
@@ -156,26 +142,19 @@ class Exporter(
                         putOpt("earfcn", sc.earfcn)
                         putOpt("nrarfcn", sc.nrarfcn)
                         putOpt("band", sc.band)
-
-                        // NEW
                         putOpt("bandwidth_mhz", sc.bandwidthMhz)
                     }
                 })
-
                 putOpt("signal", c.signal?.let { s ->
                     JSONObject().apply {
                         putOpt("rsrp", s.rsrp)
                         putOpt("rsrq", s.rsrq)
                         putOpt("sinr", s.sinr)
                         putOpt("rssi", s.rssi)
-
-                        // NEW
                         putOpt("cqi", s.cqi)
                         putOpt("timing_advance", s.timingAdvance)
                     }
                 })
-
-                // NEW
                 putOpt("radio_metrics", c.radioMetrics?.let { rm ->
                     JSONObject().apply {
                         putOpt("mimo_layers", rm.mimoLayers)
@@ -183,8 +162,6 @@ class Exporter(
                         putOpt("nr_cqi", rm.nrCqi)
                     }
                 })
-
-                // NEW
                 putOpt("aggregation", c.aggregation?.let { ag ->
                     JSONObject().apply {
                         putOpt("active", ag.active)
@@ -204,7 +181,6 @@ class Exporter(
                         })
                     }
                 })
-
                 put("availability", JSONObject().apply {
                     put("cellInfoAccessible", c.availability.cellInfoAccessible)
                     put("idsAccessible", c.availability.idsAccessible)
@@ -219,7 +195,7 @@ class Exporter(
             putOpt("wifi", wifi)
             putOpt("cell", cell)
             put("performance", perf)
-            putOpt("diagnostics", diagnostics) // NEW
+            putOpt("diagnostics", diagnostics)
         }
     }
 }

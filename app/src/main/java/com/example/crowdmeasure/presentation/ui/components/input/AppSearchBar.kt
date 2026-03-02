@@ -1,4 +1,5 @@
-import androidx.compose.foundation.interaction.MutableInteractionSource
+package com.example.crowdmeasure.presentation.ui.components.input
+
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -7,10 +8,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -91,5 +90,16 @@ fun AppSearchBar(
                 focusManager.clearFocus()
             }
         )
+    )
+}
+
+@Preview
+@Composable
+fun AppSearchBarPreview() {
+    AppSearchBar(
+        query = "",
+        onQueryChange = {},
+        onClear = {},
+        enabled = true
     )
 }

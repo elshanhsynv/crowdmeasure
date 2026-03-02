@@ -6,11 +6,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-/**
- * Status pill for displaying state labels.
- */
 @Composable
 fun StatusPill(
     label: String,
@@ -30,9 +28,6 @@ fun StatusPill(
     }
 }
 
-/**
- * Assistive hint text for providing context.
- */
 @Composable
 fun AssistiveHint(
     text: String,
@@ -44,4 +39,16 @@ fun AssistiveHint(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier
     )
+}
+
+@Preview
+@Composable
+private fun StatusPillPreview() {
+    StatusPill(label = "Status")
+}
+
+@Preview
+@Composable
+private fun AssistiveHintPreview() {
+    AssistiveHint(text = "Hint text")
 }

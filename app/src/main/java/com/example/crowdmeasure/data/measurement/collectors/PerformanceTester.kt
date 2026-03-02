@@ -12,7 +12,6 @@ import kotlin.math.ceil
 import kotlin.math.roundToLong
 
 object PerformanceTester {
-
     data class Timings(
         var dnsMs: Long? = null,
         var tcpMs: Long? = null,
@@ -108,7 +107,6 @@ object PerformanceTester {
         var firstHttpStatus: Int? = null
         var firstServerRegion: String? = null
 
-        // "stall" heuristic: RTT exceeds threshold (tweak for your needs)
         val stallThresholdMs = 1500L
         var stalls = 0
         var maxStallMs: Long? = null
@@ -133,7 +131,7 @@ object PerformanceTester {
         val rttAvg = samples.takeIf { it.isNotEmpty() }?.average()?.roundToLong()
         val rttP95 = percentile(samples, 0.95)
         val jitter = jitter(samples)
-        val lossPct = ((failures.toDouble() / attempts.toDouble()) * 100.0).takeIf { attempts > 0 }
+        val lossPct = ((failures.toDouble() / attempts.toDouble()) * 100.0).takeIf { true }
 
         return PerformanceInfo(
             endpointId = endpointId,
@@ -147,21 +145,14 @@ object PerformanceTester {
             packetLossPct = lossPct,
             downMbps = null,
             upMbps = null,
-
-            // NEW: throughput stability (not measured here)
             downP95Mbps = null,
             downStdDevMbps = null,
             upP95Mbps = null,
             upStdDevMbps = null,
-
-            // NEW: UX pain (heuristic based on RTT probes)
             stallsCount = stalls.takeIf { samples.isNotEmpty() },
             maxStallMs = maxStallMs,
-
-            // NEW: server signals
             httpStatus = firstHttpStatus,
             serverRegion = firstServerRegion,
-
             testPayloadBytes = null,
             protocol = timings.protocol
         )
@@ -177,10 +168,8 @@ object PerformanceTester {
         val start = now()
         return try {
             client.newCall(req).execute().use { resp ->
-                // consume minimal; don't download body
-                resp.body?.source()?.request(1)
+                resp.body.source().request(1)
                 val end = now()
-
                 val status = resp.code
                 val region = extractServerRegion(resp.headers)
 
@@ -198,7 +187,7 @@ object PerformanceTester {
     }
 
     private fun extractServerRegion(headers: okhttp3.Headers): String? {
-        // Best-effort. Works only if your endpoint/CDN provides these headers.
+        // Best-effort. Works only if endpoint/CDN provides these headers.
         // Cloudflare: CF-RAY (e.g. "7c1...-AMS")
         headers["cf-ray"]?.let { v ->
             val dash = v.lastIndexOf('-')
@@ -220,14 +209,12 @@ object PerformanceTester {
 
     private fun now(): Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())
     private fun delta(startMs: Long): Long? = if (startMs <= 0) null else (now() - startMs).coerceAtLeast(0)
-
     private fun percentile(samples: List<Long>, p: Double): Long? {
         if (samples.isEmpty()) return null
         val sorted = samples.sorted()
         val idx = ceil(p * sorted.size).toInt().coerceIn(1, sorted.size) - 1
         return sorted[idx]
     }
-
     private fun jitter(samples: List<Long>): Long? {
         if (samples.size < 2) return null
         var sum = 0L

@@ -15,7 +15,6 @@ interface MeasurementDao {
     @Query("SELECT * FROM measurements ORDER BY timestampUtcMs DESC LIMIT 1")
     fun observeLast(): Flow<MeasurementEntity?>
 
-    // Queue = records that still need upload (PENDING or FAILED)
     @Query("SELECT COUNT(*) FROM measurements WHERE recordState IN ('PENDING','FAILED')")
     fun observeQueueCount(): Flow<Int>
 
@@ -40,7 +39,6 @@ interface MeasurementDao {
     @Query("UPDATE measurements SET recordState = :state WHERE measurementId = :id")
     suspend fun updateRecordState(id: String, state: String)
 
-    // Upload pipeline helpers
     @Query("SELECT * FROM measurements WHERE recordState IN ('PENDING','FAILED') ORDER BY timestampUtcMs ASC LIMIT :limit")
     suspend fun getUploadCandidates(limit: Int): List<MeasurementEntity>
 

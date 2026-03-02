@@ -8,12 +8,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 
-
-/**
- * Switch row for settings toggles.
- * Entire row is tappable for better UX.
- */
 @Composable
 fun SettingSwitchRow(
     title: String,
@@ -51,5 +47,16 @@ fun SettingSwitchRow(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         modifier = modifier
+    )
+}
+
+@Preview
+@Composable
+private fun SettingSwitchRowPreview() {
+    SettingSwitchRow(
+        title = "Title",
+        subtitle = "Subtitle",
+        checked = true,
+        onCheckedChange = {}
     )
 }

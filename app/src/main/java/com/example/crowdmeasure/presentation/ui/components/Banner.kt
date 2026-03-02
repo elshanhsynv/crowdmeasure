@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 
 /**
@@ -24,23 +25,6 @@ enum class BannerTone {
 
 /**
  * Informational banner for alerts, warnings, or critical messages.
- *
- * Features:
- * - Semantic color based on tone
- * - Title + body text
- * - Optional trailing action
- * - Accessible color combinations
- *
- * Usage:
- * ```
- * InfoBanner(
- *     title = "Collection Disabled",
- *     body = "Enable in Settings to run measurements.",
- *     tone = BannerTone.Warning
- * ) {
- *     TextButton(onClick = {...}) { Text("Settings") }
- * }
- * ```
  */
 @Composable
 fun InfoBanner(
@@ -55,8 +39,10 @@ fun InfoBanner(
     val (containerColor, contentColor) = when (tone) {
         BannerTone.Info -> MaterialTheme.colorScheme.surfaceVariant to
                 MaterialTheme.colorScheme.onSurfaceVariant
+
         BannerTone.Warning -> MaterialTheme.colorScheme.secondaryContainer to
                 MaterialTheme.colorScheme.onSecondaryContainer
+
         BannerTone.Critical -> MaterialTheme.colorScheme.errorContainer to
                 MaterialTheme.colorScheme.onErrorContainer
     }
@@ -90,4 +76,14 @@ fun InfoBanner(
             trailing?.invoke()
         }
     }
+}
+
+@Preview
+@Composable
+private fun InfoBannerPreview() {
+    InfoBanner(
+        title = "Warning",
+        body = "This is a warning message.",
+        tone = BannerTone.Warning
+    )
 }

@@ -19,8 +19,6 @@ class AppPreferences(private val context: Context) {
         const val DEFAULT_AUTORUN_MINUTES = 20
     }
 
-
-
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         val installId = prefs[DataStoreKeys.INSTALL_ID] ?: ""
         val minutes = prefs[DataStoreKeys.AUTO_RUN_INTERVAL_MINUTES] ?: DEFAULT_AUTORUN_MINUTES

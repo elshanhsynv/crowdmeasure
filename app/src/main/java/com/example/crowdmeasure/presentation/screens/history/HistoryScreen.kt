@@ -1,6 +1,6 @@
 package com.example.crowdmeasure.presentation.screens.history
 
-import AppSearchBar
+import com.example.crowdmeasure.presentation.ui.components.input.AppSearchBar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

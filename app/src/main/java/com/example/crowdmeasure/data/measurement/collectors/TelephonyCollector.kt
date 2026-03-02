@@ -89,22 +89,12 @@ object TelephonyCollector {
             availability = parsed.flags.copy(cellInfoAccessible = true)
         )
     }
-
-    // --------------------------------------------------------------------
-    // Safe helpers
-    // --------------------------------------------------------------------
-
     private inline fun <T> safe(block: () -> T): T? =
         try { block() } catch (_: SecurityException) { null } catch (_: Throwable) { null }
 
     private fun Int.validId(): Int? = takeIf { it != Int.MAX_VALUE && it != Int.MIN_VALUE }
     private fun Long.validId(): Long? = takeIf { it != Long.MAX_VALUE && it != Long.MIN_VALUE }
-
     private fun Int.validSig(): Int? = takeIf { it != Int.MAX_VALUE && it != Int.MIN_VALUE }
-
-    // --------------------------------------------------------------------
-    // Parsed holder
-    // --------------------------------------------------------------------
 
     private data class Parsed(
         val servingCell: ServingCell?,
@@ -127,9 +117,9 @@ object TelephonyCollector {
         }
 
         return try {
-            when {
-                ci is CellInfoLte -> parseLte(ci)
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && ci is CellInfoNr -> parseNr(ci)
+            when (ci) {
+                is CellInfoLte -> parseLte(ci)
+                is CellInfoNr -> parseNr(ci)
                 else -> Parsed(
                     servingCell = null,
                     signal = null,
@@ -162,20 +152,15 @@ object TelephonyCollector {
         val band: Int? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             id.bands.firstOrNull()
         } else null
-
-        // Timing advance exists since API 26, but may be gated/unknown
         val timingAdvance: Int? = safe { sig.timingAdvance }?.validSig()
-
-        // CQI isn't part of public API for LTE signal; best-effort reflection (often null)
         val cqi: Int? = reflectInt(sig, "getCqi")?.validSig()
-
         val serving = ServingCell(
             ci = id.ci.validId(),
             tac = id.tac.validId(),
             pci = id.pci.validId(),
             earfcn = id.earfcn.validId(),
             band = band,
-            bandwidthMhz = null // best-effort; not reliably available via public API
+            bandwidthMhz = null
         )
 
         val signal = SignalInfo(
@@ -221,7 +206,7 @@ object TelephonyCollector {
         val id = ci.cellIdentity as? CellIdentityNr
         val sig = ci.cellSignalStrength as? CellSignalStrengthNr
 
-        // band (API 30+ for NR too)
+        // band (API 30+ for NR)
         val band: Int? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             id?.bands?.firstOrNull()
         } else null
@@ -354,22 +339,11 @@ object TelephonyCollector {
         return NrState.NONE
     }
 
-
-
-    // --------------------------------------------------------------------
-    // Reflection helpers
-    // --------------------------------------------------------------------
-
     private fun reflectInt(obj: Any?, methodName: String): Int? =
         runCatching {
             if (obj == null) return null
             obj.javaClass.getMethod(methodName).invoke(obj) as? Int
         }.getOrNull()
-
-    // --------------------------------------------------------------------
-    // Network type name mapping
-    // --------------------------------------------------------------------
-
     private fun networkTypeName(type: Int): String = when (type) {
         TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
         TelephonyManager.NETWORK_TYPE_NR -> "NR"

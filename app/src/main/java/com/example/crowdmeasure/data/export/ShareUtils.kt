@@ -11,11 +11,7 @@ object ShareUtils {
             type = "application/json"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-            // Important if caller context isn't an Activity (e.g., appContext / Worker)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-            // Helps some apps actually receive the Uri permission
             clipData = ClipData.newRawUri("crowdmeasure_export.json", uri)
         }
 

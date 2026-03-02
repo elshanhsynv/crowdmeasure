@@ -1,4 +1,3 @@
-// presentation/util/SystemSettingsIntents.kt
 package com.example.crowdmeasure.presentation.util
 
 import android.content.Context
@@ -10,7 +9,6 @@ object SystemSettingsIntents {
 
     /**
      * Opens a relevant battery optimization screen.
-     * We avoid requesting ignore-optimizations directly (policy/UX sensitive).
      */
     fun openBatteryOptimizationSettings(context: Context) {
         val appContext = context.applicationContext

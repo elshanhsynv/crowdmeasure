@@ -6,11 +6,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-/**
- * Key-value row for displaying information.
- */
 @Composable
 fun KeyValueRow(
     key: String,
@@ -35,4 +33,10 @@ fun KeyValueRow(
             modifier = Modifier.weight(1f)
         )
     }
+}
+
+@Preview
+@Composable
+private fun KeyValueRowPreview() {
+    KeyValueRow(key = "Key", value = "Value")
 }

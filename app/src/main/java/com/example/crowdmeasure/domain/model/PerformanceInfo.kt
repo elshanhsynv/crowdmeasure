@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PerformanceInfo(
     val endpointId: String,
-
     val dnsMs: Long? = null,
     val tcpMs: Long? = null,
     val tlsMs: Long? = null,

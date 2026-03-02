@@ -32,7 +32,7 @@ object NavigationConfig {
      * Enter transition for forward navigation (push).
      * The new screen slides in from the right.
      */
-    fun AnimatedContentTransitionScope<NavBackStackEntry>.enterTransition(): EnterTransition {
+    fun enterTransition(): EnterTransition {
         return slideInHorizontally(
             animationSpec = springSpec,
             initialOffsetX = { it } // Start fully off-screen right
@@ -44,7 +44,7 @@ object NavigationConfig {
      * The current screen slides slightly left, fades out, and SCALES DOWN
      * to create a "depth" effect (putting it in the background).
      */
-    fun AnimatedContentTransitionScope<NavBackStackEntry>.exitTransition(): ExitTransition {
+    fun exitTransition(): ExitTransition {
         return slideOutHorizontally(
             animationSpec = springSpec,
             targetOffsetX = { -it / 4 } // Move slightly left
@@ -59,7 +59,7 @@ object NavigationConfig {
      * The previous screen slides back from left, fades in, and SCALES UP
      * returning from the background.
      */
-    fun AnimatedContentTransitionScope<NavBackStackEntry>.popEnterTransition(): EnterTransition {
+    fun popEnterTransition(): EnterTransition {
         return slideInHorizontally(
             animationSpec = springSpec,
             initialOffsetX = { -it / 4 } // Start slightly left
@@ -73,7 +73,7 @@ object NavigationConfig {
      * Exit transition when popping (current screen exits to the right).
      * The current screen slides out to the right.
      */
-    fun AnimatedContentTransitionScope<NavBackStackEntry>.popExitTransition(): ExitTransition {
+    fun popExitTransition(): ExitTransition {
         return slideOutHorizontally(
             animationSpec = springSpec,
             targetOffsetX = { it } // Move fully off-screen right

@@ -1,4 +1,3 @@
-// presentation/components/BackgroundWorkStatusCard.kt
 package com.example.crowdmeasure.presentation.ui.components
 
 import androidx.compose.foundation.layout.*
@@ -6,14 +5,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.screens.settings.BackgroundWorkUiState
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 
-
-/**
- * Card showing background work status.
- */
 @Composable
 fun BackgroundWorkStatusCard(
     state: BackgroundWorkUiState,
@@ -41,7 +37,7 @@ fun BackgroundWorkStatusCard(
             StatusPill(label = state.workManagerStateLabel)
         }
 
-        Divider()
+        HorizontalDivider()
 
         // Metrics
         KeyValueRow("Interval", state.intervalMinutesLabel)
@@ -50,7 +46,7 @@ fun BackgroundWorkStatusCard(
         KeyValueRow("Result", state.lastResultLabel)
         KeyValueRow("Uploaded", state.lastUploadedLabel)
 
-        Divider()
+        HorizontalDivider()
 
         // Error (full width)
         Column {
@@ -71,9 +67,8 @@ fun BackgroundWorkStatusCard(
             )
         }
 
-        Divider()
+        HorizontalDivider()
 
-        // Actions
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(spacing.sm)
@@ -99,4 +94,14 @@ fun BackgroundWorkStatusCard(
             text = "Periodic work is inexact and may run later due to battery optimizations or Doze mode."
         )
     }
+}
+
+@Preview
+@Composable
+private fun BackgroundWorkStatusCardPreview() {
+    BackgroundWorkStatusCard(
+        state = BackgroundWorkUiState.loading(),
+        onRunNow = {},
+        onReschedule = {},
+    )
 }

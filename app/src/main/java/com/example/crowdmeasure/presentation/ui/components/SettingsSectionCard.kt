@@ -11,13 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 
-/**
- * Section card for settings grouping.
- * Provides consistent styling for settings sections.
- */
 @Composable
 fun SettingsSectionCard(
     title: String,
@@ -43,7 +40,6 @@ fun SettingsSectionCard(
                 .padding(spacing.cardPadding),
             verticalArrangement = Arrangement.spacedBy(spacing.cardContentSpacing)
         ) {
-            // Header
             Column(verticalArrangement = Arrangement.spacedBy(spacing.xxs)) {
                 Text(
                     text = title,
@@ -58,10 +54,18 @@ fun SettingsSectionCard(
                     )
                 }
             }
-
-            // Content
             content()
         }
     }
 }
 
+@Preview
+@Composable
+private fun SettingsSectionCardPreview() {
+    SettingsSectionCard(
+        title = "Section Title",
+        description = "This is a section with some content."
+    ) {
+        Text("This is the section's content.")
+    }
+}

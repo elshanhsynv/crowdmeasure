@@ -119,7 +119,6 @@ fun ConsentGateScreen(
     val consentAccepted = settings?.consentAccepted ?: false
     val collectionEnabled = settings?.collectionEnabled ?: false
 
-    // Permission state (refreshed when visible changes)
     var fineLocationGranted by remember { mutableStateOf(false) }
     var phoneStateGranted by remember { mutableStateOf(false) }
 
@@ -174,7 +173,8 @@ private fun ConsentGateContent(
     onRequestPhoneState: () -> Unit
 ) {
     val spacing = LocalSpacing.current
-    val canComplete = consentAccepted && collectionEnabled
+    val canComplete =
+        consentAccepted && collectionEnabled && fineLocationGranted && phoneStateGranted
 
     AnimatedVisibility(
         visible = visible,
@@ -344,41 +344,6 @@ private fun PrivacyBullet(text: String) {
             color = MaterialTheme.colorScheme.onPrimaryContainer,
             modifier = Modifier.weight(1f)
         )
-    }
-}
-
-@Composable
-private fun ConsentControlsCard(
-    consentAccepted: Boolean,
-    collectionEnabled: Boolean,
-    onConsentChange: (Boolean) -> Unit,
-    onCollectionChange: (Boolean) -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column {
-            ConsentSwitchItem(
-                title = "I understand and agree",
-                subtitle = "Required to participate in crowdsourced measurements",
-                checked = consentAccepted,
-                onCheckedChange = onConsentChange,
-                enabled = true
-            )
-
-            Divider()
-
-            ConsentSwitchItem(
-                title = "Enable data collection",
-                subtitle = "Start collecting network measurements in the background",
-                checked = collectionEnabled,
-                onCheckedChange = onCollectionChange,
-                enabled = consentAccepted
-            )
-        }
     }
 }
 
@@ -651,12 +616,12 @@ private fun ConsentActions(
             horizontalArrangement = Arrangement.spacedBy(spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Skip for now")
-            }
+//            TextButton(
+//                onClick = onDismiss,
+//                modifier = Modifier.weight(1f)
+//            ) {
+//                Text("Skip for now")
+//            }
 
             Button(
                 onClick = onComplete,
@@ -687,16 +652,3 @@ private fun ConsentGateScreenPreview() {
         onRequestPhoneState = {}
     )
 }
-
-
-//@Preview
-//@Composable
-//private fun OptionalPermissionsCardPreview() {
-//    OptionalPermissionsCard(
-//        fineLocationGranted = false,
-//        phoneStateGranted = false,
-//        enabled = true,
-//        onRequestFineLocation = {},
-//        onRequestPhoneState = {}
-//    )
-//}

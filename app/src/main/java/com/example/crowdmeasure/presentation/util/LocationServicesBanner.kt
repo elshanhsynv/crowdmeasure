@@ -33,9 +33,6 @@ fun LocationServicesBanner(
     val context = LocalContext.current
     val spacing = LocalSpacing.current
     val isPreview = LocalInspectionMode.current
-
-    // Use LocalInspectionMode to avoid accessing LocationManager in Preview,
-    // which causes "Unsupported Service: location" AssertionError in LayoutLib.
     val locationServicesOn by remember(context, isPreview) {
         if (isPreview) {
             flowOf(true)

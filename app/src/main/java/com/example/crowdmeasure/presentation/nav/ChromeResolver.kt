@@ -2,25 +2,7 @@ package com.example.crowdmeasure.presentation.nav
 
 import androidx.navigation.NavDestination
 
-/**
- * Resolves chrome configuration (top bar, bottom bar, back button) for navigation destinations.
- *
- * Separated from UI for testability and flexibility.
- * Can be extended to support:
- * - Nested navigation graphs
- * - Route prefixes/patterns
- * - Dynamic titles from arguments
- */
 object ChromeResolver {
-
-    /**
-     * Determines chrome configuration based on the current destination.
-     *
-     * Strategy:
-     * 1. Check exact route matches (top-level screens)
-     * 2. Check route patterns (detail screens with args)
-     * 3. Fall back to sensible defaults
-     */
     fun resolve(destination: NavDestination?): ChromeConfig {
         val route = destination?.route ?: return defaultChrome()
 
@@ -56,7 +38,7 @@ object ChromeResolver {
                 showTopBar = true,
                 showBottomBar = false,
                 showBackButton = true,
-                topBarElevated = true  // Elevated to show it's a layer above
+                topBarElevated = true
             )
 
             // Future: handle nested graphs by checking route.startsWith(...)

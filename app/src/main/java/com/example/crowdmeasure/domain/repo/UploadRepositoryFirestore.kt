@@ -23,14 +23,11 @@ class UploadRepositoryFirestore @Inject constructor(
         if (!settings.firestoreUploadsEnabled) return@runCatching 0
         if (!settings.consentAccepted || !settings.collectionEnabled) return@runCatching 0
 
-
         prefs.ensureInstallId()
         val installId = prefs.settingsFirst().installId
 
         val pending = dao.getUploadCandidates( limit)
         if (pending.isEmpty()) return@runCatching 0
-
-
 
         val batch = firestore.batch()
 

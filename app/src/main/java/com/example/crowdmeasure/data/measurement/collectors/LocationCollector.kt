@@ -32,7 +32,7 @@ object LocationCollector {
         val platform = tryPlatformNetworkProvider(context)
         if (platform != null) return platform
 
-        // 2) Last resort: best-effort single fused update (you had this already)
+        // 2) Last resort: best-effort single fused update
         val lastResort = tryFusedSingleUpdate(context)
         return lastResort
     }
@@ -100,7 +100,6 @@ object LocationCollector {
                 }
 
                 try {
-                    // NETWORK_PROVIDER is the right choice for COARSE.
                     lm.requestSingleUpdate(
                         LocationManager.NETWORK_PROVIDER,
                         listener,
@@ -109,7 +108,6 @@ object LocationCollector {
                 } catch (_: SecurityException) {
                     finish(null)
                 } catch (_: IllegalArgumentException) {
-                    // Provider missing/disabled on some devices
                     finish(null)
                 } catch (_: Throwable) {
                     finish(null)

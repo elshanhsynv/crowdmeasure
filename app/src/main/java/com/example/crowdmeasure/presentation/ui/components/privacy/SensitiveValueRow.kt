@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 
@@ -111,4 +112,15 @@ fun SensitiveValueRow(
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun SensitiveValueRowPreview() {
+    SensitiveValueRow(
+        label = "Endpoint",
+        value = "https://api.example.com",
+        revealed = true,
+        onToggleReveal = {}
+    )
 }

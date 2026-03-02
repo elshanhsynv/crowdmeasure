@@ -10,23 +10,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 
-/**
- * Grid row showing two metrics side-by-side.
- * Useful for compact display of related metrics.
- *
- * Usage:
- * ```
- * MetricGridRow(
- *     label1 = "DNS",
- *     value1 = "12 ms",
- *     label2 = "TCP",
- *     value2 = "45 ms"
- * )
- * ```
- */
 @Composable
 fun MetricGridRow(
     label1: String,
@@ -65,4 +52,15 @@ fun MetricGridRow(
             )
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MetricGridRowPreview() {
+    MetricGridRow(
+        label1 = "Label 1",
+        value1 = "Value 1",
+        label2 = "Label 2",
+        value2 = "Value 2"
+    )
 }

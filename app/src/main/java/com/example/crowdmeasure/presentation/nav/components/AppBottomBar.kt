@@ -129,9 +129,9 @@ private fun NavDestination?.isInHierarchy(route: String): Boolean {
 private fun AppBottomBarPreview() {
     AppBottomBar(
         navController = NavHostController(LocalContext.current),
-        badgeCounts = mapOf(
-            MainTab.HOME.route to 1,
-            MainTab.HISTORY.route to 1,
-        )
+//        badgeCounts = mapOf(
+//            MainTab.HOME.route to 1,
+//            MainTab.HISTORY.route to 1,
+//        )
     )
 }

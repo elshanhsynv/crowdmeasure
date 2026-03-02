@@ -8,7 +8,6 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import android.location.LocationManager
-import androidx.core.content.getSystemService
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -16,22 +15,21 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 object AppPermissions {
 
-    fun hasCoarseLocation(context: Context): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED
+    fun hasCoarseLocation(context: Context): Boolean = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
 
-    fun hasPhoneState(context: Context): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) ==
-                PackageManager.PERMISSION_GRANTED
+    fun hasPhoneState(context: Context): Boolean = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.READ_PHONE_STATE
+    ) == PackageManager.PERMISSION_GRANTED
 
-    fun hasFineLocation(context: Context): Boolean =
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
+    fun hasFineLocation(context: Context): Boolean = ContextCompat.checkSelfPermission(
+        context, Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
 
     fun isLocationServicesEnabled(context: Context): Boolean {
-        // LayoutLib (Preview) doesn't support LocationManager and throws AssertionError
         val locationManager = try {
             context.getSystemService(LocationManager::class.java)
         } catch (e: Throwable) {

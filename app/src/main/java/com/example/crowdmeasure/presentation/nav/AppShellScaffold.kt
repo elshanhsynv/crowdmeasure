@@ -48,8 +48,6 @@ fun AppShellScaffold(
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
-
-    // Derive chrome config - only recalculates when destination changes
     val chrome by remember {
         derivedStateOf { ChromeResolver.resolve(destination) }
     }
@@ -105,6 +103,6 @@ fun rememberAppShellState(): AppShellState {
 private fun AppShellScaffoldPreview() {
     AppShellScaffold(
         navController = NavHostController(LocalContext.current),
-        content = {PaddingValues(5.dp)}
+        content = { PaddingValues(5.dp) }
     )
 }

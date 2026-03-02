@@ -8,22 +8,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 
-
-/**
- * Simple label-value row for displaying metrics.
- *
- * Features:
- * - Space-between layout
- * - Accessible labels (grayed)
- * - Monospace value option for alignment
- *
- * Usage:
- * ```
- * MetricRow("RTT Avg", "42 ms")
- * MetricRow("Queue", "7", monoValue = true)
- * ```
- */
 @Composable
 fun MetricRow(
     label: String,
@@ -46,4 +32,10 @@ fun MetricRow(
             color = MaterialTheme.colorScheme.onSurface
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MetricRowPreview() {
+    MetricRow(label = "Label", value = "Value")
 }

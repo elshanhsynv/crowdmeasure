@@ -24,7 +24,6 @@ object DatabaseModule {
             .fallbackToDestructiveMigrationOnDowngrade(false)
             .build()
     }
-
     @Provides
     fun provideDao(db: AppDatabase): MeasurementDao = db.measurementDao()
 }

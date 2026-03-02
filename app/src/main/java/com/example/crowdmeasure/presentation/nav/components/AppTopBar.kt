@@ -14,6 +14,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 /**
@@ -44,12 +45,12 @@ fun AppTopBar(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val colors = if (elevated) {
-        TopAppBarDefaults.centerAlignedTopAppBarColors(
+        TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
             scrolledContainerColor = MaterialTheme.colorScheme.surface,
         )
     } else {
-        TopAppBarDefaults.centerAlignedTopAppBarColors(
+        TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background,
             scrolledContainerColor = MaterialTheme.colorScheme.surface,
         )
@@ -81,5 +82,17 @@ fun AppTopBar(
         actions = actions,
         colors = colors,
         scrollBehavior = scrollBehavior,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+private fun AppTopBarPreview() {
+    AppTopBar(
+        title = "Preview",
+        showBackButton = true,
+        onBackClick = {},
+        elevated = true,
     )
 }

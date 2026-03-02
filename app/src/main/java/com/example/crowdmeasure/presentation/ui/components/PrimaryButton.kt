@@ -4,6 +4,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun PrimaryButton(
@@ -15,4 +16,10 @@ fun PrimaryButton(
     Button(onClick = onClick, modifier = modifier, enabled = enabled) {
         Text(text)
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PrimaryButtonPreview() {
+    PrimaryButton(text = "Button", onClick = {})
 }

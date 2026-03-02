@@ -38,7 +38,7 @@ fun AppEmptyState(
 ) {
     Column(
         modifier = modifier
-            .padding(24.dp) // Generous padding for "serious/calm" vibe
+            .padding(24.dp)
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -46,10 +46,10 @@ fun AppEmptyState(
         if (icon != null) {
             Icon(
                 imageVector = icon,
-                contentDescription = null, // Decorative
-                tint = MaterialTheme.colorScheme.outline, // Muted color
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier
-                    .size(64.dp) // Large enough to be an anchor
+                    .size(64.dp)
                     .padding(bottom = 16.dp)
             )
         }

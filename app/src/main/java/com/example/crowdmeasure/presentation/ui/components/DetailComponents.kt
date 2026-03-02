@@ -14,28 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 
 /**
  * Section card for detail screens with collapsible content.
- *
- * Features:
- * - Title + optional description
- * - Optional header action (e.g., reveal sensitive)
- * - Consistent styling
- * - Content slot
- *
- * Usage:
- * ```
- * DetailSectionCard(
- *     title = "Performance",
- *     description = "Latency breakdown"
- * ) {
- *     MetricRow("RTT", "42 ms")
- *     MetricRow("TTFB", "120 ms")
- * }
- * ```
  */
 @Composable
 fun DetailSectionCard(
@@ -63,7 +47,6 @@ fun DetailSectionCard(
                 .padding(spacing.cardPadding),
             verticalArrangement = Arrangement.spacedBy(spacing.cardContentSpacing)
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -96,7 +79,6 @@ fun DetailSectionCard(
 }
 
 
-
 /**
  * Divider for separating groups within a section.
  */
@@ -104,4 +86,16 @@ fun DetailSectionCard(
 fun SectionDivider() {
     val spacing = LocalSpacing.current
     Spacer(Modifier.height(spacing.sm))
+}
+
+@Preview
+@Composable
+private fun DetailSectionCardPreview() {
+    DetailSectionCard(
+        title = "Section Title",
+        description = "This is a section with some content.",
+        headerAction = {}
+    ) {
+        Text("This is the section's content.")
+    }
 }

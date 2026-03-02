@@ -22,7 +22,7 @@ object WifiCollector {
 
         return WifiInfo(
             rssi = info?.rssi,
-            linkSpeedMbps = info?.linkSpeed, // legacy
+            linkSpeedMbps = info?.linkSpeed,
             txLinkSpeedMbps = txSpeed,
             rxLinkSpeedMbps = rxSpeed,
             frequencyMhz = frequencyMhz,
@@ -31,11 +31,6 @@ object WifiCollector {
             bssidHash = info?.bssid?.let { hashBssid(it) }
         )
     }
-
-    // ---------------------------------------------------------
-    // Safe getters (work across API levels)
-    // ---------------------------------------------------------
-
     private fun getFrequency(info: AndroidWifiInfo?): Int? =
         runCatching {
             info?.javaClass?.getMethod("getFrequency")?.invoke(info) as? Int
@@ -43,7 +38,6 @@ object WifiCollector {
 
     private fun getChannelWidth(info: AndroidWifiInfo?): Int? =
         runCatching {
-            // 0=20, 1=40, 2=80, 3=160, 4=80+80
             val cw = info?.javaClass?.getMethod("getChannelWidth")?.invoke(info) as? Int
             when (cw) {
                 0 -> 20
@@ -60,10 +54,6 @@ object WifiCollector {
 
     private fun getRxLinkSpeed(info: AndroidWifiInfo?): Int? =
         if (Build.VERSION.SDK_INT >= 29) info?.rxLinkSpeedMbps else null
-
-    // ---------------------------------------------------------
-    // Derived metrics
-    // ---------------------------------------------------------
 
     private fun deriveStandard(freq: Int?, width: Int?): WifiStandard {
         if (freq == null) return WifiStandard.UNKNOWN
@@ -82,15 +72,10 @@ object WifiCollector {
             else -> WifiStandard.UNKNOWN
         }
     }
-
-    /**
-     * Privacy-safe stable AP identity.
-     * Hash instead of storing raw BSSID.
-     */
     private fun hashBssid(bssid: String): String {
-        val salt = "crowdmeasure_wifi_salt_v1" // keep constant or rotate per app version
+        val salt = "crowdmeasure_wifi_salt_v1"
         val md = MessageDigest.getInstance("SHA-256")
         val bytes = md.digest((bssid + salt).toByteArray())
-        return bytes.take(8).joinToString("") { "%02x".format(it) } // short hash
+        return bytes.take(8).joinToString("") { "%02x".format(it) }
     }
 }

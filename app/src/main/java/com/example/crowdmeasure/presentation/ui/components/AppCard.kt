@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
@@ -28,16 +29,6 @@ import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
  * - Consistent spacing and elevation
  * - Content slot for custom layout
  *
- * Usage:
- * ```
- * AppCard(
- *     title = "Measurement Queue",
- *     description = "Pending uploads"
- * ) {
- *     MetricRow("Count", "42")
- *     Button(...) { Text("Upload") }
- * }
- * ```
  */
 @Composable
 fun AppCard(
@@ -101,5 +92,17 @@ fun AppCard(
             // Content
             content()
         }
+    }
+}
+
+
+@Preview
+@Composable
+private fun AppCardPreview() {
+    AppCard(
+        title = "Card Title",
+        description = "This is a card with some content."
+    ) {
+        Text("This is the card's content.")
     }
 }
