@@ -1,21 +1,21 @@
 [versions]
 agp = "9.0.1"
-kotlin = "2.3.0"
+kotlin = "2.3.20"
 ksp = "2.3.5"
 
-composeBom = "2026.01.01"
-activityCompose = "1.12.3"
+composeBom = "2026.03.01"
+activityCompose = "1.13.0"
 material3 = "1.4.0"
 navigationCompose = "2.9.7"
 
 lifecycle = "2.10.0"
 coroutinesAndroid = "1.10.2"
-datastorePreferences = "1.2.0"
+datastorePreferences = "1.2.1"
 
 room = "2.8.4"
-workRuntimeKtx = "2.11.1"
+workRuntimeKtx = "2.11.2"
 
-hiltAndroid = "2.59"
+hiltAndroid = "2.59.2"
 hiltCompilerVersion = "1.3.0"
 
 playServicesLocation = "21.3.0"
@@ -25,9 +25,9 @@ serializationJson = "1.10.0"
 materialIconsExtended = "1.7.8"
 
 junit = "4.13.2"
-junitVersion = "1.1.5"
-espressoCore = "3.5.1"
-animationCore = "1.10.2"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+animationCore = "1.10.6"
 
 [libraries]
 

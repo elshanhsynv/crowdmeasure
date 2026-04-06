@@ -4,8 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
-import com.example.crowdmeasure.domain.usecase.SetCollectionEnabledUseCase
-import com.example.crowdmeasure.domain.usecase.SetConsentAcceptedUseCase
 import com.example.crowdmeasure.domain.usecase.SetConsentGateDismissedUseCase
 import com.example.crowdmeasure.workers.WorkScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,8 +17,6 @@ import javax.inject.Inject
 @HiltViewModel
 class ConsentGateViewModel @Inject constructor(
     private val userSessionRepository: UserSessionRepository,
-    private val setConsentAcceptedUseCase: SetConsentAcceptedUseCase,
-    private val setCollectionEnabledUseCase: SetCollectionEnabledUseCase,
     private val setConsentGateDismissedUseCase: SetConsentGateDismissedUseCase,
     private val workScheduler: WorkScheduler,
 ) : ViewModel() {
@@ -32,24 +28,6 @@ class ConsentGateViewModel @Inject constructor(
             initialValue = null
         )
 
-    fun setConsent(accepted: Boolean) {
-        viewModelScope.launch {
-            setConsentAcceptedUseCase(accepted)
-            if (!accepted) {
-                setCollectionEnabledUseCase(false)
-            }
-            rescheduleBackgroundWork()
-        }
-    }
-
-    fun setCollection(enabled: Boolean) {
-        viewModelScope.launch {
-            val current = userSessionRepository.settings.first()
-            if (enabled && !current.consentAccepted) return@launch
-            setCollectionEnabledUseCase(enabled)
-            rescheduleBackgroundWork()
-        }
-    }
 
     fun markConsentGateCompleted() {
         viewModelScope.launch {

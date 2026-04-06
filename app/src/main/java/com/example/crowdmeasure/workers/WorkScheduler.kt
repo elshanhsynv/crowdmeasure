@@ -40,9 +40,6 @@ class WorkScheduler @Inject constructor(
     fun observeAutoRunWorkInfo() =
         workManager.getWorkInfosForUniqueWorkFlow(AUTO_RUN_NAME).map { it.firstOrNull() }
 
-    fun observeMaintenanceWorkInfo() =
-        workManager.getWorkInfosForUniqueWorkFlow(MAINTENANCE_NAME).map { it.firstOrNull() }
-
     fun scheduleMaintenanceDaily() {
         val req = PeriodicWorkRequestBuilder<MaintenanceWorker>(
             24,
@@ -52,6 +49,7 @@ class WorkScheduler @Inject constructor(
         )
             .setConstraints(
                 Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
                     .setRequiresBatteryNotLow(true)
                     .build()
             )
@@ -78,11 +76,9 @@ class WorkScheduler @Inject constructor(
     ) {
         scheduleMaintenanceDaily()
 
-        val allowed =
-            settings.consentAccepted && settings.collectionEnabled && settings.autoRunEnabled
+        val allowed = settings.autoRunEnabled
         if (!allowed) {
             cancelAutoRun()
-            // also cancel kickoff if previously enqueued
             workManager.cancelUniqueWork(AUTO_RUN_KICKOFF_NAME)
             return
         }
@@ -104,7 +100,7 @@ class WorkScheduler @Inject constructor(
         val last = statusStore.autoRunStatus.first()
         val scheduleUnchanged =
             last.lastScheduleMinutes == safeMinutes.toInt() &&
-                last.lastScheduleWifiOnly == wifiOnly
+                    last.lastScheduleWifiOnly == wifiOnly
         if (scheduleUnchanged && isWorkActive(AUTO_RUN_NAME)) return
 
         val constraints = Constraints.Builder()
@@ -202,5 +198,4 @@ class WorkScheduler @Inject constructor(
     }
 
 }
-
 

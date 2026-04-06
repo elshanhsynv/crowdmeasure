@@ -26,7 +26,7 @@ class AutoRunWorkRepository @Inject constructor(
 ) {
     suspend fun execute(nowUtcMs: Long, runAttemptCount: Int): AutoRunExecution {
         val settings = sessionRepo.settings.first()
-        val allowed = settings.autoRunEnabled && settings.consentAccepted && settings.collectionEnabled
+        val allowed = settings.autoRunEnabled
         if (!allowed) {
             return AutoRunExecution(
                 outcome = AutoRunExecution.Outcome.SUCCESS,

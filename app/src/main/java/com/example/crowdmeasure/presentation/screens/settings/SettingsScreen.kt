@@ -85,8 +85,7 @@ import com.example.crowdmeasure.presentation.util.UiState
  */
 @Composable
 fun SettingsScreen(
-    contentPadding: PaddingValues,
-    viewModel: SettingsViewModel = hiltViewModel<SettingsViewModel>()
+    contentPadding: PaddingValues, viewModel: SettingsViewModel = hiltViewModel<SettingsViewModel>()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val backgroundWorkState by viewModel.backgroundWorkState.collectAsStateWithLifecycle()
@@ -103,17 +102,12 @@ fun SettingsScreen(
         exportState = exportState,
         deleteState = deleteState,
         backgroundWorkState = backgroundWorkState,
-        onSaveEndpoint = viewModel::saveEndpoint,
-        onCollectOnlyWifiChange = viewModel::setCollectOnlyWifi,
-        onAutoRunChange = viewModel::setAutoRun,
         onRunNow = viewModel::runAutoRunNow,
         onReschedule = viewModel::rescheduleBackgroundWork,
         onExport = viewModel::exportData,
         onClearExportState = viewModel::clearExportState,
         onDelete = viewModel::deleteAllData,
         onClearDeleteState = viewModel::clearDeleteState,
-        onSetConsent = viewModel::setConsent,
-        onSetCollection = viewModel::setCollection,
         onSetFirestoreUploads = viewModel::setFirestoreUploads
     )
 
@@ -126,17 +120,12 @@ private fun SettingsScreenContent(
     exportState: UiState<Unit>,
     deleteState: UiState<Unit>,
     backgroundWorkState: BackgroundWorkUiState,
-    onSaveEndpoint: (String) -> Unit,
-    onCollectOnlyWifiChange: (Boolean) -> Unit,
-    onAutoRunChange: (Boolean, Int) -> Unit,
     onRunNow: () -> Unit,
     onReschedule: () -> Unit,
     onExport: (Context, Int) -> Unit,
     onClearExportState: () -> Unit,
     onDelete: () -> Unit,
     onClearDeleteState: () -> Unit,
-    onSetConsent: (Boolean) -> Unit,
-    onSetCollection: (Boolean) -> Unit,
     onSetFirestoreUploads: (Boolean) -> Unit
 ) {
 
@@ -150,25 +139,15 @@ private fun SettingsScreenContent(
     ) {
         // Tab row
         SettingsTabRow(
-            selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it }
-        )
+            selectedTab = selectedTab, onTabSelected = { selectedTab = it })
 
         // Tab content
         when (selectedTab) {
-            0 -> PrivacyTab(
-                settings = settings,
-                onConsentChange = onSetConsent,
-                onCollectionChange = onSetCollection,
-                onFirestoreUploadsChange = onSetFirestoreUploads
-            )
+            0 -> PrivacyTab()
 
             1 -> CollectionTab(
                 settings = settings,
                 backgroundWorkState = backgroundWorkState,
-                onSaveEndpoint = onSaveEndpoint,
-                onCollectOnlyWifiChange = onCollectOnlyWifiChange,
-                onAutoRunChange = onAutoRunChange,
                 onRunNow = onRunNow,
                 onReschedule = onReschedule
             )
@@ -191,8 +170,7 @@ private fun SettingsScreenContent(
 
 @Composable
 private fun SettingsTabRow(
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit
+    selectedTab: Int, onTabSelected: (Int) -> Unit
 ) {
     val tabs = listOf(
         SettingsTab("Privacy", Icons.Filled.Security),
@@ -212,18 +190,15 @@ private fun SettingsTabRow(
                 text = { Text(tab.title) },
                 icon = {
                     Icon(
-                        imageVector = tab.icon,
-                        contentDescription = null
+                        imageVector = tab.icon, contentDescription = null
                     )
-                }
-            )
+                })
         }
     }
 }
 
 private data class SettingsTab(
-    val title: String,
-    val icon: ImageVector
+    val title: String, val icon: ImageVector
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -232,10 +207,6 @@ private data class SettingsTab(
 
 @Composable
 private fun PrivacyTab(
-    settings: AppSettings?,
-    onConsentChange: (Boolean) -> Unit,
-    onCollectionChange: (Boolean) -> Unit,
-    onFirestoreUploadsChange: (Boolean) -> Unit
 ) {
     val spacing = LocalSpacing.current
     val context = LocalContext.current
@@ -277,56 +248,52 @@ private fun PrivacyTab(
         verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
     ) {
         // Consent & Collection
+//        SettingsSectionCard(
+//            title = "Consent & Collection",
+//            description = "Control what data is collected and uploaded"
+//        ) {
+//            AssistiveHint(
+//                text = "CrowdMeasure collects network measurements only when you opt in. " +
+//                        "Optional permissions improve measurement quality."
+//            )
+//
+//            HorizontalDivider()
+//
+//            SettingSwitchRow(
+//                title = "I Understand and Agree",
+//                subtitle = "Required before enabling collection",
+//                checked = settings?.consentAccepted ?: false,
+//                onCheckedChange = onConsentChange
+//            )
+//
+//            HorizontalDivider()
+//
+//            SettingSwitchRow(
+//                title = "Enable Data Collection",
+//                subtitle = "Allows measurement collection in the background",
+//                checked = settings?.collectionEnabled ?: false,
+//                enabled = settings?.consentAccepted == true,
+//                onCheckedChange = onCollectionChange
+//            )
+//
+//            HorizontalDivider()
+//
+//            SettingSwitchRow(
+//                title = "Enable Firestore Uploads",
+//                subtitle = "Uploads queued measurements when you tap 'Upload now'",
+//                checked = settings?.firestoreUploadsEnabled ?: false,
+//                enabled = settings?.consentAccepted == true && settings?.collectionEnabled == true,
+//                onCheckedChange = onFirestoreUploadsChange
+//            )
+//        }
+
         SettingsSectionCard(
-            title = "Consent & Collection",
-            description = "Control what data is collected and uploaded"
-        ) {
-            AssistiveHint(
-                text = "CrowdMeasure collects network measurements only when you opt in. " +
-                        "Optional permissions improve measurement quality."
-            )
-
-            HorizontalDivider()
-
-            SettingSwitchRow(
-                title = "I Understand and Agree",
-                subtitle = "Required before enabling collection",
-                checked = settings?.consentAccepted ?: false,
-                onCheckedChange = onConsentChange
-            )
-
-            HorizontalDivider()
-
-            SettingSwitchRow(
-                title = "Enable Data Collection",
-                subtitle = "Allows measurement collection in the background",
-                checked = settings?.collectionEnabled ?: false,
-                enabled = settings?.consentAccepted == true,
-                onCheckedChange = onCollectionChange
-            )
-
-            HorizontalDivider()
-
-            SettingSwitchRow(
-                title = "Enable Firestore Uploads",
-                subtitle = "Uploads queued measurements when you tap 'Upload now'",
-                checked = settings?.firestoreUploadsEnabled ?: false,
-                enabled = settings?.consentAccepted == true && settings?.collectionEnabled == true,
-                onCheckedChange = onFirestoreUploadsChange
-            )
-        }
-
-        SettingsSectionCard(
-            title = "Optional Permissions",
-            description = "Improve measurement quality"
+            title = "Permissions", description = "Improve measurement quality"
         ) {
             if (!locationServicesOn) {
-                AssistChip(
-                    onClick = { refreshPermissions() },
-                    label = {
-                        Text("⚠️ Location services OFF — cell metrics may be empty")
-                    }
-                )
+                AssistChip(onClick = { refreshPermissions() }, label = {
+                    Text("⚠️ Location services OFF — cell metrics may be empty")
+                })
                 Spacer(Modifier.height(spacing.sm))
             }
 
@@ -334,9 +301,8 @@ private fun PrivacyTab(
                 title = "Coarse Location",
                 subtitle = "Adds approximate coordinates to measurements",
                 granted = coarseGranted,
-                enabled = settings?.consentAccepted == true,
-                onRequest = { requestCoarse.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }
-            )
+                enabled = true,
+                onRequest = { requestCoarse.launch(Manifest.permission.ACCESS_COARSE_LOCATION) })
 
             HorizontalDivider()
 
@@ -344,9 +310,8 @@ private fun PrivacyTab(
                 title = "Fine Location",
                 subtitle = "Required for detailed cell signal on some devices (e.g., Samsung)",
                 granted = fineGranted,
-                enabled = settings?.consentAccepted == true,
-                onRequest = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
-            )
+                enabled = true,
+                onRequest = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) })
 
             HorizontalDivider()
 
@@ -354,13 +319,11 @@ private fun PrivacyTab(
                 title = "Phone State",
                 subtitle = "Enables additional cell metrics on some devices",
                 granted = phoneGranted,
-                enabled = settings?.consentAccepted == true,
-                onRequest = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) }
-            )
+                enabled = true,
+                onRequest = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) })
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = { refreshPermissions() }) {
                     Text("Refresh Status")
@@ -379,33 +342,11 @@ private fun PrivacyTab(
 private fun CollectionTab(
     settings: AppSettings?,
     backgroundWorkState: BackgroundWorkUiState,
-    onSaveEndpoint: (String) -> Unit,
-    onCollectOnlyWifiChange: (Boolean) -> Unit,
-    onAutoRunChange: (Boolean, Int) -> Unit,
     onRunNow: () -> Unit,
     onReschedule: () -> Unit
 ) {
     val spacing = LocalSpacing.current
     val context = LocalContext.current
-
-    val endpointInitial = settings?.endpointUrl.orEmpty()
-    var endpoint by rememberSaveable(endpointInitial) { mutableStateOf(endpointInitial) }
-
-    val intervalInitial = (settings?.autoRunIntervalMinutes ?: 20).toString()
-    var intervalText by rememberSaveable(intervalInitial) { mutableStateOf(intervalInitial) }
-
-    val autoRunAllowed = settings?.consentAccepted == true && settings.collectionEnabled
-    val currentInterval = settings?.autoRunIntervalMinutes ?: 20
-
-    val parsedInterval by remember(intervalText) {
-        derivedStateOf { intervalText.toIntOrNull() }
-    }
-    val intervalValid by remember(parsedInterval) {
-        derivedStateOf { parsedInterval != null && parsedInterval in 15..10_080 }
-    }
-    val intervalChanged by remember(parsedInterval, currentInterval) {
-        derivedStateOf { parsedInterval != null && parsedInterval != currentInterval }
-    }
 
     Column(
         modifier = Modifier
@@ -415,125 +356,14 @@ private fun CollectionTab(
             .padding(vertical = spacing.sm),
         verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
     ) {
-        SettingsSectionCard(
-            title = "Test Endpoint",
-            description = "HTTPS URL used for network performance checks"
-        ) {
-            OutlinedTextField(
-                value = endpoint,
-                onValueChange = { endpoint = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("HTTPS URL") },
-                placeholder = { Text("https://api.example.com") },
-                singleLine = true,
-                supportingText = { Text("Use a stable HTTPS endpoint (no personal tokens).") }
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Button(
-                    onClick = { onSaveEndpoint(endpoint) },
-                    enabled = endpoint.startsWith("https://")
-                ) { Text("Save") }
-            }
-        }
-
-        SettingsSectionCard(
-            title = "Collection Rules",
-            description = "Control when background work is allowed to use network"
-        ) {
-            SettingSwitchRow(
-                title = "Wi-Fi only",
-                subtitle = "Avoid using mobile data",
-                checked = settings?.collectOnlyWifi ?: false,
-                onCheckedChange = onCollectOnlyWifiChange
-            )
-        }
-
-        SettingsSectionCard(
-            title = "Auto-Run",
-            description = "Periodic background measurements"
-        ) {
-            if (!autoRunAllowed) {
-                InfoBanner(
-                    title = "To enable Auto-Run, accept consent and enable collection.",
-                    body = "You can opt out at any time.",
-                    tone = BannerTone.Warning
-                )
-                Spacer(Modifier.height(spacing.sm))
-            }
-
-            SettingSwitchRow(
-                title = "Enable Auto-Run",
-                subtitle = "Runs periodically in the background",
-                checked = settings?.autoRunEnabled ?: true,
-                enabled = autoRunAllowed,
-                onCheckedChange = { enabled ->
-                    val safeInterval = (parsedInterval ?: currentInterval).coerceIn(15, 10_080)
-                    onAutoRunChange(enabled, safeInterval)
-                }
-            )
-
-            Spacer(Modifier.height(spacing.sm))
-
-            OutlinedTextField(
-                value = intervalText,
-                onValueChange = { text ->
-                    intervalText = text.filter(Char::isDigit).take(5)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Interval (minutes)") },
-                placeholder = { Text("20") },
-                isError = intervalText.isNotEmpty() && !intervalValid,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                enabled = autoRunAllowed,
-                supportingText = {
-                    Text(
-                        when {
-                            intervalText.isEmpty() -> "15–10080 minutes"
-                            !intervalValid -> "Enter a value between 15 and 10080"
-                            else -> "Example: 20 (default), 60 (hourly), 360 (6 hours)"
-                        }
-                    )
-                }
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
-                    onClick = { intervalText = currentInterval.toString() },
-                    enabled = autoRunAllowed && intervalText.isNotBlank() && intervalText != currentInterval.toString()
-                ) { Text("Reset") }
-
-                Spacer(Modifier.width(spacing.sm))
-
-                Button(
-                    onClick = {
-                        val safeInterval = (parsedInterval ?: currentInterval).coerceIn(15, 10_080)
-                        onAutoRunChange(settings?.autoRunEnabled ?: true, safeInterval)
-                    },
-                    enabled = autoRunAllowed && intervalValid && intervalChanged
-                ) { Text("Apply") }
-            }
-        }
-
         BackgroundWorkStatusCard(
-            state = backgroundWorkState,
-            onRunNow = onRunNow,
-            onReschedule = onReschedule
+            state = backgroundWorkState, onRunNow = onRunNow, onReschedule = onReschedule
         )
 
         BackgroundReliabilityCard(
-            onFixScheduling = onReschedule,
-            onOpenBatterySettings = {
+            onFixScheduling = onReschedule, onOpenBatterySettings = {
                 SystemSettingsIntents.openBatteryOptimizationSettings(context)
-            }
-        )
+            })
 
         Spacer(Modifier.height(spacing.xl))
     }
@@ -566,8 +396,7 @@ private fun DataTab(
         verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
     ) {
         SettingsSectionCard(
-            title = "Export Data",
-            description = "Export measurements as JSON for analysis"
+            title = "Export Data", description = "Export measurements as JSON for analysis"
         ) {
             OutlinedTextField(
                 value = exportCount,
@@ -581,15 +410,13 @@ private fun DataTab(
                 singleLine = true,
                 supportingText = {
                     Text("Export last N measurements (1–10000)")
-                }
-            )
+                })
 
             FilledTonalButton(
                 onClick = {
                     val count = exportCount.toIntOrNull()?.coerceIn(1, 10_000) ?: 50
                     onExport(context, count)
-                },
-                modifier = Modifier.fillMaxWidth()
+                }, modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Export & Share JSON")
             }
@@ -695,8 +522,7 @@ private fun DataTab(
 
 private fun hasFineLocation(context: Context): Boolean {
     return ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_FINE_LOCATION
+        context, Manifest.permission.ACCESS_FINE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
 }
 
@@ -709,18 +535,12 @@ private fun SettingsScreenPreview() {
         exportState = UiState.Idle,
         deleteState = UiState.Idle,
         backgroundWorkState = BackgroundWorkUiState.loading(),
-        onSaveEndpoint = {},
-        onCollectOnlyWifiChange = {},
-        onAutoRunChange = { _, _ -> },
         onRunNow = {},
         onReschedule = {},
         onExport = { _, _ -> },
         onClearExportState = {},
         onDelete = {},
         onClearDeleteState = {},
-        onSetConsent = {},
-        onSetCollection = {},
-        onSetFirestoreUploads = {}
-    )
+        onSetFirestoreUploads = {})
 }
 

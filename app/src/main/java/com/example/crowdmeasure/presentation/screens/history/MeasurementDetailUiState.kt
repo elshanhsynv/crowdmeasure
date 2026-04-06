@@ -17,8 +17,6 @@ data class MeasurementDetailUi(
     val id: String,
     val timeText: String,
     val feedbackTag: String? = null,
-
-    // Sections
     val header: List<Pair<String, String>>,
     val context: List<Pair<String, String>>,
     val diagnostics: List<Pair<String, String>>?,

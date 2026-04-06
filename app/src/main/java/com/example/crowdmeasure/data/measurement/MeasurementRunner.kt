@@ -35,9 +35,9 @@ class MeasurementRunner(
             val settings = prefs.settings.first()
 
             // HARD opt-in gate: no consent, no collection.
-            check(settings.consentAccepted && settings.collectionEnabled) {
-                "Consent not accepted or collection disabled."
-            }
+//            check(settings.consentAccepted && settings.collectionEnabled) {
+//                "Consent not accepted or collection disabled."
+//            }
 
             val device = DeviceCollector.collect()
 

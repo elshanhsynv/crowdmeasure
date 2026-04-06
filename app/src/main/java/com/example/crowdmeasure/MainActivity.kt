@@ -43,13 +43,8 @@ private fun MainContent() {
 
     var userDismissedConsent by rememberSaveable { mutableStateOf(false) }
 
-    val shouldShowConsent = when {
-        userDismissedConsent -> false
-        settings == null -> false
-        settings?.consentGateDismissed == true -> false
-        settings?.consentAccepted != true || !settings!!.collectionEnabled -> true
-        else -> false
-    }
+    val shouldShowConsent =
+        settings != null && !settings!!.consentGateDismissed
 
     Box(modifier = Modifier.fillMaxSize()) {
         AppNav()

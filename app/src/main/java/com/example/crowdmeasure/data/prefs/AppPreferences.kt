@@ -24,9 +24,10 @@ class AppPreferences(private val context: Context) {
         val minutes = prefs[DataStoreKeys.AUTO_RUN_INTERVAL_MINUTES] ?: DEFAULT_AUTORUN_MINUTES
 
         AppSettings(
-            consentAccepted = prefs[DataStoreKeys.CONSENT_ACCEPTED] ?: false,
+//            consentAccepted = prefs[DataStoreKeys.CONSENT_ACCEPTED] ?: true,
+//            collectionEnabled = prefs[DataStoreKeys.COLLECTION_ENABLED] ?: true,
+
             consentVersion = CONSENT_VERSION,
-            collectionEnabled = prefs[DataStoreKeys.COLLECTION_ENABLED] ?: false,
             endpointUrl = prefs[DataStoreKeys.ENDPOINT_URL] ?: DEFAULT_ENDPOINT,
             collectOnlyWifi = prefs[DataStoreKeys.COLLECT_ONLY_WIFI] ?: false,
             autoRunEnabled = prefs[DataStoreKeys.AUTO_RUN_ENABLED] ?: true,

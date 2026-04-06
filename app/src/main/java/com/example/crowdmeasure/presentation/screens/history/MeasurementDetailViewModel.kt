@@ -56,33 +56,30 @@ class MeasurementDetailViewModel @Inject constructor(
                 measurementRepository.getMeasurementById(id)
             }
 
-            result.fold(
-                onSuccess = { measurement ->
-                    if (measurement == null) {
-                        _uiState.update {
-                            it.copy(
-                                loadState = UiState.Error("Measurement not found. It may have been deleted.")
-                            )
-                        }
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                loadState = UiState.Success(measurement.toDetailUi(dateFormatter))
-                            )
-                        }
-                    }
-                },
-                onFailure = { error ->
+            result.fold(onSuccess = { measurement ->
+                if (measurement == null) {
                     _uiState.update {
                         it.copy(
-                            loadState = UiState.Error(
-                                message = "Couldn't load measurement. Check connection and retry.",
-                                throwable = error
-                            )
+                            loadState = UiState.Error("Measurement not found. It may have been deleted.")
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            loadState = UiState.Success(measurement.toDetailUi(dateFormatter))
                         )
                     }
                 }
-            )
+            }, onFailure = { error ->
+                _uiState.update {
+                    it.copy(
+                        loadState = UiState.Error(
+                            message = "Couldn't load measurement. Check connection and retry.",
+                            throwable = error
+                        )
+                    )
+                }
+            })
         }
     }
 
@@ -119,9 +116,9 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     val timeText = formatter.format(Date(header.timestampUtcMs))
 
     val headerPairs = listOf(
-        "App Version" to (header.appVersion ?: "—"),
-        "Android Version" to (header.androidVersion ?: "—"),
-        "Device Model" to (header.deviceModel ?: "—"),
+        "App Version" to header.appVersion,
+        "Android Version" to header.androidVersion,
+        "Device Model" to header.deviceModel,
         "Consent Version" to header.userConsentVersion.toString()
     )
 
@@ -141,7 +138,6 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         "${loc.lat}, ${loc.lon} (±${loc.accuracyMeters}m)"
     }
 
-    // NEW: Diagnostics section
     val diagnosticsPairs = diagnostics?.let { d ->
         buildList {
             d.thermalStatus?.let { add("Thermal Status" to it.toString()) }
@@ -166,6 +162,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             w.channelWidthMhz?.let { add("Channel Width" to "$it MHz") }
             w.standard?.let { add("Wi-Fi Standard" to it.name) }
             w.bssidHash?.let { add("BSSID Hash" to it) }
+            w.ispName?.let { add("ISP" to it) } ?: "—"
         }.takeIf { it.isNotEmpty() }
     }
 
@@ -196,7 +193,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         }.takeIf { it.isNotEmpty() }
     }
 
-    // Sensitive: Cell IDs (keep here)
+    // Sensitive: Cell IDs
     val cellIdsText = cell?.servingCell?.let { sc ->
         buildList {
             sc.ci?.let { add("CI: $it") }
@@ -220,8 +217,6 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         rttP95 = performance.rttP95Ms?.let { "$it ms" } ?: "—",
         jitter = performance.jitterMs?.let { "$it ms" } ?: "—",
         loss = performance.packetLossPct?.let { "${"%.1f".format(it)}%" } ?: "—",
-
-        // NEW
         httpStatus = performance.httpStatus?.toString() ?: "—",
         serverRegion = performance.serverRegion ?: "—",
         stallsCount = performance.stallsCount?.toString() ?: "—",
@@ -231,8 +226,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         downP95 = performance.downP95Mbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
         downStdDev = performance.downStdDevMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
         upP95 = performance.upP95Mbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
-        upStdDev = performance.upStdDevMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—"
-    )
+        upStdDev = performance.upStdDevMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—")
 
     return MeasurementDetailUi(
         id = header.measurementId,

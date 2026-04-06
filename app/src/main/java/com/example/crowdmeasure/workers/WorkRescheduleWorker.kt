@@ -45,7 +45,6 @@ class WorkRescheduleWorker @AssistedInject constructor(
     companion object {
         private const val TAG = "WorkRescheduleWorker"
         private const val CODE_RESCHEDULE_FAILED = "reschedule_failed"
-
         const val KEY_TRIGGER_SOURCE = "trigger_source"
         const val KEY_ERROR_CODE = "error_code"
         const val TRIGGER_APP_START = "app_start"

@@ -21,7 +21,6 @@ class UploadRepositoryFirestore @Inject constructor(
     override suspend fun uploadPending(limit: Int): Result<Int> = runCatching {
         val settings = prefs.settingsFirst()
         if (!settings.firestoreUploadsEnabled) return@runCatching 0
-        if (!settings.consentAccepted || !settings.collectionEnabled) return@runCatching 0
 
         prefs.ensureInstallId()
         val installId = prefs.settingsFirst().installId

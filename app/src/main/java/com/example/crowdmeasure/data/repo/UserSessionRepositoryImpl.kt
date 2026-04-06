@@ -10,9 +10,6 @@ class UserSessionRepositoryImpl(
 ) : UserSessionRepository {
 
     override val settings: Flow<AppSettings> = prefs.settings
-
-    override suspend fun setConsentAccepted(accepted: Boolean) = prefs.setConsentAccepted(accepted)
-    override suspend fun setCollectionEnabled(enabled: Boolean) = prefs.setCollectionEnabled(enabled)
     override suspend fun setEndpointUrl(url: String) = prefs.setEndpointUrl(url)
     override suspend fun setCollectOnlyWifi(enabled: Boolean) = prefs.setCollectOnlyWifi(enabled)
     override suspend fun setAutoRun(enabled: Boolean, intervalMinutes: Int) = prefs.setAutoRun(enabled, intervalMinutes)

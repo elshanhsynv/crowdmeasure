@@ -1,8 +1,8 @@
 package com.example.crowdmeasure.presentation.screens.consent
 
 import android.Manifest
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -41,19 +41,15 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,7 +65,6 @@ import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
 import com.example.crowdmeasure.presentation.util.AppPermissions
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
@@ -116,9 +111,6 @@ fun ConsentGateScreen(
     val context = LocalContext.current
     val settings = viewModel.settings.collectAsStateWithLifecycle().value
 
-    val consentAccepted = settings?.consentAccepted ?: false
-    val collectionEnabled = settings?.collectionEnabled ?: false
-
     var fineLocationGranted by remember { mutableStateOf(false) }
     var phoneStateGranted by remember { mutableStateOf(false) }
 
@@ -139,14 +131,20 @@ fun ConsentGateScreen(
         onResult = { granted -> phoneStateGranted = granted }
     )
 
+    fun canCollect(settings: AppSettings?, context: Context): Boolean {
+        return settings.let {
+            it != null && !it.consentGateDismissed
+        } &&
+                AppPermissions.hasFineLocation(context) &&
+                AppPermissions.hasPhoneState(context)
+    }
+
+    val canCollect = canCollect(settings, context)
+
     ConsentGateContent(
         visible = visible,
         onComplete = onComplete,
         onDismiss = onDismiss,
-        consentAccepted = consentAccepted,
-        collectionEnabled = collectionEnabled,
-        onSetConsent = viewModel::setConsent,
-        onSetCollection = viewModel::setCollection,
         fineLocationGranted = fineLocationGranted,
         phoneStateGranted = phoneStateGranted,
         onRequestFineLocation = {
@@ -154,7 +152,8 @@ fun ConsentGateScreen(
         },
         onRequestPhoneState = {
             requestPhoneState.launch(Manifest.permission.READ_PHONE_STATE)
-        }
+        },
+        canCollect = canCollect
     )
 }
 
@@ -163,18 +162,13 @@ private fun ConsentGateContent(
     visible: Boolean,
     onComplete: () -> Unit,
     onDismiss: () -> Unit,
-    consentAccepted: Boolean,
-    collectionEnabled: Boolean,
-    onSetConsent: (Boolean) -> Unit,
-    onSetCollection: (Boolean) -> Unit,
     fineLocationGranted: Boolean,
     phoneStateGranted: Boolean,
     onRequestFineLocation: () -> Unit,
-    onRequestPhoneState: () -> Unit
+    onRequestPhoneState: () -> Unit,
+    canCollect: Boolean = false,
 ) {
     val spacing = LocalSpacing.current
-    val canComplete =
-        consentAccepted && collectionEnabled && fineLocationGranted && phoneStateGranted
 
     AnimatedVisibility(
         visible = visible,
@@ -205,42 +199,19 @@ private fun ConsentGateContent(
 
                     PrivacyPromiseCard()
 
-                    ConsentSwitchItem(
-                        title = "I understand and agree",
-                        subtitle = "Required to participate in crowdsourced measurements",
-                        checked = consentAccepted,
-                        onCheckedChange = onSetConsent,
-                        enabled = true
-                    )
-
                     OptionalPermissionsCard(
                         fineLocationGranted = fineLocationGranted,
                         phoneStateGranted = phoneStateGranted,
-                        enabled = consentAccepted,
+                        enabled = true,
                         onRequestFineLocation = onRequestFineLocation,
                         onRequestPhoneState = onRequestPhoneState
-                    )
-
-                    ConsentSwitchItem(
-                        title = "Enable data collection",
-                        subtitle = "Start collecting network measurements in the background",
-                        checked = collectionEnabled,
-                        onCheckedChange = onSetCollection,
-                        enabled = consentAccepted
-                    )
-
-                    ConsentHints(
-                        consentAccepted = consentAccepted,
-                        collectionEnabled = collectionEnabled,
-                        onAcceptConsent = { onSetConsent(true) },
-                        onEnableCollection = { onSetCollection(true) }
                     )
 
                     Spacer(Modifier.height(spacing.xl))
                 }
 
                 ConsentActions(
-                    canComplete = canComplete,
+                    canComplete = canCollect,
                     onComplete = onComplete,
                     onDismiss = onDismiss,
                 )
@@ -348,58 +319,11 @@ private fun PrivacyBullet(text: String) {
 }
 
 @Composable
-private fun ConsentSwitchItem(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    enabled: Boolean,
-) {
-    val spacing = LocalSpacing.current
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(spacing.cardPadding),
-        horizontalArrangement = Arrangement.spacedBy(spacing.md),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(spacing.xxs)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled
-        )
-    }
-}
-
-@Composable
 private fun OptionalPermissionsCard(
-//    coarseLocationGranted: Boolean,
     fineLocationGranted: Boolean,
     phoneStateGranted: Boolean,
     enabled: Boolean,
     onRequestFineLocation: () -> Unit,
-//    onRequestCoarseLocation: () -> Unit,
     onRequestPhoneState: () -> Unit,
 ) {
     val spacing = LocalSpacing.current
@@ -436,15 +360,6 @@ private fun OptionalPermissionsCard(
                 enabled = enabled,
                 onRequest = onRequestFineLocation
             )
-
-//            PermissionItem(
-//                icon = Icons.Filled.LocationOn,
-//                title = "Coarse Location",
-//                subtitle = "Improves regional accuracy (approximate location, not precise GPS)",
-//                granted = coarseLocationGranted,
-//                enabled = enabled,
-//                onRequest = onRequestCoarseLocation
-//            )
 
             PermissionItem(
                 icon = Icons.Filled.PhoneAndroid,
@@ -564,39 +479,6 @@ private fun PermissionItem(
     }
 }
 
-
-@Composable
-private fun ConsentHints(
-    consentAccepted: Boolean,
-    collectionEnabled: Boolean,
-    onAcceptConsent: () -> Unit,
-    onEnableCollection: () -> Unit,
-) {
-    val spacing = LocalSpacing.current
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(spacing.sm)
-    ) {
-        when {
-            !consentAccepted -> {
-                AssistChip(
-                    onClick = onAcceptConsent,
-                    label = { Text("Tap 'I understand and agree' to continue") }
-                )
-            }
-
-            !collectionEnabled -> {
-                AssistChip(
-                    onClick = onEnableCollection,
-                    label = { Text("Enable collection to finish setup") }
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun ConsentActions(
     canComplete: Boolean,
@@ -616,12 +498,6 @@ private fun ConsentActions(
             horizontalArrangement = Arrangement.spacedBy(spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
-//            TextButton(
-//                onClick = onDismiss,
-//                modifier = Modifier.weight(1f)
-//            ) {
-//                Text("Skip for now")
-//            }
 
             Button(
                 onClick = onComplete,
@@ -634,7 +510,6 @@ private fun ConsentActions(
     }
 }
 
-
 @Preview
 @Composable
 private fun ConsentGateScreenPreview() {
@@ -642,10 +517,6 @@ private fun ConsentGateScreenPreview() {
         visible = true,
         onComplete = {},
         onDismiss = {},
-        consentAccepted = false,
-        collectionEnabled = false,
-        onSetConsent = {},
-        onSetCollection = {},
         fineLocationGranted = false,
         phoneStateGranted = false,
         onRequestFineLocation = {},

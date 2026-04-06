@@ -8,23 +8,8 @@ import com.example.crowdmeasure.domain.model.SnapshotHeader
 import com.example.crowdmeasure.domain.model.WifiInfo
 import com.example.crowdmeasure.presentation.util.UiState
 
-/**
- * UI state for the Home screen.
- *
- * Immutable to enable safe comparison and caching.
- * All fields have defaults for initial state.
- *
- * State breakdown:
- * - Permissions: consentAccepted, collectionEnabled, uploadsEnabled
- * - Derived: canCollect (combines consent + collection)
- * - Data: queuedCount, lastMeasurement
- * - Operations: measurementState, uploadState
- */
 @Immutable
 data class HomeUiState(
-    // User permissions/settings
-    val consentAccepted: Boolean = false,
-    val collectionEnabled: Boolean = false,
     val uploadsEnabled: Boolean = false,
 
     // Derived permission state
@@ -57,13 +42,6 @@ data class HomeUiState(
         get() = canCollect && uploadsEnabled && queuedCount > 0 && !isUploading
 }
 
-/**
- * UI model for a measurement preview.
- * Wraps domain models for display.
- *
- * Note: We keep domain models here instead of flattening to avoid
- * large data classes and maintain structure for detail screen reuse.
- */
 @Immutable
 data class MeasurementUi(
     val header: SnapshotHeader,

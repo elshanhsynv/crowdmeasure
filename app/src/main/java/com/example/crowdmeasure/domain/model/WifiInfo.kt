@@ -11,7 +11,8 @@ data class WifiInfo(
     val frequencyMhz: Int? = null,
     val channelWidthMhz: Int? = null,
     val standard: WifiStandard? = null,
-    val bssidHash: String? = null
+    val bssidHash: String? = null,
+    val ispName: String? = null,
 )
 
 @Serializable

@@ -105,18 +105,15 @@ class AutoRunWorker @AssistedInject constructor(
 
     companion object {
         private const val TAG = "AutoRunWorker"
-
         private const val STATUS_SUCCESS = "SUCCESS"
         private const val STATUS_RETRY = "RETRY"
         private const val STATUS_FAILURE = "FAILURE"
-
         const val KEY_TRIGGER_SOURCE = "trigger_source"
         const val KEY_ERROR_CODE = "error_code"
         const val TRIGGER_PERIODIC = "periodic"
         const val TRIGGER_KICKOFF = "kickoff"
         const val TRIGGER_DEBUG = "debug"
         const val TRIGGER_UNKNOWN = "unknown"
-
         private const val CODE_UNEXPECTED_ERROR = "unexpected_error"
     }
 }

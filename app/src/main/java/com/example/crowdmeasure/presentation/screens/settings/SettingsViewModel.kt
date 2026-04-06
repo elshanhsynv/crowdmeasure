@@ -11,9 +11,7 @@ import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.DeleteAllDataUseCase
 import com.example.crowdmeasure.domain.usecase.ExportMeasurementsUseCase
 import com.example.crowdmeasure.domain.usecase.SetAutoRunUseCase
-import com.example.crowdmeasure.domain.usecase.SetCollectionEnabledUseCase
 import com.example.crowdmeasure.domain.usecase.SetCollectOnlyWifiUseCase
-import com.example.crowdmeasure.domain.usecase.SetConsentAcceptedUseCase
 import com.example.crowdmeasure.domain.usecase.SetEndpointUrlUseCase
 import com.example.crowdmeasure.domain.usecase.SetFirestoreUploadsEnabledUseCase
 import com.example.crowdmeasure.presentation.util.UiState
@@ -37,8 +35,6 @@ class SettingsViewModel @Inject constructor(
     private val setEndpointUseCase: SetEndpointUrlUseCase,
     private val setCollectOnlyWifiUseCase: SetCollectOnlyWifiUseCase,
     private val setAutoRunUseCase: SetAutoRunUseCase,
-    private val setConsentAcceptedUseCase: SetConsentAcceptedUseCase,
-    private val setCollectionEnabledUseCase: SetCollectionEnabledUseCase,
     private val setFirestoreUploadsEnabledUseCase: SetFirestoreUploadsEnabledUseCase,
     private val deleteAllDataUseCase: DeleteAllDataUseCase,
     private val exportMeasurementsUseCase: ExportMeasurementsUseCase,
@@ -81,8 +77,7 @@ class SettingsViewModel @Inject constructor(
             ?.let(::sanitizeError)
             ?: "None"
 
-        val canRun = userSettings?.consentAccepted == true &&
-                userSettings.collectionEnabled &&
+        val canRun = userSettings != null &&
                 userSettings.autoRunEnabled
 
         BackgroundWorkUiState(
@@ -115,31 +110,19 @@ class SettingsViewModel @Inject constructor(
             initialValue = UiState.Idle
         )
 
-    fun setConsent(accepted: Boolean) {
-        viewModelScope.launch {
-            setConsentAcceptedUseCase(accepted)
-//            rescheduleAfterSettingsChange(kickoffIfAllowed = accepted)
-        }
-    }
-
-    fun setCollection(enabled: Boolean) {
-        viewModelScope.launch {
-            setCollectionEnabledUseCase(enabled)
-            rescheduleAfterSettingsChange(kickoffIfAllowed = enabled)
-        }
-    }
-
     fun setCollectOnlyWifi(enabled: Boolean) {
         viewModelScope.launch {
             setCollectOnlyWifiUseCase(enabled)
             rescheduleAfterSettingsChange(kickoffIfAllowed = false)
         }
     }
+
     fun setFirestoreUploads(enabled: Boolean) {
         viewModelScope.launch {
             setFirestoreUploadsEnabledUseCase(enabled)
         }
     }
+
     fun saveEndpoint(url: String) {
         viewModelScope.launch {
             setEndpointUseCase(url)
@@ -150,8 +133,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val safeInterval = intervalMinutes.coerceIn(15, 10_080)
             val currentSettings = settings.value
-            val allowedByConsentAndCollection =
-                currentSettings?.consentAccepted == true && currentSettings.collectionEnabled
+            val allowedByConsentAndCollection = true
 
             if (!allowedByConsentAndCollection) {
                 setAutoRunUseCase(false, safeInterval)
@@ -168,7 +150,7 @@ class SettingsViewModel @Inject constructor(
 
         workScheduler.scheduleMaintenanceDaily()
 
-        val allowed = s.consentAccepted && s.collectionEnabled && s.autoRunEnabled
+        val allowed = s.autoRunEnabled
         if (allowed) {
             workScheduler.scheduleAutoRun(
                 intervalMinutes = s.autoRunIntervalMinutes.toLong(),
@@ -181,6 +163,7 @@ class SettingsViewModel @Inject constructor(
             workScheduler.cancelAutoRun()
         }
     }
+
     fun runAutoRunNow() {
         workScheduler.runAutoRunOnceNowDebug(ignoreConstraints = true)
     }
@@ -237,6 +220,7 @@ class SettingsViewModel @Inject constructor(
     fun clearDeleteState() {
         _deleteState.value = UiState.Idle
     }
+
     fun ensureMaintenanceScheduled() {
         workScheduler.scheduleMaintenanceDaily()
     }
@@ -251,7 +235,10 @@ class SettingsViewModel @Inject constructor(
 
     private fun sanitizeError(raw: String): String {
         return raw.take(120)
-            .replace(Regex("measurement[_-]?id\\s*[:=]\\s*\\S+", RegexOption.IGNORE_CASE), "ID=<redacted>")
+            .replace(
+                Regex("measurement[_-]?id\\s*[:=]\\s*\\S+", RegexOption.IGNORE_CASE),
+                "ID=<redacted>"
+            )
             .replace(Regex("https?://\\S+"), "<url>")
     }
 }

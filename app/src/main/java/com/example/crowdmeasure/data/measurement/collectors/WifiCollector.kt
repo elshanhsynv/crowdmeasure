@@ -4,12 +4,23 @@ import android.content.Context
 import android.net.wifi.WifiInfo as AndroidWifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
 import com.example.crowdmeasure.domain.model.WifiInfo
 import com.example.crowdmeasure.domain.model.WifiStandard
 import java.security.MessageDigest
 
 object WifiCollector {
+
+    fun getPasspointProviderNames(context: Context): List<String> {
+        val wifiManager =
+            context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+
+        // Requires Android P (API 28) or higher
+        val configurations = wifiManager.passpointConfigurations
+
+        return configurations.map { it.homeSp.friendlyName }
+    }
 
     fun collect(context: Context): WifiInfo {
         val wm = context.applicationContext.getSystemService<WifiManager>()
@@ -20,6 +31,8 @@ object WifiCollector {
         val txSpeed = getTxLinkSpeed(info)
         val rxSpeed = getRxLinkSpeed(info)
 
+        val name = getPasspointProviderNames(context).firstOrNull()
+
         return WifiInfo(
             rssi = info?.rssi,
             linkSpeedMbps = info?.linkSpeed,
@@ -28,9 +41,11 @@ object WifiCollector {
             frequencyMhz = frequencyMhz,
             channelWidthMhz = channelWidthMhz,
             standard = deriveStandard(frequencyMhz, channelWidthMhz),
-            bssidHash = info?.bssid?.let { hashBssid(it) }
+            bssidHash = info?.bssid?.let { hashBssid(it) },
+            ispName = name
         )
     }
+
     private fun getFrequency(info: AndroidWifiInfo?): Int? =
         runCatching {
             info?.javaClass?.getMethod("getFrequency")?.invoke(info) as? Int
@@ -72,6 +87,7 @@ object WifiCollector {
             else -> WifiStandard.UNKNOWN
         }
     }
+
     private fun hashBssid(bssid: String): String {
         val salt = "crowdmeasure_wifi_salt_v1"
         val md = MessageDigest.getInstance("SHA-256")
