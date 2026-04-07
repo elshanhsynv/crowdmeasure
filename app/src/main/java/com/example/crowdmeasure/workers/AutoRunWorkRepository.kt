@@ -105,7 +105,6 @@ class AutoRunWorkRepository @Inject constructor(
         const val CODE_MEASUREMENT_FAILED = "measurement_failed"
         const val CODE_DB_INSERT_FAILED = "db_insert_failed"
         const val CODE_UPLOAD_FAILED = "upload_failed"
-
         private const val TAG = "AutoRunWorkRepository"
         private const val MIN_PERIODIC_MINUTES = 15
         private const val RECENT_RUN_TOLERANCE_MS = 60_000L

@@ -26,8 +26,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -76,11 +78,9 @@ import com.example.crowdmeasure.presentation.util.SystemSettingsIntents
 import com.example.crowdmeasure.presentation.util.UiState
 
 /**
- * Settings screen with tabbed organization.
- *
  * Tabs:
- * 1. Privacy - Consent, permissions, uploads
- * 2. Collection - Endpoint, intervals, Wi-Fi only, auto-run
+ * 1. Privacy - Permissions
+ * 2. Collection - WorkManager status
  * 3. Data - Export, delete
  */
 @Composable
@@ -108,7 +108,6 @@ fun SettingsScreen(
         onClearExportState = viewModel::clearExportState,
         onDelete = viewModel::deleteAllData,
         onClearDeleteState = viewModel::clearDeleteState,
-        onSetFirestoreUploads = viewModel::setFirestoreUploads
     )
 
 }
@@ -126,7 +125,6 @@ private fun SettingsScreenContent(
     onClearExportState: () -> Unit,
     onDelete: () -> Unit,
     onClearDeleteState: () -> Unit,
-    onSetFirestoreUploads: (Boolean) -> Unit
 ) {
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -247,46 +245,6 @@ private fun PrivacyTab(
             .padding(vertical = spacing.sm),
         verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
     ) {
-        // Consent & Collection
-//        SettingsSectionCard(
-//            title = "Consent & Collection",
-//            description = "Control what data is collected and uploaded"
-//        ) {
-//            AssistiveHint(
-//                text = "CrowdMeasure collects network measurements only when you opt in. " +
-//                        "Optional permissions improve measurement quality."
-//            )
-//
-//            HorizontalDivider()
-//
-//            SettingSwitchRow(
-//                title = "I Understand and Agree",
-//                subtitle = "Required before enabling collection",
-//                checked = settings?.consentAccepted ?: false,
-//                onCheckedChange = onConsentChange
-//            )
-//
-//            HorizontalDivider()
-//
-//            SettingSwitchRow(
-//                title = "Enable Data Collection",
-//                subtitle = "Allows measurement collection in the background",
-//                checked = settings?.collectionEnabled ?: false,
-//                enabled = settings?.consentAccepted == true,
-//                onCheckedChange = onCollectionChange
-//            )
-//
-//            HorizontalDivider()
-//
-//            SettingSwitchRow(
-//                title = "Enable Firestore Uploads",
-//                subtitle = "Uploads queued measurements when you tap 'Upload now'",
-//                checked = settings?.firestoreUploadsEnabled ?: false,
-//                enabled = settings?.consentAccepted == true && settings?.collectionEnabled == true,
-//                onCheckedChange = onFirestoreUploadsChange
-//            )
-//        }
-
         SettingsSectionCard(
             title = "Permissions", description = "Improve measurement quality"
         ) {
@@ -386,6 +344,7 @@ private fun DataTab(
     val context = LocalContext.current
 
     var exportCount by remember { mutableStateOf("50") }
+    var showDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -421,10 +380,8 @@ private fun DataTab(
                 Text("Export & Share JSON")
             }
 
-            // Export status
             when (exportState) {
-                UiState.Idle -> { /* Nothing */
-                }
+                UiState.Idle -> {}
 
                 UiState.Loading -> {
                     Text(
@@ -467,8 +424,10 @@ private fun DataTab(
                 text = "⚠️ This action cannot be undone. All local measurements will be deleted."
             )
 
+
+
             Button(
-                onClick = onDelete,
+                onClick = { showDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
@@ -477,11 +436,12 @@ private fun DataTab(
             ) {
                 Text("Delete All Data")
             }
+            if (showDialog) {
+                OpenDeleteDialog(onDeleted = onDelete, onDismiss = { showDialog = false })
+            }
 
-            // Delete status
             when (deleteState) {
-                UiState.Idle -> { /* Nothing */
-                }
+                UiState.Idle -> {}
 
                 UiState.Loading -> {
                     Text(
@@ -520,6 +480,34 @@ private fun DataTab(
     }
 }
 
+@Composable
+private fun OpenDeleteDialog(onDeleted: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {
+            onDismiss()
+        },
+        confirmButton = {
+            TextButton(
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                ),
+                onClick = {
+                    onDeleted()
+                    onDismiss()
+                }) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onDismiss() }) {
+                Text("Cancel")
+            }
+        },
+        title = { Text("Delete All Data") },
+        text = { Text("Are you sure you want to delete all data?") })
+}
+
 private fun hasFineLocation(context: Context): Boolean {
     return ContextCompat.checkSelfPermission(
         context, Manifest.permission.ACCESS_FINE_LOCATION
@@ -541,6 +529,6 @@ private fun SettingsScreenPreview() {
         onClearExportState = {},
         onDelete = {},
         onClearDeleteState = {},
-        onSetFirestoreUploads = {})
+    )
 }
 

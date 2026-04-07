@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.presentation.nav.AppNav
 import com.example.crowdmeasure.presentation.screens.consent.ConsentGateScreen
 import com.example.crowdmeasure.presentation.screens.consent.ConsentGateViewModel
+import com.example.crowdmeasure.presentation.screens.home.HomeViewModel
 import com.example.crowdmeasure.presentation.ui.theme.CrowdMeasureTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -39,9 +40,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MainContent() {
     val consentViewModel: ConsentGateViewModel = hiltViewModel<ConsentGateViewModel>()
-    val settings by consentViewModel.settings.collectAsStateWithLifecycle()
+    val homeViewModel: HomeViewModel = hiltViewModel<HomeViewModel>()
 
-    var userDismissedConsent by rememberSaveable { mutableStateOf(false) }
+    val settings by consentViewModel.settings.collectAsStateWithLifecycle()
 
     val shouldShowConsent =
         settings != null && !settings!!.consentGateDismissed
@@ -52,10 +53,9 @@ private fun MainContent() {
             visible = shouldShowConsent,
             onComplete = {
                 consentViewModel.markConsentGateCompleted()
+//                homeViewModel.startMeasurement()
             },
-            onDismiss = {
-                userDismissedConsent = true
-            },
+            onDismiss = {},
             viewModel = consentViewModel
         )
     }

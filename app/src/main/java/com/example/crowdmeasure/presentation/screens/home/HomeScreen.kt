@@ -91,42 +91,31 @@ private fun HomeContent(
 ) {
     val spacing = LocalSpacing.current
 
-    // Scrollable column with proper padding
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(contentPadding)  // Scaffold padding (top bar, bottom bar)
-            .windowInsetsPadding(WindowInsets.navigationBars)  // Extra safety for nav bar
+            .padding(contentPadding)
+            .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(horizontal = spacing.screenPadding),
         verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
     ) {
-        // Top spacing
         Spacer(Modifier.height(spacing.xs))
 
-        // Permission warnings (if any)
         PermissionWarnings(state = state)
 
-        // Quick measurement card
         MeasurementCard(
-            state = state,
-            onStart = onStartMeasurement,
-            onStop = onStopMeasurement
+            state = state, onStart = onStartMeasurement, onStop = onStopMeasurement
         )
 
-        // Upload queue card
         UploadQueueCard(
-            state = state,
-            onUpload = onUploadNow
+            state = state, onUpload = onUploadNow
         )
 
-        // Last measurement preview
         LastMeasurementCard(
-            state = state,
-            onOpenDetail = onNavigateToDetail
+            state = state, onOpenDetail = onNavigateToDetail
         )
 
-        // Bottom spacing (extra for visual breathing room)
         Spacer(Modifier.height(spacing.xl))
     }
 }
@@ -139,11 +128,8 @@ private fun PermissionWarnings(state: HomeUiState) {
     val spacing = LocalSpacing.current
 
     Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-        LocationServicesBanner {
-            /* Nothing */
-        }
+        LocationServicesBanner {}
 
-        // Critical: No consent or collection disabled
         if (!state.canCollect) {
             InfoBanner(
                 title = "Collection Disabled",
@@ -152,14 +138,11 @@ private fun PermissionWarnings(state: HomeUiState) {
             ) {
                 IconButton(onClick = { /* TODO: Navigate to settings */ }) {
                     Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = "Open settings"
+                        imageVector = Icons.Filled.Settings, contentDescription = "Open settings"
                     )
                 }
             }
-        }
-        // Warning: Collection enabled but uploads disabled
-        else if (!state.uploadsEnabled) {
+        } else if (!state.uploadsEnabled) {
             InfoBanner(
                 title = "Uploads Disabled",
                 body = "Measurements will queue locally. Enable uploads in Settings to sync.",
@@ -174,15 +157,12 @@ private fun PermissionWarnings(state: HomeUiState) {
  */
 @Composable
 private fun MeasurementCard(
-    state: HomeUiState,
-    onStart: () -> Unit,
-    onStop: () -> Unit
+    state: HomeUiState, onStart: () -> Unit, onStop: () -> Unit
 ) {
     val spacing = LocalSpacing.current
 
     AppCard(
-        title = "Run Measurement",
-        description = when {
+        title = "Run Measurement", description = when {
             !state.canCollect -> "Enable collection in Settings to start"
             state.isMeasuring -> "Collecting network metrics..."
             else -> "Capture current network performance data"
@@ -198,8 +178,7 @@ private fun MeasurementCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null
+                    imageVector = Icons.Filled.PlayArrow, contentDescription = null
                 )
                 Spacer(Modifier.width(spacing.xs))
                 Text(if (state.isMeasuring) "Measuring..." else "Start")
@@ -207,12 +186,10 @@ private fun MeasurementCard(
 
             if (state.isMeasuring) {
                 OutlinedButton(
-                    onClick = onStop,
-                    enabled = state.isMeasuring
+                    onClick = onStop, enabled = state.isMeasuring
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Stop,
-                        contentDescription = null
+                        imageVector = Icons.Filled.Stop, contentDescription = null
                     )
                     Spacer(Modifier.width(spacing.xs))
                     Text("Stop")
@@ -221,9 +198,7 @@ private fun MeasurementCard(
         }
 
         InlineStatusText(
-            state = state.measurementState,
-            successMessage = { "Measurement saved successfully" }
-        )
+            state = state.measurementState, successMessage = { "Measurement saved successfully" })
     }
 }
 
@@ -232,14 +207,12 @@ private fun MeasurementCard(
  */
 @Composable
 private fun UploadQueueCard(
-    state: HomeUiState,
-    onUpload: () -> Unit
+    state: HomeUiState, onUpload: () -> Unit
 ) {
     val spacing = LocalSpacing.current
 
     AppCard(
-        title = "Upload Queue",
-        description = when {
+        title = "Upload Queue", description = when {
             !state.uploadsEnabled -> "Uploads are disabled in Settings"
             state.queuedCount == 0 -> "No measurements waiting to upload"
             state.queuedCount == 1 -> "1 measurement ready to upload"
@@ -268,13 +241,10 @@ private fun UploadQueueCard(
         }
 
         FilledTonalButton(
-            onClick = onUpload,
-            enabled = state.canUpload,
-            modifier = Modifier.fillMaxWidth()
+            onClick = onUpload, enabled = state.canUpload, modifier = Modifier.fillMaxWidth()
         ) {
             Icon(
-                imageVector = Icons.Filled.CloudUpload,
-                contentDescription = null
+                imageVector = Icons.Filled.CloudUpload, contentDescription = null
             )
             Spacer(Modifier.width(spacing.xs))
             Text(
@@ -288,15 +258,13 @@ private fun UploadQueueCard(
         }
 
         InlineStatusText(
-            state = state.uploadState,
-            successMessage = { count ->
+            state = state.uploadState, successMessage = { count ->
                 when (count) {
                     0 -> "Nothing to upload"
                     1 -> "Uploaded 1 measurement"
                     else -> "Uploaded $count measurements"
                 }
-            }
-        )
+            })
     }
 }
 
@@ -305,13 +273,11 @@ private fun UploadQueueCard(
  */
 @Composable
 private fun LastMeasurementCard(
-    state: HomeUiState,
-    onOpenDetail: (String) -> Unit
+    state: HomeUiState, onOpenDetail: (String) -> Unit
 ) {
 
     AppCard(
-        title = "Last Measurement",
-        description = if (state.lastMeasurement == null) {
+        title = "Last Measurement", description = if (state.lastMeasurement == null) {
             "No measurements recorded yet"
         } else {
             "Most recent network snapshot"
@@ -326,8 +292,7 @@ private fun LastMeasurementCard(
             )
         } else {
             MeasurementPreview(
-                measurement = measurement,
-                onOpenDetail = onOpenDetail
+                measurement = measurement, onOpenDetail = onOpenDetail
             )
         }
     }
@@ -338,60 +303,47 @@ private fun LastMeasurementCard(
  */
 @Composable
 private fun MeasurementPreview(
-    measurement: MeasurementUi,
-    onOpenDetail: (String) -> Unit
+    measurement: MeasurementUi, onOpenDetail: (String) -> Unit
 ) {
     val spacing = LocalSpacing.current
 
     Column(
         verticalArrangement = Arrangement.spacedBy(spacing.sm)
     ) {
-        // Timestamp
         val timestamp = formatTimestamp(measurement.header.timestampUtcMs)
         MetricRow(
-            label = "Recorded",
-            value = timestamp
+            label = "Recorded", value = timestamp
         )
 
-        // Transport type
         MetricRow(
-            label = "Transport",
-            value = measurement.context.transport.toString()
+            label = "Transport", value = measurement.context.transport.toString()
         )
 
-        // Performance metrics (if available)
         measurement.performance.rttAvgMs?.let { rtt ->
             MetricRow(
-                label = "RTT Average",
-                value = "$rtt ms"
+                label = "RTT Average", value = "$rtt ms"
             )
         }
 
         measurement.performance.ttfbMs?.let { ttfb ->
             MetricRow(
-                label = "Time to First Byte",
-                value = "$ttfb ms"
+                label = "Time to First Byte", value = "$ttfb ms"
             )
         }
 
-        // Endpoint
         MetricRow(
-            label = "Endpoint",
-            value = measurement.performance.endpointId
+            label = "Endpoint", value = measurement.performance.endpointId
         )
 
-        // Network type indicator
         val networkType = when {
             measurement.cell != null -> "Cellular"
             measurement.wifi != null -> "Wi-Fi"
             else -> "Unknown"
         }
         MetricRow(
-            label = "Network Type",
-            value = networkType
+            label = "Network Type", value = networkType
         )
 
-        // View details button
         TextButton(
             onClick = { onOpenDetail(measurement.header.measurementId) },
             modifier = Modifier.fillMaxWidth()
@@ -400,6 +352,7 @@ private fun MeasurementPreview(
         }
     }
 }
+
 /**
  * Format timestamp for display.
  * Shows date and time in local timezone.
@@ -427,6 +380,5 @@ fun HomeScreenPreview() {
         onStartMeasurement = {},
         onStopMeasurement = {},
         onUploadNow = {},
-        onNavigateToDetail = {}
-    )
+        onNavigateToDetail = {})
 }

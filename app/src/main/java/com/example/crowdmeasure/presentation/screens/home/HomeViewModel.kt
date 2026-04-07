@@ -38,14 +38,9 @@ class HomeViewModel @Inject constructor(
         uploadState
     ) { settings, lastMeasurement, queueCount, measurementOp, uploadOp ->
 
-//        val consentAccepted = settings.consentAccepted
-//        val collectionEnabled = settings.collectionEnabled
         val uploadsEnabled = settings.firestoreUploadsEnabled
-//        val canCollect = consentAccepted && collectionEnabled
 
         HomeUiState(
-//            consentAccepted = consentAccepted,
-//            collectionEnabled = collectionEnabled,
             uploadsEnabled = uploadsEnabled,
             canCollect = true,
             queuedCount = queueCount,
@@ -60,7 +55,6 @@ class HomeViewModel @Inject constructor(
     )
 
     fun startMeasurement() {
-        // Prevent concurrent measurements
         if (currentMeasurementJob?.isActive == true) return
 
         currentMeasurementJob = viewModelScope.launch {
@@ -70,7 +64,7 @@ class HomeViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = { measurement ->
-                    // Save to local DB
+                    // Saving to local DB
                     val saveResult = runCatching {
                         measurementRepository.insert(measurement)
                     }

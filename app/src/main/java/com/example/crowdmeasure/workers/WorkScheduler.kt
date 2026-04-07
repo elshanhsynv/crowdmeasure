@@ -22,14 +22,11 @@ class WorkScheduler @Inject constructor(
         const val AUTO_RUN_DEBUG_ONCE_NAME = "auto_run_measurement_debug_once"
         const val MAINTENANCE_NAME = "maintenance_cleanup"
         const val RESCHEDULE_NAME = "reschedule_background_work"
-
         private const val MIN_PERIODIC_MINUTES = 15L
         private const val MIN_FLEX_MINUTES = 5L
-
         const val TAG_RESCHEDULE = "reschedule"
         const val TAG_AUTORUN = "autorun"
         const val TAG_MAINTENANCE = "maintenance"
-
         private val ACTIVE_STATES = setOf(
             WorkInfo.State.ENQUEUED,
             WorkInfo.State.RUNNING,
@@ -129,15 +126,14 @@ class WorkScheduler @Inject constructor(
         statusStore.rememberSchedule(safeMinutes.toInt(), wifiOnly)
     }
 
-    fun kickoffAutoRunOnce(wifiOnly: Boolean) {
+    fun kickoffAutoRunOnce(wifiOnly: Boolean = false) {
         val constraints = Constraints.Builder()
-            .setRequiresBatteryNotLow(true)
             .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
             .build()
 
         val req = OneTimeWorkRequestBuilder<AutoRunWorker>()
             .setConstraints(constraints)
-            .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)
             .setInputData(workDataOf(AutoRunWorker.KEY_TRIGGER_SOURCE to AutoRunWorker.TRIGGER_KICKOFF))
             .addTag("${TAG_AUTORUN}_kickoff")
             .build()
@@ -155,8 +151,12 @@ class WorkScheduler @Inject constructor(
 
     fun enqueueRescheduleWorker() {
         val req = OneTimeWorkRequestBuilder<WorkRescheduleWorker>()
-            .setConstraints(Constraints.NONE)
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .setInputData(
                 workDataOf(
                     WorkRescheduleWorker.KEY_TRIGGER_SOURCE to WorkRescheduleWorker.TRIGGER_APP_START
