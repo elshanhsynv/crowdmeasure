@@ -113,30 +113,36 @@ fun ConsentGateScreen(
 
     var fineLocationGranted by remember { mutableStateOf(false) }
     var phoneStateGranted by remember { mutableStateOf(false) }
+    var backgroundLocationGranted by remember { mutableStateOf(false) }
+
 
     LaunchedEffect(visible) {
         if (visible) {
             fineLocationGranted = AppPermissions.hasFineLocation(context)
             phoneStateGranted = AppPermissions.hasPhoneState(context)
+            backgroundLocationGranted = AppPermissions.hasBackgroundLocation(context)
         }
     }
 
     val requestFineLocation = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted -> fineLocationGranted = granted }
-    )
+        onResult = { granted -> fineLocationGranted = granted })
 
     val requestPhoneState = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted -> phoneStateGranted = granted }
-    )
+        onResult = { granted -> phoneStateGranted = granted })
+
+    val requestBackgroundLocation = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted -> backgroundLocationGranted = granted })
+
 
     fun canCollect(settings: AppSettings?, context: Context): Boolean {
         return settings.let {
             it != null && !it.consentGateDismissed
-        } &&
-                AppPermissions.hasFineLocation(context) &&
-                AppPermissions.hasPhoneState(context)
+        } && AppPermissions.hasFineLocation(context) && AppPermissions.hasPhoneState(context) && AppPermissions.hasBackgroundLocation(
+            context
+        )
     }
 
     val canCollect = canCollect(settings, context)
@@ -146,9 +152,13 @@ fun ConsentGateScreen(
         onComplete = onComplete,
         onDismiss = onDismiss,
         fineLocationGranted = fineLocationGranted,
+        backgroundLocationGranted = backgroundLocationGranted,
         phoneStateGranted = phoneStateGranted,
         onRequestFineLocation = {
             requestFineLocation.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        },
+        onRequestBackgroundLocation = {
+            requestBackgroundLocation.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         },
         onRequestPhoneState = {
             requestPhoneState.launch(Manifest.permission.READ_PHONE_STATE)
@@ -164,8 +174,10 @@ private fun ConsentGateContent(
     onDismiss: () -> Unit,
     fineLocationGranted: Boolean,
     phoneStateGranted: Boolean,
+    backgroundLocationGranted: Boolean,
     onRequestFineLocation: () -> Unit,
     onRequestPhoneState: () -> Unit,
+    onRequestBackgroundLocation: () -> Unit,
     canCollect: Boolean = false,
 ) {
     val spacing = LocalSpacing.current
@@ -201,9 +213,11 @@ private fun ConsentGateContent(
 
                     OptionalPermissionsCard(
                         fineLocationGranted = fineLocationGranted,
+                        backgroundLocationGranted = backgroundLocationGranted,
                         phoneStateGranted = phoneStateGranted,
                         enabled = true,
                         onRequestFineLocation = onRequestFineLocation,
+                        onRequestBackgroundLocation = onRequestBackgroundLocation,
                         onRequestPhoneState = onRequestPhoneState
                     )
 
@@ -226,8 +240,7 @@ private fun ConsentHeader() {
     val spacing = LocalSpacing.current
 
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth()
+        horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()
     ) {
         Icon(
             imageVector = Icons.Filled.Security,
@@ -262,8 +275,7 @@ private fun PrivacyPromiseCard() {
     val spacing = LocalSpacing.current
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
@@ -300,8 +312,7 @@ private fun PrivacyBullet(text: String) {
     val spacing = LocalSpacing.current
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(spacing.sm)
+        modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing.sm)
     ) {
         Icon(
             imageVector = Icons.Outlined.CheckCircle,
@@ -321,16 +332,17 @@ private fun PrivacyBullet(text: String) {
 @Composable
 private fun OptionalPermissionsCard(
     fineLocationGranted: Boolean,
+    backgroundLocationGranted: Boolean,
     phoneStateGranted: Boolean,
     enabled: Boolean,
     onRequestFineLocation: () -> Unit,
+    onRequestBackgroundLocation: () -> Unit,
     onRequestPhoneState: () -> Unit,
 ) {
     val spacing = LocalSpacing.current
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
@@ -362,6 +374,15 @@ private fun OptionalPermissionsCard(
             )
 
             PermissionItem(
+                icon = Icons.Filled.LocationOn,
+                title = "Background Location",
+                subtitle = "Improves accuracy using approximate location (WiFi)",
+                granted = backgroundLocationGranted,
+                enabled = enabled,
+                onRequest = onRequestBackgroundLocation
+            )
+
+            PermissionItem(
                 icon = Icons.Filled.PhoneAndroid,
                 title = "Phone State",
                 subtitle = "Enables cell network metrics for better signal insights",
@@ -390,9 +411,7 @@ private fun PermissionItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (granted) {
+            imageVector = icon, contentDescription = null, tint = if (granted) {
                 MaterialTheme.colorScheme.primary
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -400,8 +419,7 @@ private fun PermissionItem(
         )
 
         Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(spacing.xxs)
+            modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(spacing.xxs)
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(spacing.sm),
@@ -432,18 +450,14 @@ private fun PermissionItem(
             val infinite = rememberInfiniteTransition(label = "grant_attention")
 
             val pulse by infinite.animateFloat(
-                initialValue = 0f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
+                initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(
                     animation = tween(durationMillis = 1100, easing = LinearEasing),
                     repeatMode = RepeatMode.Reverse
-                ),
-                label = "pulse"
+                ), label = "pulse"
             )
 
             val borderWidth by animateDpAsState(
-                targetValue = if (enabled) (1.dp + (pulse * 2.dp)) else 1.dp,
-                label = "borderWidth"
+                targetValue = if (enabled) (1.dp + (pulse * 2.dp)) else 1.dp, label = "borderWidth"
             )
 
             val scale by animateFloatAsState(
@@ -467,10 +481,8 @@ private fun PermissionItem(
                 },
                 border = BorderStroke(borderWidth, borderColor),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (enabled)
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-                    else
-                        Color.Transparent
+                    containerColor = if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                    else Color.Transparent
                 ),
             ) {
                 Text("Grant")
@@ -500,9 +512,7 @@ private fun ConsentActions(
         ) {
 
             Button(
-                onClick = onComplete,
-                enabled = canComplete,
-                modifier = Modifier.weight(1f)
+                onClick = onComplete, enabled = canComplete, modifier = Modifier.weight(1f)
             ) {
                 Text("Get Started")
             }
@@ -518,8 +528,9 @@ private fun ConsentGateScreenPreview() {
         onComplete = {},
         onDismiss = {},
         fineLocationGranted = false,
+        backgroundLocationGranted = false,
         phoneStateGranted = false,
         onRequestFineLocation = {},
-        onRequestPhoneState = {}
-    )
+        onRequestBackgroundLocation = {},
+        onRequestPhoneState = {})
 }

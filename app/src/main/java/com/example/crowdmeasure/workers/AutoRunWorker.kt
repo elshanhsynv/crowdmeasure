@@ -22,14 +22,16 @@ class AutoRunWorker @AssistedInject constructor(
         val now = System.currentTimeMillis()
         val trigger = inputData.getString(KEY_TRIGGER_SOURCE) ?: TRIGGER_UNKNOWN
 
-        runCatching { statusStore.markAutoRunStart(now) }
-            .onFailure { WorkerLog.w(TAG, "failed to persist worker start", it) }
+        runCatching { statusStore.markAutoRunStart(now) }.onFailure {
+            WorkerLog.w(
+                TAG, "failed to persist worker start", it
+            )
+        }
         WorkerLog.i(TAG, "start attempt=$runAttemptCount trigger=$trigger")
 
         return try {
             val execution = autoRunWorkRepository.execute(
-                nowUtcMs = now,
-                runAttemptCount = runAttemptCount
+                nowUtcMs = now, runAttemptCount = runAttemptCount
             )
 
             val statusResult = when (execution.outcome) {
@@ -52,10 +54,12 @@ class AutoRunWorker @AssistedInject constructor(
                     }
                     Result.success()
                 }
+
                 AutoRunExecution.Outcome.RETRY -> {
                     WorkerLog.w(TAG, "retrying code=${execution.code}", execution.cause)
                     Result.retry()
                 }
+
                 AutoRunExecution.Outcome.FAILURE -> {
                     WorkerLog.e(TAG, "failing code=${execution.code}", execution.cause)
                     Result.failure(workDataOf(KEY_ERROR_CODE to execution.code))
@@ -84,10 +88,7 @@ class AutoRunWorker @AssistedInject constructor(
     }
 
     private suspend fun markEndSafely(
-        result: String,
-        code: String,
-        uploadedCount: Int,
-        measurementId: String?
+        result: String, code: String, uploadedCount: Int, measurementId: String?
     ) {
         runCatching {
             statusStore.markAutoRunEnd(

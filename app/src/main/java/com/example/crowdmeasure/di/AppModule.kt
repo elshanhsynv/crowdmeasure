@@ -11,12 +11,13 @@ import com.example.crowdmeasure.data.repo.UserSessionRepositoryImpl
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UploadRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
-import dagger.Binds
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
 import javax.inject.Singleton
 
 @Module
@@ -40,7 +41,7 @@ object AppModule {
         @ApplicationContext context: Context,
         prefs: AppPreferences,
         okHttpClientProvider: OkHttpClientProvider,
-        @IoDispatcher io: kotlinx.coroutines.CoroutineDispatcher
+        @IoDispatcher io: CoroutineDispatcher
     ): MeasurementRunner =
         MeasurementRunner(context, prefs, okHttpClientProvider, io)
 
@@ -48,9 +49,16 @@ object AppModule {
     fun provideMeasurementRepo(
         dao: com.example.crowdmeasure.data.db.MeasurementDao,
         runner: MeasurementRunner,
-        @IoDispatcher io: kotlinx.coroutines.CoroutineDispatcher
+        @IoDispatcher io: CoroutineDispatcher
     ): MeasurementRepository =
         MeasurementRepositoryImpl(dao, runner, io)
+
+    @Provides @Singleton
+    fun provideUploadRepo(
+        dao: com.example.crowdmeasure.data.db.MeasurementDao,
+        prefs: AppPreferences,
+        firestore: FirebaseFirestore
+    ): UploadRepository = UploadRepositoryFirestore(dao, prefs, firestore)
 
     @Provides @Singleton
     fun provideExporter(@ApplicationContext context: Context): Exporter =

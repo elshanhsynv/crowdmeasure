@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 object AppPermissions {
-
     fun hasCoarseLocation(context: Context): Boolean = ContextCompat.checkSelfPermission(
         context,
         Manifest.permission.ACCESS_COARSE_LOCATION
@@ -27,6 +26,10 @@ object AppPermissions {
 
     fun hasFineLocation(context: Context): Boolean = ContextCompat.checkSelfPermission(
         context, Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    fun hasBackgroundLocation(context: Context): Boolean = ContextCompat.checkSelfPermission(
+        context, Manifest.permission.ACCESS_BACKGROUND_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
 
     fun isLocationServicesEnabled(context: Context): Boolean {
