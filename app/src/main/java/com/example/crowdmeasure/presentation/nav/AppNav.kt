@@ -133,8 +133,6 @@ fun AppNav() {
                     }
                 )
             }
-
-            // Future: more destinations here (e.g., settings sub-screens, onboarding)
         }
     }
 }

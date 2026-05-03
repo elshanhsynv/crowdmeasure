@@ -52,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
 }
@@ -125,4 +126,7 @@ dependencies {
 
     // Extended Icons
     implementation(libs.androidx.material.icons.extended)
+
+    //
+    implementation(libs.timber)
 }

@@ -51,7 +51,6 @@ class Exporter(
             put("app_version", m.header.appVersion)
             put("android_version", m.header.androidVersion)
             put("device_model", m.header.deviceModel)
-            put("user_consent_version", m.header.userConsentVersion)
         }
 
         val contextObj = JSONObject().apply {
@@ -63,8 +62,7 @@ class Exporter(
             put("battery_saver", m.context.batterySaver)
             put("charging", m.context.charging)
             put("screen_on", m.context.screenOn)
-            put("foreground", m.context.foreground)
-            putOpt("coarse_location", m.context.coarseLocation?.let { loc ->
+            putOpt("location", m.context.location?.let { loc ->
                 JSONObject().apply {
                     put("lat", loc.lat)
                     put("lon", loc.lon)
@@ -78,11 +76,6 @@ class Exporter(
                 putOpt("thermal_status", d.thermalStatus)
                 putOpt("doze_mode", d.dozeMode)
                 putOpt("data_saver_enabled", d.dataSaverEnabled)
-                putOpt("handover_count", d.handoverCount)
-                putOpt("handover_during_test", d.handoverDuringTest)
-                putOpt("public_ip_hash", d.publicIpHash)
-                putOpt("asn", d.asn)
-                putOpt("isp_name", d.ispName)
             }
         }
 
@@ -132,7 +125,7 @@ class Exporter(
                 putOpt("voice_network_type", c.voiceNetworkType)
                 putOpt("roaming", c.roaming)
                 putOpt("registered_rat", c.registeredRat)
-                putOpt("nr_state", c.nrState?.name)
+                putOpt("nr_state", c.nrState.name)
                 putOpt("serving_cell", c.servingCell?.let { sc ->
                     JSONObject().apply {
                         putOpt("ci", sc.ci)

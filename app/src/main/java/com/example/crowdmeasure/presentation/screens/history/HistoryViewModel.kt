@@ -129,7 +129,6 @@ class HistoryViewModel @Inject constructor(
     private fun buildHaystack(item: HistoryItemUi): String {
         // Keep everything you want searchable here
         return listOfNotNull(
-            item.feedbackTag,
             item.transportText,
             item.carrierName,
             item.registeredRat,
@@ -155,9 +154,6 @@ class HistoryViewModel @Inject constructor(
             if (f.startsWith(fullQuery)) score += prefix
             if (f.contains(fullQuery)) score += contains
         }
-
-        // Strongest: feedback tag
-        bump(item.feedbackTag, exact = 100, prefix = 70, contains = 40)
 
         // Strong: carrier / RAT / endpoint host
         bump(item.carrierName, exact = 70, prefix = 45, contains = 25)
@@ -189,8 +185,7 @@ private fun Measurement.toHistoryItemUi(formatter: SimpleDateFormat): HistoryIte
         transportText = context.transport.toString(),
         rttText = performance.rttAvgMs?.let { "$it ms" } ?: "—",
         ttfbText = performance.ttfbMs?.let { "$it ms" } ?: "—",
-        hasLocation = context.coarseLocation != null,
-        feedbackTag = feedbackTag,
+        hasLocation = context.location != null,
         carrierName = cell?.carrierName,
         registeredRat = cell?.registeredRat,
         dataNetworkType = cell?.dataNetworkType,

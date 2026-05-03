@@ -1,31 +1,25 @@
 package com.example.crowdmeasure.data.measurement.collectors
 
 import android.os.Build
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DeviceSnapshot(
     val appVersion: String,
-    val androidVersion: String,
-    val deviceModel: String
+    /** Human-readable Android release string, e.g. "15". */
+    val androidRelease: String,
+    /** Numeric API level, e.g. 35. */
+    val androidSdk: Int,
+    /** "<MANUFACTURER> <MODEL>" trimmed, e.g. "Google Pixel 9". */
+    val deviceModel: String,
 )
 
 object DeviceCollector {
-    fun collect(): DeviceSnapshot {
-        val androidVersion = "${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"
-        val model = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
-        return DeviceSnapshot(
-            appVersion = safeBuildConfigVersionName(),
-            androidVersion = androidVersion,
-            deviceModel = model
-        )
-    }
 
-    private fun safeBuildConfigVersionName(): String {
-        return try {
-            val clazz = Class.forName("com.example.crowdmeasure.BuildConfig")
-            val field = clazz.getDeclaredField("VERSION_NAME")
-            field.get(null) as? String ?: "unknown"
-        } catch (_: Throwable) {
-            "unknown"
-        }
-    }
+    fun collect(versionName: String): DeviceSnapshot = DeviceSnapshot(
+        appVersion = versionName.ifBlank { "unknown" },
+        androidRelease = Build.VERSION.RELEASE,
+        androidSdk = Build.VERSION.SDK_INT,
+        deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
+    )
 }

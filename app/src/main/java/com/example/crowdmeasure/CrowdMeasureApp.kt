@@ -11,6 +11,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.components.SingletonComponent
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -20,6 +21,10 @@ class CrowdMeasureApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
         val factory = EntryPointAccessors.fromApplication(
             this,
             WorkManagerFactoryEntryPoint::class.java

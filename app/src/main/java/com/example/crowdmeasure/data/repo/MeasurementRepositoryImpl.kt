@@ -27,7 +27,6 @@ class MeasurementRepositoryImpl(
             measurementId = measurement.header.measurementId,
             timestampUtcMs = measurement.header.timestampUtcMs,
             transport = measurement.context.transport.name,
-            feedbackTag = measurement.feedbackTag,
             json = Converters.measurementToJson(measurement),
             recordState = RecordState.PENDING.name
         )
@@ -44,11 +43,8 @@ class MeasurementRepositoryImpl(
     override fun observeQueueCount(): Flow<Int> = dao.observeQueueCount()
 
     override fun observeHistory(limit: Int, feedbackTag: String?): Flow<List<Measurement>> {
-        val src = if (feedbackTag.isNullOrBlank()) {
-            dao.observeHistory(limit)
-        } else {
-            dao.observeHistoryByTag(limit, feedbackTag)
-        }
+        val src = dao.observeHistory(limit)
+
 
         return src.map { list ->
             list.mapNotNull { e -> runCatching { Converters.jsonToMeasurement(e.json) }.getOrNull() }

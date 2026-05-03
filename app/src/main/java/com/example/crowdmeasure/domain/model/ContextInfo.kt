@@ -4,21 +4,21 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ContextInfo(
-    val coarseLocation: CoarseLocation? = null,
+    val location: Location? = null,
     val transport: TransportType,
     val validatedInternet: Boolean? = null,
     val captivePortal: Boolean? = null,
     val metered: Boolean? = null,
     val vpnPresent: Boolean? = null,
     val batterySaver: Boolean,
+    val batteryPercentage: Int? = null,
     val charging: Boolean,
     val screenOn: Boolean,
-    val foreground: Boolean
 )
 
 @Serializable
-data class CoarseLocation(
+data class Location(
     val lat: Double,
     val lon: Double,
-    val accuracyMeters: Float
+    val accuracyMeters: Float,
 )

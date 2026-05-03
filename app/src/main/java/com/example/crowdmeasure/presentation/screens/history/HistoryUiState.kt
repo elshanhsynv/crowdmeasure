@@ -55,7 +55,6 @@ data class HistoryItemUi(
     val rttText: String,
     val ttfbText: String,
     val hasLocation: Boolean,
-    val feedbackTag: String?,
     val carrierName: String? = null,
     val registeredRat: String? = null,
     val dataNetworkType: String? = null,

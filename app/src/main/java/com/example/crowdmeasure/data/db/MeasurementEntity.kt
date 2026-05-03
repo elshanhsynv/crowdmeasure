@@ -8,7 +8,6 @@ data class MeasurementEntity(
     @PrimaryKey val measurementId: String,
     val timestampUtcMs: Long,
     val transport: String,
-    val feedbackTag: String?,
     val json: String,
     val recordState: String
 )

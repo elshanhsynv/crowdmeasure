@@ -8,7 +8,7 @@ data class Measurement(
     val context: ContextInfo,
     val cell: CellInfo? = null,
     val wifi: WifiInfo? = null,
+    val ip: IpInfo? = null,
     val performance: PerformanceInfo,
     val diagnostics: DiagnosticsInfo? = null,
-    val feedbackTag: String? = null
 )

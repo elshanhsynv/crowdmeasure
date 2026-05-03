@@ -3,9 +3,11 @@ package com.example.crowdmeasure.data.measurement
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.example.crowdmeasure.BuildConfig
 import com.example.crowdmeasure.data.measurement.collectors.ContextCollector
 import com.example.crowdmeasure.data.measurement.collectors.DeviceCollector
 import com.example.crowdmeasure.data.measurement.collectors.DiagnosticsCollector
+import com.example.crowdmeasure.data.measurement.collectors.IpCollector
 import com.example.crowdmeasure.data.measurement.collectors.LocationCollector
 import com.example.crowdmeasure.data.measurement.collectors.PerformanceTester
 import com.example.crowdmeasure.data.measurement.collectors.TelephonyCollector
@@ -34,12 +36,7 @@ class MeasurementRunner(
             prefs.ensureInstallId()
             val settings = prefs.settings.first()
 
-            // HARD opt-in gate: no consent, no collection.
-//            check(settings.consentAccepted && settings.collectionEnabled) {
-//                "Consent not accepted or collection disabled."
-//            }
-
-            val device = DeviceCollector.collect()
+            val device = DeviceCollector.collect(versionName = BuildConfig.VERSION_NAME)
 
             // Collect base context first (no location inside yet)
             val ctxBase = ContextCollector.collect(context)
@@ -50,12 +47,14 @@ class MeasurementRunner(
             }
 
             // Location one-shot (optional). Only do it once.
-            val coarseLocation = LocationCollector.tryGetCoarseOneShot(context)
-            val ctx = ctxBase.copy(coarseLocation = coarseLocation)
+            val location = LocationCollector.tryGetCoarseOneShot(context)
+            val ctx = ctxBase.copy(location = location)
 
             // Transport-specific collectors
             val wifi = if (ctx.transport == TransportType.WIFI) WifiCollector.collect(context) else null
             val cell = if (ctx.transport == TransportType.CELL) TelephonyCollector.collect(context) else null
+
+            val ip = IpCollector.collect(okHttpClientProvider.create())
 
             // Performance test (light probe)
             val endpointUrl = settings.endpointUrl
@@ -64,7 +63,6 @@ class MeasurementRunner(
                 okHttp = http,
                 endpointUrl = endpointUrl,
                 endpointId = endpointUrl,
-                protocolHint = ProtocolType.UNKNOWN
             )
 
             val diagnostics = DiagnosticsCollector.collect(context)
@@ -74,9 +72,9 @@ class MeasurementRunner(
                 timestampUtcMs = System.currentTimeMillis(),
                 measurementId = measurementId,
                 appVersion = device.appVersion,
-                androidVersion = device.androidVersion,
-                deviceModel = device.deviceModel,
-                userConsentVersion = settings.consentVersion
+                androidVersion = device.androidRelease,
+                androidSdk = device.androidSdk,
+                deviceModel = device.deviceModel
             )
 
             Measurement(
@@ -84,9 +82,9 @@ class MeasurementRunner(
                 context = ctx,
                 cell = cell,
                 wifi = wifi,
+                ip = ip,
                 performance = perf,
                 diagnostics = diagnostics,
-                feedbackTag = null
             )
         }
     }

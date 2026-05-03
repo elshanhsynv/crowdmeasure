@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "ee2750a1f6de933bec457f9b196d4c73",
+    "identityHash": "c6171acb7326ab5a3334dac97711957f",
     "entities": [
       {
         "tableName": "measurements",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`measurementId` TEXT NOT NULL, `timestampUtcMs` INTEGER NOT NULL, `transport` TEXT NOT NULL, `feedbackTag` TEXT, `json` TEXT NOT NULL, `recordState` TEXT NOT NULL, PRIMARY KEY(`measurementId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`measurementId` TEXT NOT NULL, `timestampUtcMs` INTEGER NOT NULL, `transport` TEXT NOT NULL, `json` TEXT NOT NULL, `recordState` TEXT NOT NULL, PRIMARY KEY(`measurementId`))",
         "fields": [
           {
             "fieldPath": "measurementId",
@@ -25,11 +25,6 @@
             "columnName": "transport",
             "affinity": "TEXT",
             "notNull": true
-          },
-          {
-            "fieldPath": "feedbackTag",
-            "columnName": "feedbackTag",
-            "affinity": "TEXT"
           },
           {
             "fieldPath": "json",
@@ -54,7 +49,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ee2750a1f6de933bec457f9b196d4c73')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c6171acb7326ab5a3334dac97711957f')"
     ]
   }
 }

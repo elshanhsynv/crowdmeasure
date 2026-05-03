@@ -47,7 +47,6 @@ class UploadRepositoryFirestore @Inject constructor(
                     "measurement_id" to e.measurementId,
                     "timestamp_utc_ms" to e.timestampUtcMs,
                     "transport" to e.transport,
-                    "feedback_tag" to e.feedbackTag,
                     "uploaded_at" to humanReadableTime,
                     "payload" to payloadMap
                 )

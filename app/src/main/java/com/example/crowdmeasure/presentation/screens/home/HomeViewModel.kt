@@ -138,5 +138,4 @@ private fun Measurement.toUiModel() = MeasurementUi(
     cell = this.cell,
     wifi = this.wifi,
     performance = this.performance,
-    feedbackTag = this.feedbackTag
 )

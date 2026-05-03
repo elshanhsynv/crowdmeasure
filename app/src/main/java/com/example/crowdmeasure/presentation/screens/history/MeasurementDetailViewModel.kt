@@ -118,8 +118,8 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     val headerPairs = listOf(
         "App Version" to header.appVersion,
         "Android Version" to header.androidVersion,
+        "Android SDK" to header.androidSdk.toString(),
         "Device Model" to header.deviceModel,
-        "Consent Version" to header.userConsentVersion.toString()
     )
 
     val contextPairs = buildList {
@@ -129,12 +129,12 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         add("Metered Connection" to (context.metered?.toString() ?: "—"))
         add("VPN Active" to (context.vpnPresent?.toString() ?: "—"))
         add("Battery Saver" to context.batterySaver.toString())
+        add("Battery % " to (context.batteryPercentage?.let { "$it%" } ?: "—"))
         add("Charging" to context.charging.toString())
         add("Screen On" to context.screenOn.toString())
-        add("Foreground" to context.foreground.toString())
     }
 
-    val coarseLocationText = context.coarseLocation?.let { loc ->
+    val locationText = context.location?.let { loc ->
         "${loc.lat}, ${loc.lon} (±${loc.accuracyMeters}m)"
     }
 
@@ -143,11 +143,6 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             d.thermalStatus?.let { add("Thermal Status" to it.toString()) }
             d.dozeMode?.let { add("Doze Mode" to it.toString()) }
             d.dataSaverEnabled?.let { add("Data Saver" to it.toString()) }
-            d.handoverCount?.let { add("Handover Count" to it.toString()) }
-            d.handoverDuringTest?.let { add("Handover During Test" to it.toString()) }
-            d.asn?.let { add("ASN" to it.toString()) }
-            d.ispName?.let { add("ISP" to it) }
-            d.publicIpHash?.let { add("Public IP Hash" to it) }
         }.takeIf { it.isNotEmpty() }
     }
 
@@ -162,7 +157,6 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             w.channelWidthMhz?.let { add("Channel Width" to "$it MHz") }
             w.standard?.let { add("Wi-Fi Standard" to it.name) }
             w.bssidHash?.let { add("BSSID Hash" to it) }
-            w.ispName?.let { add("ISP" to it) } ?: "—"
         }.takeIf { it.isNotEmpty() }
     }
 
@@ -207,6 +201,15 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         }.joinToString(" • ")
     }
 
+    // IP info
+    val ipUi = ip?.let { i ->
+        buildList {
+            add("Public IP" to i.publicIpHash.toString())
+            add("ISP" to i.ispName.toString())
+            add("ASN" to i.asn.toString())
+        }.takeIf { it.isNotEmpty() }
+    }
+
     val performanceUi = PerformanceUi(
         protocol = performance.protocol.toString(),
         dns = performance.dnsMs?.let { "$it ms" } ?: "—",
@@ -231,15 +234,15 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     return MeasurementDetailUi(
         id = header.measurementId,
         timeText = timeText,
-        feedbackTag = feedbackTag,
         header = headerPairs,
         context = contextPairs,
-        diagnostics = diagnosticsPairs, // NEW
+        diagnostics = diagnosticsPairs,
         wifi = wifiPairs,
         cell = cellPairs,
+        ip = ipUi,
         performance = performanceUi,
         endpointId = performance.endpointId,
-        coarseLocationText = coarseLocationText,
+        locationText = locationText,
         cellIdsText = cellIdsText
     )
 }

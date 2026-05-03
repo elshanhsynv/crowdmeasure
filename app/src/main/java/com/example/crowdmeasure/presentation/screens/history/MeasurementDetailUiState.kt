@@ -16,17 +16,17 @@ data class MeasurementDetailUiState(
 data class MeasurementDetailUi(
     val id: String,
     val timeText: String,
-    val feedbackTag: String? = null,
     val header: List<Pair<String, String>>,
     val context: List<Pair<String, String>>,
     val diagnostics: List<Pair<String, String>>?,
     val wifi: List<Pair<String, String>>?,
     val cell: List<Pair<String, String>>?,
+    val ip: List<Pair<String, String>>?,
     val performance: PerformanceUi,
 
     // Sensitive data (masked by default)
     val endpointId: String?,
-    val coarseLocationText: String?,
+    val locationText: String?,
     val cellIdsText: String?
 )
 
@@ -41,8 +41,6 @@ data class PerformanceUi(
     val rttP95: String,
     val jitter: String,
     val loss: String,
-
-    // NEW
     val httpStatus: String,
     val serverRegion: String,
     val stallsCount: String,

@@ -53,7 +53,6 @@ private fun MainContent() {
             visible = shouldShowConsent,
             onComplete = {
                 consentViewModel.markConsentGateCompleted()
-//                homeViewModel.startMeasurement()
             },
             onDismiss = {},
             viewModel = consentViewModel

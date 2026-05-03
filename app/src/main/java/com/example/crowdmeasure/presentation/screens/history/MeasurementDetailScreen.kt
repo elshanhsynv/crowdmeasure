@@ -105,7 +105,7 @@ private fun MeasurementDetailContent(
                 item(key = "context") {
                     ContextSection(
                         pairs = measurement.context,
-                        locationText = measurement.coarseLocationText,
+                        locationText = measurement.locationText,
                         locationRevealed = state.revealed.contains(RevealKey.Location),
                         onToggleLocation = { onToggleReveal(RevealKey.Location) }
                     )
@@ -128,12 +128,19 @@ private fun MeasurementDetailContent(
                 // Cellular section (if present)
                 measurement.cell?.let { cellPairs ->
                     item(key = "cell") {
-                        CellularSection(
+                            CellularSection(
                             pairs = cellPairs,
                             cellIdsText = measurement.cellIdsText,
                             cellIdsRevealed = state.revealed.contains(RevealKey.CellIds),
                             onToggleCellIds = { onToggleReveal(RevealKey.CellIds) }
                         )
+                    }
+                }
+
+                // IP section
+                measurement.ip?.let { ipPairs ->
+                    item(key = "ip") {
+                        IpSection(pairs = ipPairs)
                     }
                 }
 
@@ -184,25 +191,6 @@ private fun SummarySection(measurement: MeasurementDetailUi) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            // Feedback tag (if present)
-            measurement.feedbackTag?.let { tag ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Tag",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = tag,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-            }
         }
     }
 }
@@ -243,7 +231,7 @@ private fun ContextSection(
 //            if (locationText != null) {
                 SectionDivider()
                 SensitiveValueRow(
-                    label = "Coarse Location",
+                    label = "Location",
                     value = locationText,
                     revealed = locationRevealed,
                     onToggleReveal = onToggleLocation
@@ -284,6 +272,21 @@ private fun WifiSection(pairs: List<Pair<String, String>>) {
     }
 }
 
+@Composable
+private fun IpSection(pairs: List<Pair<String, String>>) {
+    val spacing = LocalSpacing.current
+
+    DetailSectionCard(
+        title = "IP Information",
+        description = "Network identity and provider"
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            pairs.forEach { (label, value) ->
+                MetricRow(label, value)
+            }
+        }
+    }
+}
 @Composable
 private fun CellularSection(
     pairs: List<Pair<String, String>>,

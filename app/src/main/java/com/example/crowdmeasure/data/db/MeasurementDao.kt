@@ -21,9 +21,6 @@ interface MeasurementDao {
     @Query("SELECT * FROM measurements ORDER BY timestampUtcMs DESC LIMIT :limit")
     fun observeHistory(limit: Int): Flow<List<MeasurementEntity>>
 
-    @Query("SELECT * FROM measurements WHERE feedbackTag = :tag ORDER BY timestampUtcMs DESC LIMIT :limit")
-    fun observeHistoryByTag(limit: Int, tag: String): Flow<List<MeasurementEntity>>
-
     @Query("SELECT * FROM measurements WHERE measurementId = :id LIMIT 1")
     suspend fun getById(id: String): MeasurementEntity?
 

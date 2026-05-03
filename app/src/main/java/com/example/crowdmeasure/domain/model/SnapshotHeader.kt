@@ -8,6 +8,6 @@ data class SnapshotHeader(
     val measurementId: String,
     val appVersion: String,
     val androidVersion: String,
+    val androidSdk: Int,
     val deviceModel: String,
-    val userConsentVersion: Int
 )
