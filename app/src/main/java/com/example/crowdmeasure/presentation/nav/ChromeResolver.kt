@@ -41,8 +41,6 @@ object ChromeResolver {
                 topBarElevated = true
             )
 
-            // Future: handle nested graphs by checking route.startsWith(...)
-
             else -> defaultChrome()
         }
     }
