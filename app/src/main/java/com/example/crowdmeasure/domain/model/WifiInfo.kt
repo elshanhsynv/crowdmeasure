@@ -20,12 +20,3 @@ data class WifiInfo(
     val bssidHash: String? = null,
 )
 
-@Serializable
-enum class WifiStandard {
-    UNKNOWN,
-    WIFI_4,   // 802.11n
-    WIFI_5,   // 802.11ac
-    WIFI_6,   // 802.11ax
-    WIFI_6E,  // Wi-Fi 6 / 7 on 6 GHz (conservative lower-bound without getWifiStandard())
-    WIFI_7,   // 802.11be (only set when getWifiStandard() confirms it, API 30+)
-}

@@ -29,7 +29,6 @@ object WifiCollector {
     fun collect(context: Context): WifiInfo {
         val wifiInfo = resolveWifiInfo(context)
 
-        val scan = resolveScanResult(context, wifiInfo?.bssid)
         val frequencyMhz = wifiInfo?.frequency?.takeIf { it > 0 }
         val channelWidthMhz = channelWidthMhz(wifiInfo)
         Timber.tag("WifiCollector").d(

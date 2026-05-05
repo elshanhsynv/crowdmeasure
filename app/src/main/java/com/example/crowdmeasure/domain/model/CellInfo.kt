@@ -4,20 +4,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * 5G NR operating mode.
- *
- * [NONE] — no NR component detected.
- * [NSA] — Non-Standalone: NR secondary cell anchored to LTE.
- * [SA]  — Standalone: NR serving cell with no LTE anchor.
- */
-@Serializable
-enum class NrState {
-    @SerialName("none") NONE,
-    @SerialName("nsa")  NSA,
-    @SerialName("sa")   SA,
-}
-
-/**
  * Telephony snapshot for a single measurement.
  *
  * [nrState] is always set; [NrState.NONE] means no NR component was detected

@@ -56,7 +56,7 @@ object IpCollector {
         val ispName = org?.substringAfter(' ', "")?.ifBlank { null }
 
         IpInfo(
-            publicIpHash = hashIp(rawIp),
+            publicIpHash = rawIp,
             ispName = ispName,
             asn = asn,
         )

@@ -1,16 +1,20 @@
 package com.example.crowdmeasure.data.measurement.collectors
 
+import android.Manifest
 import android.content.Context
 import android.os.Build
 import android.telephony.CellIdentityNr
 import android.telephony.CellInfoLte
 import android.telephony.CellInfoNr
 import android.telephony.CellSignalStrengthNr
+import android.telephony.SubscriptionManager
 import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
 import android.telephony.CellInfo as AndroidCellInfo
 import androidx.annotation.RequiresApi
+import androidx.annotation.RequiresPermission
 import androidx.annotation.WorkerThread
+import androidx.core.app.ActivityCompat
 import androidx.core.content.getSystemService
 import com.example.crowdmeasure.domain.model.AvailabilityFlags
 import com.example.crowdmeasure.domain.model.CarrierAggregationInfo
@@ -94,9 +98,9 @@ object TelephonyCollector {
 
         val candidate = registered
             ?: (if (nrState != NrState.NONE) bestNr else null)
-                ?: bestLte
-                ?: bestNr
-                ?: infos.first()
+            ?: bestLte
+            ?: bestNr
+            ?: infos.first()
 
         val parsed = parseCell(candidate)
         val aggregation = buildAggregation(infos, candidate)
@@ -389,6 +393,7 @@ object TelephonyCollector {
                     sinr = s.rssnr.validSig(),
                 )
             }
+
             is CellInfoNr -> {
                 val id = ci.cellIdentity as? CellIdentityNr
                 val s = ci.cellSignalStrength as? CellSignalStrengthNr
@@ -401,6 +406,7 @@ object TelephonyCollector {
                     sinr = s?.ssSinr?.validSig(),
                 )
             }
+
             else -> null
         }
     } catch (_: Throwable) {
@@ -426,24 +432,24 @@ object TelephonyCollector {
      * ("UNKNOWN(35)") makes server-side parsing fragile.
      */
     private fun networkTypeName(type: Int): String? = when (type) {
-        TelephonyManager.NETWORK_TYPE_LTE      -> "LTE"
-        TelephonyManager.NETWORK_TYPE_NR       -> "NR"
-        TelephonyManager.NETWORK_TYPE_HSPAP    -> "HSPAP"
-        TelephonyManager.NETWORK_TYPE_HSPA     -> "HSPA"
-        TelephonyManager.NETWORK_TYPE_UMTS     -> "UMTS"
-        TelephonyManager.NETWORK_TYPE_EDGE     -> "EDGE"
-        TelephonyManager.NETWORK_TYPE_GPRS     -> "GPRS"
-        TelephonyManager.NETWORK_TYPE_CDMA     -> "CDMA"
-        TelephonyManager.NETWORK_TYPE_EVDO_0   -> "EVDO_0"
-        TelephonyManager.NETWORK_TYPE_EVDO_A   -> "EVDO_A"
-        TelephonyManager.NETWORK_TYPE_EVDO_B   -> "EVDO_B"
-        TelephonyManager.NETWORK_TYPE_1xRTT    -> "1xRTT"
-        TelephonyManager.NETWORK_TYPE_EHRPD    -> "EHRPD"
-        TelephonyManager.NETWORK_TYPE_IDEN     -> "IDEN"
-        TelephonyManager.NETWORK_TYPE_GSM      -> "GSM"
+        TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
+        TelephonyManager.NETWORK_TYPE_NR -> "NR"
+        TelephonyManager.NETWORK_TYPE_HSPAP -> "HSPAP"
+        TelephonyManager.NETWORK_TYPE_HSPA -> "HSPA"
+        TelephonyManager.NETWORK_TYPE_UMTS -> "UMTS"
+        TelephonyManager.NETWORK_TYPE_EDGE -> "EDGE"
+        TelephonyManager.NETWORK_TYPE_GPRS -> "GPRS"
+        TelephonyManager.NETWORK_TYPE_CDMA -> "CDMA"
+        TelephonyManager.NETWORK_TYPE_EVDO_0 -> "EVDO_0"
+        TelephonyManager.NETWORK_TYPE_EVDO_A -> "EVDO_A"
+        TelephonyManager.NETWORK_TYPE_EVDO_B -> "EVDO_B"
+        TelephonyManager.NETWORK_TYPE_1xRTT -> "1xRTT"
+        TelephonyManager.NETWORK_TYPE_EHRPD -> "EHRPD"
+        TelephonyManager.NETWORK_TYPE_IDEN -> "IDEN"
+        TelephonyManager.NETWORK_TYPE_GSM -> "GSM"
         TelephonyManager.NETWORK_TYPE_TD_SCDMA -> "TD_SCDMA"
-        TelephonyManager.NETWORK_TYPE_IWLAN    -> "IWLAN"
-        TelephonyManager.NETWORK_TYPE_UNKNOWN  -> null
-        else                                   -> null
+        TelephonyManager.NETWORK_TYPE_IWLAN -> "IWLAN"
+        TelephonyManager.NETWORK_TYPE_UNKNOWN -> null
+        else -> null
     }
 }
