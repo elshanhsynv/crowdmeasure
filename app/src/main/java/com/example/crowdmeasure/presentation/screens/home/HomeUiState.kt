@@ -2,9 +2,7 @@ package com.example.crowdmeasure.presentation.screens.home
 
 import androidx.compose.runtime.Immutable
 import com.example.crowdmeasure.domain.model.CellInfo
-import com.example.crowdmeasure.domain.model.ContextInfo
 import com.example.crowdmeasure.domain.model.PerformanceInfo
-import com.example.crowdmeasure.domain.model.SnapshotHeader
 import com.example.crowdmeasure.domain.model.WifiInfo
 import com.example.crowdmeasure.presentation.util.UiState
 

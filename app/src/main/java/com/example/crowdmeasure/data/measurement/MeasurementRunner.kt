@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.example.crowdmeasure.BuildConfig
-import com.example.crowdmeasure.data.measurement.collectors.ContextCollector
 import com.example.crowdmeasure.data.measurement.collectors.DeviceCollector
 import com.example.crowdmeasure.data.measurement.collectors.DiagnosticsCollector
 import com.example.crowdmeasure.data.measurement.collectors.IpCollector
@@ -16,7 +15,6 @@ import com.example.crowdmeasure.data.measurement.net.OkHttpClientProvider
 import com.example.crowdmeasure.data.prefs.AppPreferences
 import com.example.crowdmeasure.domain.model.Measurement
 import com.example.crowdmeasure.domain.model.ProtocolType
-import com.example.crowdmeasure.domain.model.SnapshotHeader
 import com.example.crowdmeasure.domain.model.TransportType
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first

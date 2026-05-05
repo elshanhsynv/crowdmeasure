@@ -1,69 +1,50 @@
 package com.example.crowdmeasure.domain.model
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Telephony snapshot for a single measurement.
- *
- * [nrState] is always set; [NrState.NONE] means no NR component was detected
- * (not that the check was skipped — use [AvailabilityFlags] for that).
- */
 @Serializable
 data class CellInfo(
-    val carrierName: String? = null,
-    val mcc: String? = null,
-    val mnc: String? = null,
+    val carrier: CarrierInfo,
+    val rat: String?, // LTE, NR, etc.
+    val nrState: NrState,
+
     val dataNetworkType: String? = null,
     val voiceNetworkType: String? = null,
     val roaming: Boolean? = null,
-    val registeredRat: String? = null,
-    val nrState: NrState = NrState.NONE,   // non-nullable; NONE = "not present", not "unknown"
-    val servingCell: ServingCell? = null,
-    val signal: SignalInfo? = null,
-    val radioMetrics: RadioMetrics? = null,
-    val aggregation: CarrierAggregationInfo? = null,
-    val availability: AvailabilityFlags = AvailabilityFlags(),
+
+    val serving: CellRadioSnapshot?,
+    val neighbors: List<CellRadioSnapshot> = emptyList(),
+
+    val aggregation: CarrierAggregationInfo?,
 )
 
 @Serializable
-data class ServingCell(
-    val ci: Int? = null,
-    val nci: Long? = null,
-    val tac: Int? = null,
-    val pci: Int? = null,
-    val earfcn: Int? = null,
-    val nrarfcn: Long? = null,
-    val band: Int? = null,
-    val bandwidthMhz: Int? = null,
+data class CarrierInfo(
+    val carrierName: String?,
+    val mcc: String?,
+    val mnc: String?,
 )
 
 @Serializable
-data class SignalInfo(
-    val rsrp: Int? = null,
-    val rsrq: Int? = null,
-    val sinr: Int? = null,
-    val rssi: Int? = null,
-    val cqi: Int? = null,
-    val timingAdvance: Int? = null,
-)
+data class CellRadioSnapshot(
+    val timestampOffsetMs: Long?,
 
-@Serializable
-data class AvailabilityFlags(
-    val cellInfoAccessible: Boolean = false,
-    val signalAccessible: Boolean = false,
-    val idsAccessible: Boolean = false,
-)
+    val cellId: Int?,
+    val nci: Long?,
+    val band: Int?,
+    val arfcn: Int?,
+    val nrarfcn: Int?,
+    val tac: Int?,
+    val pci: Int?,
 
-@Serializable
-data class CarrierAggregationInfo(
-    /**
-     * Whether carrier aggregation is actively in use.
-     * Null = cannot be determined from public API (the common case).
-     * Seeing secondary cells is necessary but not sufficient evidence of active CA.
-     */
-    val active: Boolean? = null,
-    val secondaryCells: List<SecondaryCell> = emptyList(),
+    val rsrpDbm: Int?,
+    val rsrqDb: Int?,
+    val sinrDb: Int?,
+    val cqi: Int?,
+    val rssi: Int?,
+
+    val bandwidthMhz: Int?,
+    val mimoLayers: Int?,
 )
 
 @Serializable
@@ -79,8 +60,7 @@ data class SecondaryCell(
 )
 
 @Serializable
-data class RadioMetrics(
-    val mimoLayers: Int? = null,
-    val lteCqi: Int? = null,
-    val nrCqi: Int? = null,
+data class CarrierAggregationInfo(
+    val active: Boolean? = null,
+    val secondaryCells: List<SecondaryCell> = emptyList(),
 )

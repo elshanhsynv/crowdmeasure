@@ -1,31 +1,24 @@
 package com.example.crowdmeasure.data.measurement.collectors
 
-import android.Manifest
 import android.content.Context
 import android.os.Build
 import android.telephony.CellIdentityNr
 import android.telephony.CellInfoLte
 import android.telephony.CellInfoNr
 import android.telephony.CellSignalStrengthNr
-import android.telephony.SubscriptionManager
 import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
-import android.telephony.CellInfo as AndroidCellInfo
 import androidx.annotation.RequiresApi
-import androidx.annotation.RequiresPermission
 import androidx.annotation.WorkerThread
-import androidx.core.app.ActivityCompat
 import androidx.core.content.getSystemService
-import com.example.crowdmeasure.domain.model.AvailabilityFlags
 import com.example.crowdmeasure.domain.model.CarrierAggregationInfo
+import com.example.crowdmeasure.domain.model.CarrierInfo
 import com.example.crowdmeasure.domain.model.CellInfo
+import com.example.crowdmeasure.domain.model.CellRadioSnapshot
 import com.example.crowdmeasure.domain.model.NrState
-import com.example.crowdmeasure.domain.model.RadioMetrics
 import com.example.crowdmeasure.domain.model.SecondaryCell
-import com.example.crowdmeasure.domain.model.ServingCell
-import com.example.crowdmeasure.domain.model.SignalInfo
 import com.example.crowdmeasure.presentation.util.AppPermissions
-import timber.log.Timber
+import android.telephony.CellInfo as AndroidCellInfo
 
 /**
  * Assumption: minSdk >= Q (29). The [RequiresApi] annotations on private
@@ -44,24 +37,22 @@ object TelephonyCollector {
         val dataType: Int? = if (phoneGranted) safe { tm.dataNetworkType } else null
         val voiceType: Int? = if (phoneGranted) safe { tm.voiceNetworkType } else null
 
-        val base = CellInfo(
+        val carrier = CarrierInfo(
             carrierName = safe { tm.networkOperatorName },
             mcc = op.takeIf { it.length >= 3 }?.substring(0, 3),
-            // MNC is 2 or 3 digits (total op length 5 or 6); substring(3) handles both.
-            mnc = op.takeIf { it.length >= 5 }?.substring(3),
+            mnc = op.takeIf { it.length >= 5 }?.substring(3)
+        )
+
+        val base = CellInfo(
+            carrier = carrier,
             dataNetworkType = dataType?.let(::networkTypeName),
             voiceNetworkType = voiceType?.let(::networkTypeName),
             roaming = safe { tm.isNetworkRoaming },
-        )
-
-        Timber.tag("TelephonyCollector").d(
-            "Basic Telephony Info: carrier=%s, mcc=%s, mnc=%s, dataType=%s, voiceType=%s, roaming=%s",
-            base.carrierName,
-            base.mcc,
-            base.mnc,
-            base.dataNetworkType,
-            base.voiceNetworkType,
-            base.roaming,
+            rat = null,
+            nrState = NrState.NONE,
+            serving = null,
+            neighbors = emptyList(),
+            aggregation = null,
         )
 
         val fineGranted = AppPermissions.hasFineLocation(context)
@@ -77,10 +68,6 @@ object TelephonyCollector {
             return base
         } catch (_: Throwable) {
             return base
-        }
-
-        if (infos.isEmpty()) {
-            return base.copy(availability = AvailabilityFlags(cellInfoAccessible = true))
         }
 
         val nrState = deriveNrState(context, tm, dataType, infos)
@@ -105,25 +92,18 @@ object TelephonyCollector {
         val parsed = parseCell(candidate)
         val aggregation = buildAggregation(infos, candidate)
 
-        Timber.tag("TelephonyCollector").d(
-            "Parsed CellInfo: rat=%s, servingCell=%s, signal=%s, radioMetrics=%s, aggregation=%s, flags=%s",
-            parsed.rat,
-            parsed.servingCell,
-            parsed.signal,
-            parsed.radioMetrics,
-            aggregation,
-            parsed.flags,
-        )
-
-        return base.copy(
+        val cellInfo = CellInfo(
+            carrier = carrier,
+            dataNetworkType = dataType?.let(::networkTypeName),
+            voiceNetworkType = voiceType?.let(::networkTypeName),
+            roaming = safe { tm.isNetworkRoaming },
+            rat = parsed.rat,
             nrState = nrState,
-            registeredRat = parsed.rat,
-            servingCell = parsed.servingCell,
-            signal = parsed.signal,
-            radioMetrics = parsed.radioMetrics,
+            serving = parsed.servingCell,
+            neighbors = parsed.neighbors ?: emptyList(),
             aggregation = aggregation,
-            availability = parsed.flags.copy(cellInfoAccessible = true),
         )
+        return cellInfo
     }
 
     // -------------------------------------------------------------------------
@@ -227,10 +207,7 @@ object TelephonyCollector {
     // -------------------------------------------------------------------------
 
     private data class Parsed(
-        val servingCell: ServingCell?,
-        val signal: SignalInfo?,
-        val radioMetrics: RadioMetrics?,
-        val flags: AvailabilityFlags,
+        val servingCell: CellRadioSnapshot?,
         val rat: String?,
     )
 
@@ -250,9 +227,6 @@ object TelephonyCollector {
 
     private fun emptyParsed(rat: String? = null) = Parsed(
         servingCell = null,
-        signal = null,
-        radioMetrics = null,
-        flags = AvailabilityFlags(cellInfoAccessible = true),
         rat = rat,
     )
 
@@ -274,11 +248,11 @@ object TelephonyCollector {
         // getCqi() is @hide; best-effort via reflection. Returns null safely when absent.
         val cqi: Int? = reflectInt(sig, "getCqi")?.validSig()
 
-        val serving = ServingCell(
-            ci = id.ci.validId(),
+        val serving = CellRadioSnapshot(
+            cellId = id.ci.validId(),
             tac = id.tac.validId(),
             pci = id.pci.validId(),
-            earfcn = id.earfcn.validId(),
+            arfcn = id.earfcn.validId(),
             band = band,
         )
 

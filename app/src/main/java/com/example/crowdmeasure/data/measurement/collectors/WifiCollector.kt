@@ -37,16 +37,17 @@ object WifiCollector {
         )
 
         return WifiInfo(
-            rssi = wifiInfo?.rssi,
-            linkSpeedMbps = wifiInfo?.linkSpeed,
-            txLinkSpeedMbps = wifiInfo?.txLinkSpeedMbps(),
-            rxLinkSpeedMbps = wifiInfo?.rxLinkSpeedMbps(),
-            frequencyMhz = frequencyMhz,
-            channelWidthMhz = channelWidthMhz,
-            standard = deriveStandard(wifiInfo, frequencyMhz, channelWidthMhz),
             bssidHash = wifiInfo?.bssid
                 ?.takeIf { it.isNotBlank() && it !in BSSID_PLACEHOLDER_VALUES }
                 ?.let { hashBssid(it) },
+            ssidHash = wifiInfo?.ssid,
+            standard = deriveStandard(wifiInfo, frequencyMhz, channelWidthMhz),
+            frequencyMhz = frequencyMhz,
+            channelWidthMhz = channelWidthMhz,
+            rssiDbm = wifiInfo?.rssi,
+            linkSpeedMbps = wifiInfo?.linkSpeed,
+            txLinkSpeedMbps = wifiInfo?.txLinkSpeedMbps(),
+            rxLinkSpeedMbps = wifiInfo?.rxLinkSpeedMbps(),
         )
     }
 

@@ -1,25 +1,38 @@
 package com.example.crowdmeasure.data.measurement.collectors
 
 import android.os.Build
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class DeviceSnapshot(
-    val appVersion: String,
-    /** Human-readable Android release string, e.g. "15". */
-    val androidRelease: String,
-    /** Numeric API level, e.g. 35. */
-    val androidSdk: Int,
-    /** "<MANUFACTURER> <MODEL>" trimmed, e.g. "Google Pixel 9". */
-    val deviceModel: String,
-)
+import com.example.crowdmeasure.domain.model.DeviceInfo
+import timber.log.Timber
 
 object DeviceCollector {
 
-    fun collect(versionName: String): DeviceSnapshot = DeviceSnapshot(
-        appVersion = versionName.ifBlank { "unknown" },
-        androidRelease = Build.VERSION.RELEASE,
-        androidSdk = Build.VERSION.SDK_INT,
-        deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
-    )
+    fun collect(versionName: String): DeviceInfo {
+        val chipset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Build.SOC_MODEL
+        } else {
+            Build.BOARD
+        }
+
+        val chipsetManufacturer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Build.SOC_MANUFACTURER
+        } else {
+            "Unknown"
+        }
+
+        val deviceInfo = DeviceInfo(
+            appVersion = versionName.ifBlank { "unknown" },
+            androidRelease = Build.VERSION.RELEASE,
+            androidSdk = Build.VERSION.SDK_INT,
+            deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
+            brand = Build.BRAND,
+            deviceManufacturer = Build.MANUFACTURER,
+            deviceOS = "Android", // Hardcoded as it's an Android platform collector
+            buildID = Build.ID,
+            hardware = Build.HARDWARE,
+            chipset = chipset,
+            chipsetManufacturer = chipsetManufacturer
+        )
+        Timber.tag("DeviceCollector").d("Collected DeviceInfo: %s", deviceInfo)
+        return deviceInfo
+    }
 }

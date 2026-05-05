@@ -4,11 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Measurement(
-    val header: SnapshotHeader,
-    val context: ContextInfo,
-    val cell: CellInfo? = null,
-    val wifi: WifiInfo? = null,
-    val ip: IpInfo? = null,
-    val performance: PerformanceInfo,
-    val diagnostics: DiagnosticsInfo? = null,
+    val meta: Meta,
+    val environment: EnvironmentInfo,
+    val config: TestConfig,
+    val phases: List<TestPhase>,
+    val summary: SummaryMetrics,
 )

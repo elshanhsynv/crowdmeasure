@@ -105,13 +105,13 @@ class Exporter(
 
         val wifi = m.wifi?.let { w ->
             JSONObject().apply {
-                putOpt("rssi", w.rssi)
+                putOpt("rssiDbm", w.rssiDbm)
                 putOpt("link_speed_mbps", w.linkSpeedMbps) // kept
                 putOpt("tx_link_speed_mbps", w.txLinkSpeedMbps)
                 putOpt("rx_link_speed_mbps", w.rxLinkSpeedMbps)
                 putOpt("frequency_mhz", w.frequencyMhz)
                 putOpt("channel_width_mhz", w.channelWidthMhz)
-                putOpt("standard", w.standard?.name)
+                putOpt("standard", w.standard.name)
                 putOpt("bssid_hash", w.bssidHash)
             }
         }

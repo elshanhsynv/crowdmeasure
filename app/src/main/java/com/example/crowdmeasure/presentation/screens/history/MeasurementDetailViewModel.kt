@@ -149,7 +149,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     // Wi-Fi section
     val wifiPairs = wifi?.let { w ->
         buildList {
-            w.rssi?.let { add("Signal Strength (RSSI)" to "$it dBm") }
+            w.rssiDbm?.let { add("Signal Strength (RSSI)" to "$it dBm") }
             w.linkSpeedMbps?.let { add("Link Speed (legacy)" to "$it Mbps") }
             w.txLinkSpeedMbps?.let { add("TX Link Speed" to "$it Mbps") }
             w.rxLinkSpeedMbps?.let { add("RX Link Speed" to "$it Mbps") }
