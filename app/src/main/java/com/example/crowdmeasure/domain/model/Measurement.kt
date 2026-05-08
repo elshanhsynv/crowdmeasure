@@ -7,7 +7,4 @@ data class Measurement(
     val meta: Meta,
     val environment: EnvironmentInfo,
     val performance: PerformanceInfo,
-//    val config: TestConfig,
-//    val phases: List<TestPhase>,
-//    val summary: SummaryMetrics,
 )

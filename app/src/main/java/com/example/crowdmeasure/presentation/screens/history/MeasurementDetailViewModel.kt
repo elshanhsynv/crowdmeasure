@@ -184,7 +184,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             sc.rsrqDb?.let { add("RSRQ" to "$it dB") }
             sc.sinrDb?.let { add("SINR" to "$it dB") }
             sc.cqi?.let { add("CQI" to "$it") }
-            sc.rssi?.let { add("RSSI" to "$it dBm") }
+            sc.rssiDbm?.let { add("RSSI" to "$it dBm") }
             sc.bandwidthMhz?.let { add("Bandwidth" to "$it MHz") }
             sc.mimoLayers?.let { add("Mimo Layers") to "$it" }
         }.joinToString(" • ")

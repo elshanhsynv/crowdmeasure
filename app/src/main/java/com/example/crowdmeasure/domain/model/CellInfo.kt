@@ -23,26 +23,55 @@ data class CarrierInfo(
     val carrierName: String?,
     val mcc: String?,
     val mnc: String?,
+    val operatorId: String?,   // MCC+MNC combined
+    val countryIso: String?,   // derived (very useful)
 )
 
 @Serializable
 data class CellRadioSnapshot(
     val timestampOffsetMs: Long?,
 
-    val cellId: Int?,
-    val nci: Long?,
-    val band: Int?,
-    val arfcn: Int?,
-    val nrarfcn: Int?,
-    val tac: Int?,
-    val pci: Int?,
+    // --- Cell Identity (multi-RAT support) ---
+    val cellId: Int?,          // LTE CI / fallback
+    val cid: Int?,             // 2G/3G explicit
+    val nci: Long?,            // 5G NR
 
+    val lac: Int?,             // 2G/3G
+    val tac: Int?,             // LTE/NR
+
+    val pci: Int?,
+    val psc: Int?,             // 3G
+    val bsic: Int?,            // 2G
+
+    val band: Int?,
+    val arfcn: Int?,           // LTE
+    val uarfcn: Int?,          // 3G
+    val nrarfcn: Int?,         // 5G
+
+    // --- Signal (generic) ---
     val rsrpDbm: Int?,
     val rsrqDb: Int?,
     val sinrDb: Int?,
+    val rssiDbm: Int?,
     val cqi: Int?,
-    val rssi: Int?,
 
+    // --- Signal normalization ---
+    val asuLevel: Int?,        // Android normalized signal
+    val dbm: Int?,             // unified signal strength
+
+    // --- LTE specific ---
+    val timingAdvance: Int?,   // IMPORTANT for distance estimation
+
+    // --- 5G NR (SS + CSI separation) ---
+    val ssRsrpDbm: Int?,
+    val ssRsrqDb: Int?,
+    val ssSinrDb: Int?,
+
+    val csiRsrpDbm: Int?,
+    val csiRsrqDb: Int?,
+    val csiSinrDb: Int?,
+
+    // --- Capacity ---
     val bandwidthMhz: Int?,
     val mimoLayers: Int?,
 )
@@ -56,6 +85,8 @@ data class SecondaryCell(
     val rsrp: Int? = null,
     val rsrq: Int? = null,
     val sinr: Int? = null,
+    val asuLevel: Int? = null,
+    val dbm: Int? = null,
     val bandwidthMhz: Int? = null,
 )
 

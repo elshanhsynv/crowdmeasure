@@ -19,6 +19,7 @@ import com.example.crowdmeasure.domain.model.CellRadioSnapshot
 import com.example.crowdmeasure.domain.model.NrState
 import com.example.crowdmeasure.domain.model.SecondaryCell
 import com.example.crowdmeasure.presentation.util.AppPermissions
+import timber.log.Timber
 import android.telephony.CellInfo as AndroidCellInfo
 
 /**
@@ -31,12 +32,23 @@ object TelephonyCollector {
     @RequiresApi(Build.VERSION_CODES.Q)
     fun collect(context: Context): CellInfo {
         val tm = context.getSystemService<TelephonyManager>() ?: return CellInfo(
-            carrier = CarrierInfo(null, null, null),
+            carrier = CarrierInfo(null, null, null, null, null),
             rat = null,
             nrState = NrState.NONE,
             serving = null,
             aggregation = null
         )
+
+//        TelephonyManager::class.java.methods
+//            .filter { it.parameterCount == 0 && it.name.startsWith("get") }
+//            .forEach { method ->
+//                try {
+//                    val value = method.invoke(tm)
+//                    Timber.d("${method.name} = $value")
+//                } catch (e: Exception) {
+//                    Timber.d("${method.name} = <error: ${e.message}>")
+//                }
+//            }
 
         val op = tm.networkOperator.orEmpty()
         val phoneGranted = AppPermissions.hasPhoneState(context)
@@ -44,10 +56,13 @@ object TelephonyCollector {
         val dataType: Int? = if (phoneGranted) safe { tm.dataNetworkType } else null
         val voiceType: Int? = if (phoneGranted) safe { tm.voiceNetworkType } else null
 
+
         val carrier = CarrierInfo(
             carrierName = safe { tm.networkOperatorName },
             mcc = op.takeIf { it.length >= 3 }?.substring(0, 3),
-            mnc = op.takeIf { it.length >= 5 }?.substring(3)
+            mnc = op.takeIf { it.length >= 5 }?.substring(3),
+            operatorId = op.takeIf { it.isNotEmpty() },
+            countryIso = safe { tm.simCountryIso },
         )
 
         val base = CellInfo(
@@ -141,6 +156,7 @@ object TelephonyCollector {
                 return when (displayInfo.overrideNetworkType) {
                     TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA,
                     TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA_MMWAVE -> NrState.NSA
+
                     TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_ADVANCED -> NrState.SA
                     else -> when (displayInfo.networkType) {
                         TelephonyManager.NETWORK_TYPE_NR -> NrState.SA
@@ -191,6 +207,8 @@ object TelephonyCollector {
         val id = ci.cellIdentity
         val sig = ci.cellSignalStrength
 
+        Timber.tag("TelephonyCollector").d("LTE: %s", sig.timingAdvance)
+
         val band: Int? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             id.bands.firstOrNull()
         } else null
@@ -217,9 +235,23 @@ object TelephonyCollector {
             rsrqDb = sig.rsrq.validSig(),
             sinrDb = sig.rssnr.validSig(),
             cqi = cqi,
-            rssi = sig.rssi.validSig(),
+            rssiDbm = sig.rssi.validSig(),
             bandwidthMhz = bandwidthMhz,
-            mimoLayers = null
+            mimoLayers = null,
+            asuLevel = sig.asuLevel.validSig(),
+            dbm = sig.dbm.validSig(),
+            timingAdvance = sig.timingAdvance.validSig(),
+            ssRsrpDbm = null,
+            ssRsrqDb = null,
+            ssSinrDb = null,
+            csiRsrpDbm = null,
+            csiRsrqDb = null,
+            csiSinrDb = null,
+            cid = null,
+            lac = null,
+            psc = null,
+            bsic = null,
+            uarfcn = null,
         )
 
         return Parsed(snapshot, "LTE")
@@ -253,9 +285,23 @@ object TelephonyCollector {
             rsrqDb = sig?.ssRsrq?.validSig(),
             sinrDb = sig?.ssSinr?.validSig(),
             cqi = nrCqi,
-            rssi = null, // NR API doesn't expose standard RSSI in the same way
+            rssiDbm = null, // NR API doesn't expose standard RSSI in the same way
             bandwidthMhz = null, // No standard bandwidth property on NR Identity prior to Android 14
-            mimoLayers = null
+            mimoLayers = null,
+            dbm = null,
+            timingAdvance = null,
+            ssRsrpDbm = null,
+            ssRsrqDb = null,
+            ssSinrDb = null,
+            csiRsrpDbm = null,
+            csiRsrqDb = null,
+            csiSinrDb = null,
+            cid = null,
+            lac = null,
+            psc = null,
+            bsic = null,
+            uarfcn = null,
+            asuLevel = null
         )
 
         return Parsed(snapshot, "NR")
