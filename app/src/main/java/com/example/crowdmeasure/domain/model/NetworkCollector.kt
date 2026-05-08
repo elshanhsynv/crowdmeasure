@@ -19,8 +19,13 @@ object NetworkCollector {
         val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
         val transport = caps.toTransportType()
         val ip = IpCollector.collect(okHttp)
-        val wifi = WifiCollector.collect(context)
-        val cell = TelephonyCollector.collect(context)
+
+        val wifi = if (transport == TransportType.WIFI) {
+            WifiCollector.collect(context)
+        } else null
+        val cell = if (transport == TransportType.CELL) {
+            TelephonyCollector.collect(context)
+        } else null
 
 
         val validatedInternet: Boolean?

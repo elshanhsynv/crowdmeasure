@@ -40,7 +40,8 @@ data class DeviceEnvironment(
     val charging: Boolean,
     val batterySaver: Boolean?,
     val screenOn: Boolean,
-
+    val dozeMode: Boolean?,
+    val dataSaver: Boolean?,
     val thermalState: String?,   // NORMAL / HOT / THROTTLED
     val cpuUsagePct: Double?,   // coarse estimate
     val memoryUsagePct: Double?,

@@ -24,9 +24,9 @@ class MeasurementRepositoryImpl(
 
     override suspend fun insert(measurement: Measurement) = withContext(io) {
         val entity = MeasurementEntity(
-            measurementId = measurement.header.measurementId,
-            timestampUtcMs = measurement.header.timestampUtcMs,
-            transport = measurement.context.transport.name,
+            measurementId = measurement.meta.measurementId,
+            timestampUtcMs = measurement.meta.timestampUtcMs,
+            transport = measurement.environment.network.transport.name,
             json = Converters.measurementToJson(measurement),
             recordState = RecordState.PENDING.name
         )

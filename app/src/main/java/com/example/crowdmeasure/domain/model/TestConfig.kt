@@ -18,8 +18,8 @@ data class ServerInfo(
     val serverId: String,
     val host: String,
     val ip: String,
-    val distanceKm: Int,
-    val selectionMethod: String,
+//    val distanceKm: Int,
+//    val selectionMethod: String,
     val pretestLatencyMs: Long,
 )
 

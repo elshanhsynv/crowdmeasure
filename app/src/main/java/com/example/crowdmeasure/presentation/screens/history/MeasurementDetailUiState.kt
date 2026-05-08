@@ -16,9 +16,8 @@ data class MeasurementDetailUiState(
 data class MeasurementDetailUi(
     val id: String,
     val timeText: String,
-    val header: List<Pair<String, String>>,
-    val context: List<Pair<String, String>>,
-    val diagnostics: List<Pair<String, String>>?,
+    val meta: List<Pair<String, String?>>,
+    val env: List<Pair<String, String>>,
     val wifi: List<Pair<String, String>>?,
     val cell: List<Pair<String, String>>?,
     val ip: List<Pair<String, String>>?,

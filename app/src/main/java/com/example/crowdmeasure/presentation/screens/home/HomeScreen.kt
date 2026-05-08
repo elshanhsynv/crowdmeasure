@@ -310,13 +310,13 @@ private fun MeasurementPreview(
     Column(
         verticalArrangement = Arrangement.spacedBy(spacing.sm)
     ) {
-        val timestamp = formatTimestamp(measurement.header.timestampUtcMs)
+        val timestamp = formatTimestamp(measurement.meta.timestampUtcMs)
         MetricRow(
             label = "Recorded", value = timestamp
         )
 
         MetricRow(
-            label = "Transport", value = measurement.context.transport.toString()
+            label = "Transport", value = measurement.environment.network.transport.toString()
         )
 
         measurement.performance.rttAvgMs?.let { rtt ->
@@ -345,7 +345,7 @@ private fun MeasurementPreview(
         )
 
         TextButton(
-            onClick = { onOpenDetail(measurement.header.measurementId) },
+            onClick = { onOpenDetail(measurement.meta.measurementId) },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("View Full Details")

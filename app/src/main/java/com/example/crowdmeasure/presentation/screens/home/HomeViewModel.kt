@@ -133,9 +133,9 @@ class HomeViewModel @Inject constructor(
 }
 
 private fun Measurement.toUiModel() = MeasurementUi(
-    header = this.header,
-    context = this.context,
-    cell = this.cell,
-    wifi = this.wifi,
+    meta = this.meta,
+    environment = this.environment,
+    cell = this.environment.network.cell,
+    wifi = this.environment.network.wifi,
     performance = this.performance,
 )

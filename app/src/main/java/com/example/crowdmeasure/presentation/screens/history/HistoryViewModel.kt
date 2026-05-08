@@ -180,15 +180,15 @@ private fun Measurement.toHistoryItemUi(formatter: SimpleDateFormat): HistoryIte
     val endpointHost = safeEndpointHost(performance.endpointId) ?: performance.endpointId
 
     return HistoryItemUi(
-        id = header.measurementId,
-        timeText = formatter.format(Date(header.timestampUtcMs)),
-        transportText = context.transport.toString(),
+        id = meta.measurementId,
+        timeText = formatter.format(Date(meta.timestampUtcMs)),
+        transportText = environment.network.transport.toString(),
         rttText = performance.rttAvgMs?.let { "$it ms" } ?: "—",
         ttfbText = performance.ttfbMs?.let { "$it ms" } ?: "—",
-        hasLocation = context.location != null,
-        carrierName = cell?.carrierName,
-        registeredRat = cell?.registeredRat,
-        dataNetworkType = cell?.dataNetworkType,
+        hasLocation = environment.location != null,
+        carrierName = environment.network.cell?.carrier?.carrierName,
+        registeredRat = environment.network.cell?.rat,
+        dataNetworkType = environment.network.cell?.dataNetworkType,
         protocol = performance.protocol.toString(),
         endpointIdOrHost = endpointHost
     )

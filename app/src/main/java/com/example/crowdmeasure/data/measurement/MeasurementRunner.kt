@@ -6,6 +6,7 @@ import androidx.annotation.RequiresApi
 import com.example.crowdmeasure.BuildConfig
 import com.example.crowdmeasure.data.measurement.collectors.DeviceCollector
 import com.example.crowdmeasure.data.measurement.collectors.DiagnosticsCollector
+import com.example.crowdmeasure.data.measurement.collectors.EnvironmentCollector
 import com.example.crowdmeasure.data.measurement.collectors.IpCollector
 import com.example.crowdmeasure.data.measurement.collectors.LocationCollector
 import com.example.crowdmeasure.data.measurement.collectors.PerformanceTester
@@ -14,6 +15,7 @@ import com.example.crowdmeasure.data.measurement.collectors.WifiCollector
 import com.example.crowdmeasure.data.measurement.net.OkHttpClientProvider
 import com.example.crowdmeasure.data.prefs.AppPreferences
 import com.example.crowdmeasure.domain.model.Measurement
+import com.example.crowdmeasure.domain.model.Meta
 import com.example.crowdmeasure.domain.model.ProtocolType
 import com.example.crowdmeasure.domain.model.TransportType
 import kotlinx.coroutines.CoroutineDispatcher
@@ -33,56 +35,42 @@ class MeasurementRunner(
         runCatching {
             prefs.ensureInstallId()
             val settings = prefs.settings.first()
+            val http = okHttpClientProvider.create()
 
             val device = DeviceCollector.collect(versionName = BuildConfig.VERSION_NAME)
+            val env = EnvironmentCollector.collect(context, http)
 
-            // Collect base context first (no location inside yet)
-            val ctxBase = ContextCollector.collect(context)
-
-            // Respect "Collect only on Wi-Fi"
-            if (settings.collectOnlyWifi && ctxBase.transport != TransportType.WIFI) {
+            // "Collect only on Wi-Fi"
+            if (settings.collectOnlyWifi && env.network.transport != TransportType.WIFI) {
                 throw IllegalStateException("Collect only on Wi-Fi is enabled.")
             }
 
-            // Location one-shot (optional). Only do it once.
-            val location = LocationCollector.tryGetCoarseOneShot(context)
-            val ctx = ctxBase.copy(location = location)
-
-            // Transport-specific collectors
-            val wifi = if (ctx.transport == TransportType.WIFI) WifiCollector.collect(context) else null
-            val cell = if (ctx.transport == TransportType.CELL) TelephonyCollector.collect(context) else null
-
-            val ip = IpCollector.collect(okHttpClientProvider.create())
-
             // Performance test (light probe)
             val endpointUrl = settings.endpointUrl
-            val http = okHttpClientProvider.create()
+
             val perf = PerformanceTester.run(
                 okHttp = http,
                 endpointUrl = endpointUrl,
                 endpointId = endpointUrl,
             )
 
-            val diagnostics = DiagnosticsCollector.collect(context)
-
             val measurementId = UUID.randomUUID().toString()
-            val header = SnapshotHeader(
-                timestampUtcMs = System.currentTimeMillis(),
+
+            val meta = Meta(
                 measurementId = measurementId,
+                timestampUtcMs = System.currentTimeMillis(),
+                deviceModel = device.deviceModel,
+                osVersion = device.androidRelease,
+                sdkInt = device.androidSdk,
                 appVersion = device.appVersion,
-                androidVersion = device.androidRelease,
-                androidSdk = device.androidSdk,
-                deviceModel = device.deviceModel
+                sessionId = null,
+                userIdHash = null
             )
 
             Measurement(
-                header = header,
-                context = ctx,
-                cell = cell,
-                wifi = wifi,
-                ip = ip,
-                performance = perf,
-                diagnostics = diagnostics,
+                meta = meta,
+                environment = env,
+                performance = perf
             )
         }
     }

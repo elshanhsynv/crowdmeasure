@@ -113,41 +113,38 @@ class MeasurementDetailViewModel @Inject constructor(
  */
 
 private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDetailUi {
-    val timeText = formatter.format(Date(header.timestampUtcMs))
+    val timeText = formatter.format(Date(meta.timestampUtcMs))
 
-    val headerPairs = listOf(
-        "App Version" to header.appVersion,
-        "Android Version" to header.androidVersion,
-        "Android SDK" to header.androidSdk.toString(),
-        "Device Model" to header.deviceModel,
+    val metaPairs = listOf(
+        "Device Model" to meta.deviceModel,
+        "OS Version" to meta.osVersion,
+        "Android SDK" to meta.sdkInt.toString(),
+        "App Version" to meta.appVersion,
+        "Session ID" to meta.sessionId,
+        "User ID" to meta.userIdHash
+    )
+    val envPairs = listOf(
+        "Transport" to environment.network.transport.toString(),
+        "Internet" to environment.network.validatedInternet.toString(),
+        "Captive Portal" to environment.network.captivePortal.toString(),
+        "VPN" to environment.network.vpn.toString(),
+        "Metered" to environment.network.metered.toString(),
+        "Battery" to "${environment.device.batteryPct}%",
+        "Charging" to environment.device.charging.toString(),
+        "Battery Saver" to environment.device.batterySaver.toString(),
+        "Screen On" to environment.device.screenOn.toString(),
+        "Doze Mode" to environment.device.dozeMode.toString(),
+        "Data Saver" to environment.device.dataSaver.toString(),
+        "Thermal State" to environment.device.thermalState.toString(),
+        "Memory Usage" to "%.2f".format(environment.device.memoryUsagePct) + "%",
     )
 
-    val contextPairs = buildList {
-        add("Transport" to (context.transport.toString()))
-        add("Internet Validated" to (context.validatedInternet?.toString() ?: "—"))
-        add("Captive Portal" to (context.captivePortal?.toString() ?: "—"))
-        add("Metered Connection" to (context.metered?.toString() ?: "—"))
-        add("VPN Active" to (context.vpnPresent?.toString() ?: "—"))
-        add("Battery Saver" to context.batterySaver.toString())
-        add("Battery % " to (context.batteryPercentage?.let { "$it%" } ?: "—"))
-        add("Charging" to context.charging.toString())
-        add("Screen On" to context.screenOn.toString())
-    }
-
-    val locationText = context.location?.let { loc ->
+    val locationText = environment.location?.let { loc ->
         "${loc.lat}, ${loc.lon} (±${loc.accuracyMeters}m)"
     }
 
-    val diagnosticsPairs = diagnostics?.let { d ->
-        buildList {
-            d.thermalStatus?.let { add("Thermal Status" to it.toString()) }
-            d.dozeMode?.let { add("Doze Mode" to it.toString()) }
-            d.dataSaverEnabled?.let { add("Data Saver" to it.toString()) }
-        }.takeIf { it.isNotEmpty() }
-    }
-
     // Wi-Fi section
-    val wifiPairs = wifi?.let { w ->
+    val wifiPairs = environment.network.wifi?.let { w ->
         buildList {
             w.rssiDbm?.let { add("Signal Strength (RSSI)" to "$it dBm") }
             w.linkSpeedMbps?.let { add("Link Speed (legacy)" to "$it Mbps") }
@@ -161,48 +158,40 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     }
 
     // Cell section
-    val cellPairs = cell?.let { c ->
+    val cellPairs = environment.network.cell?.let { c ->
         buildList {
-            add("Carrier" to (c.carrierName ?: "—"))
-            add("MCC / MNC" to "${c.mcc ?: "—"} / ${c.mnc ?: "—"}")
-            add("Data Network" to (c.dataNetworkType ?: "—"))
-            add("Voice Network" to (c.voiceNetworkType ?: "—"))
-            add("Roaming" to (c.roaming?.toString() ?: "—"))
-            add("Registered RAT" to (c.registeredRat ?: "—"))
-
-            // NEW
-            c.nrState?.let { add("NR State" to it.name) }
-            c.radioMetrics?.mimoLayers?.let { add("MIMO Layers" to it.toString()) }
-
-            // Serving signal extras (non-sensitive)
-            c.signal?.cqi?.let { add("CQI" to it.toString()) }
-            c.signal?.timingAdvance?.let { add("Timing Advance" to it.toString()) }
-
-            // CA summary
-            c.aggregation?.active?.let { add("Carrier Aggregation" to it.toString()) }
-            c.aggregation?.secondaryCells?.size?.let { add("Secondary Cells" to it.toString()) }
-
-            add("Signal Accessible" to c.availability.signalAccessible.toString())
-            add("IDs Accessible" to c.availability.idsAccessible.toString())
-        }.takeIf { it.isNotEmpty() }
+            c.carrier.mcc?.let { add("MCC" to it) }
+            c.carrier.mnc?.let { add("MNC" to it) }
+            c.carrier.carrierName?.let { add("Carrier" to it) }
+            c.rat?.let { add("RAT" to it) }
+            c.dataNetworkType?.let { add("Data Network Type" to it) }
+            c.voiceNetworkType?.let { add("Voice Network Type" to it) }
+            c.roaming?.let { add("Roaming" to it.toString()) }
+        }
     }
 
     // Sensitive: Cell IDs
-    val cellIdsText = cell?.servingCell?.let { sc ->
+    val cellIdsText = environment.network.cell?.serving?.let { sc ->
         buildList {
-            sc.ci?.let { add("CI: $it") }
-            sc.nci?.let { add("NCI: $it") }
-            sc.tac?.let { add("TAC: $it") }
-            sc.pci?.let { add("PCI: $it") }
-            sc.earfcn?.let { add("EARFCN: $it") }
-            sc.nrarfcn?.let { add("NRARFCN: $it") }
-            sc.band?.let { add("Band: $it") }
-            sc.bandwidthMhz?.let { add("BW: ${it}MHz") } // NEW
+            add("Serving Cell" to sc.cellId.toString())
+            sc.nci?.let { add("NCI" to "$it") }
+            sc.band?.let { add("Band" to "$it") }
+            sc.arfcn?.let { add("ARFCN" to "$it") }
+            sc.nrarfcn?.let { add("NRARFCN" to "$it") }
+            sc.tac?.let { add("TAC" to "$it") }
+            sc.pci?.let { add("PCI" to "$it") }
+            sc.rsrpDbm?.let { add("RSRP" to "$it dBm") }
+            sc.rsrqDb?.let { add("RSRQ" to "$it dB") }
+            sc.sinrDb?.let { add("SINR" to "$it dB") }
+            sc.cqi?.let { add("CQI" to "$it") }
+            sc.rssi?.let { add("RSSI" to "$it dBm") }
+            sc.bandwidthMhz?.let { add("Bandwidth" to "$it MHz") }
+            sc.mimoLayers?.let { add("Mimo Layers") to "$it" }
         }.joinToString(" • ")
     }
 
     // IP info
-    val ipUi = ip?.let { i ->
+    val ipUi = environment.network.ip.let { i ->
         buildList {
             add("Public IP" to i.publicIpHash.toString())
             add("ISP" to i.ispName.toString())
@@ -232,11 +221,10 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         upStdDev = performance.upStdDevMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—")
 
     return MeasurementDetailUi(
-        id = header.measurementId,
+        id = meta.measurementId,
         timeText = timeText,
-        header = headerPairs,
-        context = contextPairs,
-        diagnostics = diagnosticsPairs,
+        meta = metaPairs,
+        env = envPairs,
         wifi = wifiPairs,
         cell = cellPairs,
         ip = ipUi,

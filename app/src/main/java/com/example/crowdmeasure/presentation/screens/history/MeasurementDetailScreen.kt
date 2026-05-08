@@ -97,26 +97,21 @@ private fun MeasurementDetailContent(
                 }
 
                 // Device section
-                item(key = "device") {
-                    DeviceSection(pairs = measurement.header)
+                measurement.meta.let {
+                    item(key = "device") {
+                        DeviceSection(pairs = it)
+                    }
                 }
 
                 // Context section (includes location)
-                item(key = "context") {
-                    ContextSection(
-                        pairs = measurement.context,
+                item(key = "environment") {
+                    EnvironmentSection(
+                        pairs = measurement.env,
                         locationText = measurement.locationText,
                         locationRevealed = state.revealed.contains(RevealKey.Location),
                         onToggleLocation = { onToggleReveal(RevealKey.Location) }
                     )
                 }
-
-                measurement.diagnostics?.let { diagPairs ->
-                    item(key = "diagnostics") {
-                        DiagnosticsSection(pairs = diagPairs)
-                    }
-                }
-
 
                 // Wi-Fi section (if present)
                 measurement.wifi?.let { wifiPairs ->
@@ -128,7 +123,7 @@ private fun MeasurementDetailContent(
                 // Cellular section (if present)
                 measurement.cell?.let { cellPairs ->
                     item(key = "cell") {
-                            CellularSection(
+                        CellularSection(
                             pairs = cellPairs,
                             cellIdsText = measurement.cellIdsText,
                             cellIdsRevealed = state.revealed.contains(RevealKey.CellIds),
@@ -155,7 +150,8 @@ private fun MeasurementDetailContent(
                 }
             }
 
-            UiState.Idle -> { /* Should not happen */ }
+            UiState.Idle -> { /* Should not happen */
+            }
         }
 
         // Bottom spacing
@@ -196,21 +192,25 @@ private fun SummarySection(measurement: MeasurementDetailUi) {
 }
 
 @Composable
-private fun DeviceSection(pairs: List<Pair<String, String>>) {
+private fun DeviceSection(pairs: List<Pair<String, String?>>) {
     DetailSectionCard(
         title = "Device & App",
         description = "Environment information"
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             pairs.forEach { (label, value) ->
-                MetricRow(label, value)
+                value.let {
+                    if (it != null) {
+                        MetricRow(label, it)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ContextSection(
+private fun EnvironmentSection(
     pairs: List<Pair<String, String>>,
     locationText: String?,
     locationRevealed: Boolean,
@@ -229,13 +229,13 @@ private fun ContextSection(
 
             // Sensitive: Location
 //            if (locationText != null) {
-                SectionDivider()
-                SensitiveValueRow(
-                    label = "Location",
-                    value = locationText,
-                    revealed = locationRevealed,
-                    onToggleReveal = onToggleLocation
-                )
+            SectionDivider()
+            SensitiveValueRow(
+                label = "Location",
+                value = locationText,
+                revealed = locationRevealed,
+                onToggleReveal = onToggleLocation
+            )
 //            }
         }
     }
@@ -287,6 +287,7 @@ private fun IpSection(pairs: List<Pair<String, String>>) {
         }
     }
 }
+
 @Composable
 private fun CellularSection(
     pairs: List<Pair<String, String>>,
@@ -308,13 +309,13 @@ private fun CellularSection(
 
             // Sensitive: Cell IDs
 //            if (cellIdsText != null) {
-                SectionDivider()
-                SensitiveValueRow(
-                    label = "Cell Identifiers",
-                    value = cellIdsText,
-                    revealed = cellIdsRevealed,
-                    onToggleReveal = onToggleCellIds
-                )
+            SectionDivider()
+            SensitiveValueRow(
+                label = "Cell Identifiers",
+                value = cellIdsText,
+                revealed = cellIdsRevealed,
+                onToggleReveal = onToggleCellIds
+            )
 //            }
         }
     }
@@ -349,7 +350,12 @@ private fun PerformanceSection(
             MetricRow("Protocol", performance.protocol)
 
             // NEW: server info (always shown; values may be "—")
-            MetricGridRow("HTTP Status", performance.httpStatus, "Server Region", performance.serverRegion)
+            MetricGridRow(
+                "HTTP Status",
+                performance.httpStatus,
+                "Server Region",
+                performance.serverRegion
+            )
 
             SectionDivider()
 

@@ -6,7 +6,8 @@ import kotlinx.serialization.Serializable
 data class Measurement(
     val meta: Meta,
     val environment: EnvironmentInfo,
-    val config: TestConfig,
-    val phases: List<TestPhase>,
-    val summary: SummaryMetrics,
+    val performance: PerformanceInfo,
+//    val config: TestConfig,
+//    val phases: List<TestPhase>,
+//    val summary: SummaryMetrics,
 )

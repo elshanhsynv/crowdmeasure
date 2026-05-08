@@ -19,6 +19,7 @@ object DiagnosticsCollector {
     @WorkerThread
     fun collect(context: Context): DeviceEnvironment {
         val pm = context.getSystemService<PowerManager>()
+        val cm = context.getSystemService<ConnectivityManager>()
 
         val (batteryPercentage, charging) = getBatteryData(context)
 
@@ -32,6 +33,8 @@ object DiagnosticsCollector {
             charging = charging,
             batterySaver = batterySaverStatus,
             screenOn = screenOn,
+            dozeMode = pm?.isDeviceIdleMode,
+            dataSaver = cm?.dataSaverEnabled(),
             thermalState = thermalStatus?.name,
             cpuUsagePct = getCpuUsagePct(),
             memoryUsagePct = getMemoryUsagePct(context)
@@ -94,6 +97,7 @@ object DiagnosticsCollector {
     private fun ConnectivityManager.dataSaverEnabled(): Boolean? = when (restrictBackgroundStatus) {
         ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED,
         ConnectivityManager.RESTRICT_BACKGROUND_STATUS_WHITELISTED -> true
+
         ConnectivityManager.RESTRICT_BACKGROUND_STATUS_DISABLED -> false
         else -> null
     }

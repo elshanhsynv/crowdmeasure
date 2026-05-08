@@ -38,7 +38,7 @@ class AutoRunWorkRepository @Inject constructor(
         val intervalMs = intervalMinutes * 60_000L
         val lastSuccessFromStatus = statusStore.getLastSuccessUtcMs()
         val lastPersistedMeasurementUtcMs =
-            measurementRepo.getLastN(limit = 1).firstOrNull()?.header?.timestampUtcMs ?: 0L
+            measurementRepo.getLastN(limit = 1).firstOrNull()?.meta?.timestampUtcMs ?: 0L
         val effectiveLastSuccessUtcMs = max(lastSuccessFromStatus, lastPersistedMeasurementUtcMs)
 
         if (effectiveLastSuccessUtcMs > 0L &&
@@ -80,7 +80,7 @@ class AutoRunWorkRepository @Inject constructor(
             outcome = AutoRunExecution.Outcome.SUCCESS,
             code = if (uploadError == null) CODE_OK else CODE_UPLOAD_FAILED,
             uploadedCount = uploadedCount,
-            measurementId = measurement.header.measurementId,
+            measurementId = measurement.meta.measurementId,
             cause = uploadError
         )
     }

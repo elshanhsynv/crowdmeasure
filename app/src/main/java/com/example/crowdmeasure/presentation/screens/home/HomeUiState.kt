@@ -2,6 +2,9 @@ package com.example.crowdmeasure.presentation.screens.home
 
 import androidx.compose.runtime.Immutable
 import com.example.crowdmeasure.domain.model.CellInfo
+import com.example.crowdmeasure.domain.model.DeviceEnvironment
+import com.example.crowdmeasure.domain.model.EnvironmentInfo
+import com.example.crowdmeasure.domain.model.Meta
 import com.example.crowdmeasure.domain.model.PerformanceInfo
 import com.example.crowdmeasure.domain.model.WifiInfo
 import com.example.crowdmeasure.presentation.util.UiState
@@ -42,8 +45,8 @@ data class HomeUiState(
 
 @Immutable
 data class MeasurementUi(
-    val header: SnapshotHeader,
-    val context: ContextInfo,
+    val meta: Meta,
+    val environment: EnvironmentInfo,
     val cell: CellInfo? = null,
     val wifi: WifiInfo? = null,
     val performance: PerformanceInfo,

@@ -26,10 +26,6 @@ object PerformanceTester {
     private const val PROBE_ATTEMPTS = 8
     private const val STALL_THRESHOLD_MS = 1_500L
 
-    // -------------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------------
-
     /**
      * Runs [PROBE_ATTEMPTS] sequential HEAD/GET probes against [endpointUrl] and
      * returns aggregated performance metrics.
@@ -112,10 +108,6 @@ object PerformanceTester {
             protocol = negotiatedProtocol,
         )
     }
-
-    // -------------------------------------------------------------------------
-    // Probe
-    // -------------------------------------------------------------------------
 
     private data class ProbeResult(
         val rttMs: Long,
