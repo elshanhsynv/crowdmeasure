@@ -174,6 +174,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     val cellIdsText = environment.network.cell?.serving?.let { sc ->
         buildList {
             add("Serving Cell" to sc.cellId.toString())
+            sc.cid?.let { add("CID" to "$it") }
             sc.nci?.let { add("NCI" to "$it") }
             sc.band?.let { add("Band" to "$it") }
             sc.arfcn?.let { add("ARFCN" to "$it") }
@@ -187,7 +188,9 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             sc.rssiDbm?.let { add("RSSI" to "$it dBm") }
             sc.bandwidthMhz?.let { add("Bandwidth" to "$it MHz") }
             sc.mimoLayers?.let { add("Mimo Layers") to "$it" }
-        }.joinToString(" • ")
+        }.joinToString(" • ").takeIf {
+            it.isNotEmpty() || it.isNotBlank()
+        }
     }
 
     // IP info

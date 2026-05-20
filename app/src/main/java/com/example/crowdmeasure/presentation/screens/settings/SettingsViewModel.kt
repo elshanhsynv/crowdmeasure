@@ -31,15 +31,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val userSessionRepository: UserSessionRepository,
-    private val setEndpointUseCase: SetEndpointUrlUseCase,
-    private val setCollectOnlyWifiUseCase: SetCollectOnlyWifiUseCase,
-    private val setAutoRunUseCase: SetAutoRunUseCase,
-    private val setFirestoreUploadsEnabledUseCase: SetFirestoreUploadsEnabledUseCase,
+    userSessionRepository: UserSessionRepository,
     private val deleteAllDataUseCase: DeleteAllDataUseCase,
     private val exportMeasurementsUseCase: ExportMeasurementsUseCase,
     private val workScheduler: WorkScheduler,
-    private val workerStatusStore: WorkerStatusStore,
+    workerStatusStore: WorkerStatusStore,
 ) : ViewModel() {
     private val timeFormatter = DateTimeFormatter
         .ofPattern("MMM dd • HH:mm")
@@ -109,60 +105,6 @@ class SettingsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = UiState.Idle
         )
-
-    fun setCollectOnlyWifi(enabled: Boolean) {
-        viewModelScope.launch {
-            setCollectOnlyWifiUseCase(enabled)
-            rescheduleAfterSettingsChange(kickoffIfAllowed = false)
-        }
-    }
-
-    fun setFirestoreUploads(enabled: Boolean) {
-        viewModelScope.launch {
-            setFirestoreUploadsEnabledUseCase(enabled)
-        }
-    }
-
-    fun saveEndpoint(url: String) {
-        viewModelScope.launch {
-            setEndpointUseCase(url)
-        }
-    }
-
-    fun setAutoRun(enabled: Boolean, intervalMinutes: Int) {
-        viewModelScope.launch {
-            val safeInterval = intervalMinutes.coerceIn(15, 10_080)
-            val currentSettings = settings.value
-            val allowedByConsentAndCollection = true
-
-            if (!allowedByConsentAndCollection) {
-                setAutoRunUseCase(false, safeInterval)
-                workScheduler.cancelAutoRun()
-                return@launch
-            }
-            setAutoRunUseCase(enabled, safeInterval)
-            rescheduleAfterSettingsChange(kickoffIfAllowed = enabled)
-        }
-    }
-
-    private suspend fun rescheduleAfterSettingsChange(kickoffIfAllowed: Boolean) {
-        val s = userSessionRepository.settings.first()
-
-        workScheduler.scheduleMaintenanceDaily()
-
-        val allowed = s.autoRunEnabled
-        if (allowed) {
-            workScheduler.scheduleAutoRun(
-                intervalMinutes = s.autoRunIntervalMinutes.toLong(),
-                wifiOnly = s.collectOnlyWifi
-            )
-            if (kickoffIfAllowed) {
-                workScheduler.kickoffAutoRunOnce(wifiOnly = s.collectOnlyWifi)
-            }
-        } else {
-            workScheduler.cancelAutoRun()
-        }
-    }
 
     fun runAutoRunNow() {
         workScheduler.runAutoRunOnceNowDebug(ignoreConstraints = true)

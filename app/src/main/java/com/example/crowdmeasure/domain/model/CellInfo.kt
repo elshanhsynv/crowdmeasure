@@ -80,7 +80,7 @@ data class CellRadioSnapshot(
 data class SecondaryCell(
     val band: Int? = null,
     val earfcn: Int? = null,
-    val nrarfcn: Long? = null,
+    val nrarfcn: Int? = null,
     val pci: Int? = null,
     val rsrp: Int? = null,
     val rsrq: Int? = null,

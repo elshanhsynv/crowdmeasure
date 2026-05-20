@@ -32,8 +32,6 @@ object PerformanceTester {
      *
      * DNS, TCP, and TLS timings reflect the *first* (cold) connection only;
      * subsequent probes reuse the keep-alive connection intentionally.
-     *
-     * Must be called from a worker thread — blocks for the duration of all probes.
      */
     @WorkerThread
     fun run(
@@ -217,7 +215,7 @@ object PerformanceTester {
         }
         // CloudFront: X-Amz-Cf-Pop e.g. "FRA56-P1"
         headers["x-amz-cf-pop"]?.let { return it }
-        // Fastly: X-Served-By (may be a list; take first token)
+        // Fastly: X-Served-By (maybe a list; take first token)
         headers["x-served-by"]?.let { return it.split(',', ' ').firstOrNull { t -> t.isNotBlank() } }
         // Akamai: X-Akamai-Edgescape (format varies per customer config)
         headers["x-akamai-edgescape"]?.let { return it }
