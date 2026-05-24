@@ -56,7 +56,7 @@ object IpCollector {
         val ispName = org?.substringAfter(' ', "")?.ifBlank { null }
 
         IpInfo(
-            publicIpHash = rawIp,
+            publicIp = rawIp,
             ispName = ispName,
             asn = asn,
         )
@@ -66,7 +66,7 @@ object IpCollector {
         val body = get(okHttp, FALLBACK_URL) ?: return null
         val json = JSONObject(body)
         val rawIp = json.optString("ip").ifBlank { null } ?: return null
-        IpInfo(publicIpHash = hashIp(rawIp))
+        IpInfo(publicIp = hashIp(rawIp))
     }.getOrNull()
 
     private fun get(okHttp: OkHttpClient, url: String): String? {

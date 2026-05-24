@@ -187,10 +187,10 @@ class SettingsViewModel @Inject constructor(
 
 
 private fun WorkInfo.State.toHumanLabel(): String = when (this) {
-    WorkInfo.State.ENQUEUED -> "Queued"
-    WorkInfo.State.RUNNING -> "Running"
-    WorkInfo.State.SUCCEEDED -> "Completed"
-    WorkInfo.State.FAILED -> "Failed"
-    WorkInfo.State.BLOCKED -> "Blocked"
-    WorkInfo.State.CANCELLED -> "Cancelled"
+    WorkInfo.State.ENQUEUED -> "ENQUEUED"
+    WorkInfo.State.RUNNING -> "RUNNING"
+    WorkInfo.State.SUCCEEDED -> "COMPLETED"
+    WorkInfo.State.FAILED -> "FAILED"
+    WorkInfo.State.BLOCKED -> "BLOCKED"
+    WorkInfo.State.CANCELLED -> "CANCELLED"
 }

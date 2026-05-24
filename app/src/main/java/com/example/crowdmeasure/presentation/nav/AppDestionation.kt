@@ -47,6 +47,7 @@ object Routes {
 @Immutable
 data class ChromeConfig(
     val title: String,
+    val subtitle: String? = null,
     val showTopBar: Boolean = true,
     val showBottomBar: Boolean = true,
     val showBackButton: Boolean = false,

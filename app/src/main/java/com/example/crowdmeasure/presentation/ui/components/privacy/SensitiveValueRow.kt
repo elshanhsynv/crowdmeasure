@@ -7,40 +7,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
-
 
 /**
  * Row for displaying sensitive data with reveal/hide toggle.
- *
- * Privacy Design:
- * - Data masked by default (shows "••••••••")
- * - User must explicitly tap to reveal
- * - Eye icon indicates state (open = revealed, closed = hidden)
- * - Clear visual feedback
- *
- * Usage:
- * ```
- * SensitiveValueRow(
- *     label = "Endpoint",
- *     value = "https://api.example.com",
- *     revealed = state.revealed.contains(RevealKey.Endpoint),
- *     onToggleReveal = { viewModel.toggleReveal(RevealKey.Endpoint) }
- * )
- * ```
+ * Data is masked by default — user must explicitly tap to reveal.
  */
 @Composable
 fun SensitiveValueRow(
@@ -50,14 +31,11 @@ fun SensitiveValueRow(
     onToggleReveal: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val spacing = LocalSpacing.current
-
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Label
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
@@ -65,9 +43,8 @@ fun SensitiveValueRow(
             modifier = Modifier.weight(0.4f)
         )
 
-        Spacer(Modifier.width(spacing.sm))
+        Spacer(Modifier.width(8.dp))
 
-        // Value (masked or revealed)
         Row(
             modifier = Modifier.weight(0.6f),
             horizontalArrangement = Arrangement.End,
@@ -84,26 +61,17 @@ fun SensitiveValueRow(
                     text = if (revealed) value else "••••••••",
                     style = MaterialTheme.typography.bodyMedium,
                     fontFamily = if (revealed) FontFamily.Monospace else FontFamily.Default,
-                    color = if (revealed) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    color = if (revealed) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f, fill = false)
                 )
-
-                Spacer(Modifier.width(spacing.xs))
-
+                Spacer(Modifier.width(4.dp))
                 IconButton(
                     onClick = onToggleReveal,
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        imageVector = if (revealed) {
-                            Icons.Filled.VisibilityOff
-                        } else {
-                            Icons.Filled.Visibility
-                        },
+                        imageVector = if (revealed) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                         contentDescription = if (revealed) "Hide $label" else "Reveal $label",
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -112,15 +80,4 @@ fun SensitiveValueRow(
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun SensitiveValueRowPreview() {
-    SensitiveValueRow(
-        label = "Endpoint",
-        value = "https://api.example.com",
-        revealed = true,
-        onToggleReveal = {}
-    )
 }

@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -11,9 +13,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.crowdmeasure.presentation.screens.history.HistoryScreen
+import com.example.crowdmeasure.presentation.screens.history.HistoryViewModel
 import com.example.crowdmeasure.presentation.screens.history.MeasurementDetailScreen
+import com.example.crowdmeasure.presentation.screens.history.MeasurementDetailViewModel
 import com.example.crowdmeasure.presentation.screens.home.HomeScreen
+import com.example.crowdmeasure.presentation.screens.home.HomeViewModel
 import com.example.crowdmeasure.presentation.screens.settings.SettingsScreen
+import com.example.crowdmeasure.presentation.screens.settings.SettingsViewModel
 
 /**
  * Main navigation graph for the application.
@@ -24,6 +30,11 @@ fun AppNav() {
 
     val topLevelRoutes = setOf(Routes.HOME, Routes.HISTORY, Routes.SETTINGS)
 
+    val homeViewModel = hiltViewModel<HomeViewModel>()
+    val settingsViewModel = hiltViewModel<SettingsViewModel>()
+    val measurementDetailViewModel = hiltViewModel<MeasurementDetailViewModel>()
+    val historyViewModel = hiltViewModel<HistoryViewModel>()
+
     AppShellScaffold(
         navController = navController,
     ) { paddingValues ->
@@ -32,29 +43,33 @@ fun AppNav() {
             startDestination = Routes.HOME,
         ) {
 
-            val tabEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-                NavigationConfig.crossfadeTransition()
-            }
-
-            val tabExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-                if (targetState.destination.route in topLevelRoutes) {
-                    NavigationConfig.crossfadeExit()
-                } else {
-                    with(NavigationConfig) { exitTransition() }
+            val tabEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition =
+                {
+                    NavigationConfig.crossfadeEnterTransition
                 }
-            }
 
-            val tabPopEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-                if (initialState.destination.route in topLevelRoutes) {
-                    NavigationConfig.crossfadeTransition()
-                } else {
-                    with(NavigationConfig) { popEnterTransition() }
+            val tabExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition =
+                {
+                    if (targetState.destination.route in topLevelRoutes) {
+                        NavigationConfig.crossfadeExitTransition
+                    } else {
+                        with(NavigationConfig) { exitTransition }
+                    }
                 }
-            }
 
-            val tabPopExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-                NavigationConfig.crossfadeExit()
-            }
+            val tabPopEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition =
+                {
+                    if (initialState.destination.route in topLevelRoutes) {
+                        NavigationConfig.crossfadeEnterTransition
+                    } else {
+                        with(NavigationConfig) { popEnterTransition }
+                    }
+                }
+
+            val tabPopExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition =
+                {
+                    NavigationConfig.crossfadeExitTransition
+                }
 
             composable(
                 route = Routes.HOME,
@@ -64,6 +79,7 @@ fun AppNav() {
                 popExitTransition = tabPopExitTransition
             ) {
                 HomeScreen(
+                    viewModel = homeViewModel,
                     contentPadding = paddingValues,
                     onNavigateToDetail = { id ->
                         navController.navigateToDetail(Routes.detail(id))
@@ -79,7 +95,17 @@ fun AppNav() {
                 popExitTransition = tabPopExitTransition
             ) {
                 HistoryScreen(
+                    viewModel = historyViewModel,
                     contentPadding = paddingValues,
+                    onNavigateToNewMeasurement = {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     onNavigateToDetail = { id ->
                         navController.navigateToDetail(Routes.detail(id))
                     }
@@ -94,6 +120,7 @@ fun AppNav() {
                 popExitTransition = tabPopExitTransition
             ) {
                 SettingsScreen(
+                    viewModel = settingsViewModel,
                     contentPadding = paddingValues
                 )
             }
@@ -106,16 +133,16 @@ fun AppNav() {
                     }
                 ),
                 enterTransition = {
-                    with(NavigationConfig) { enterTransition() }
+                    with(NavigationConfig) { enterTransition }
                 },
                 exitTransition = {
-                    with(NavigationConfig) { exitTransition() }
+                    with(NavigationConfig) { exitTransition }
                 },
                 popEnterTransition = {
-                    with(NavigationConfig) { popEnterTransition() }
+                    with(NavigationConfig) { popEnterTransition }
                 },
                 popExitTransition = {
-                    with(NavigationConfig) { popExitTransition() }
+                    with(NavigationConfig) { popExitTransition }
                 },
             ) { backStackEntry ->
                 val measurementId = backStackEntry.arguments
@@ -127,6 +154,7 @@ fun AppNav() {
 
                 MeasurementDetailScreen(
                     id = measurementId,
+                    viewModel = measurementDetailViewModel,
                     contentPadding = paddingValues,
                     onNavigateBack = {
                         navController.popBackStack()

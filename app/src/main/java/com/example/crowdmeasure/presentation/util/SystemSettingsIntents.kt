@@ -7,6 +7,14 @@ import android.provider.Settings
 
 object SystemSettingsIntents {
 
+    fun openLocationSettings(context: Context) {
+        val appContext = context.applicationContext
+        Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .takeIf { it.resolveActivity(appContext.packageManager) != null }
+            ?.let(appContext::startActivity)
+    }
+
     /**
      * Opens a relevant battery optimization screen.
      */

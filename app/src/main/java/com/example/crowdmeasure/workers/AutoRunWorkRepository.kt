@@ -5,6 +5,7 @@ import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UploadRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
 import javax.inject.Inject
 import kotlin.math.max
 
@@ -25,6 +26,21 @@ class AutoRunWorkRepository @Inject constructor(
     private val statusStore: WorkerStatusStore
 ) {
     suspend fun execute(nowUtcMs: Long, runAttemptCount: Int): AutoRunExecution {
+        if (!AutoRunExecutionLock.mutex.tryLock()) {
+            return AutoRunExecution(
+                outcome = AutoRunExecution.Outcome.SUCCESS,
+                code = CODE_SKIPPED_CONCURRENT_RUN
+            )
+        }
+
+        return try {
+            executeExclusive(nowUtcMs, runAttemptCount)
+        } finally {
+            AutoRunExecutionLock.mutex.unlock()
+        }
+    }
+
+    private suspend fun executeExclusive(nowUtcMs: Long, runAttemptCount: Int): AutoRunExecution {
         val settings = sessionRepo.settings.first()
         val allowed = settings.autoRunEnabled
         if (!allowed) {
@@ -102,6 +118,7 @@ class AutoRunWorkRepository @Inject constructor(
         const val CODE_OK = "ok"
         const val CODE_GATE_BLOCKED = "gate_blocked"
         const val CODE_SKIPPED_RECENT_RUN = "skipped_recent_run"
+        const val CODE_SKIPPED_CONCURRENT_RUN = "skipped_concurrent_run"
         const val CODE_MEASUREMENT_FAILED = "measurement_failed"
         const val CODE_DB_INSERT_FAILED = "db_insert_failed"
         const val CODE_UPLOAD_FAILED = "upload_failed"
@@ -110,5 +127,9 @@ class AutoRunWorkRepository @Inject constructor(
         private const val RECENT_RUN_TOLERANCE_MS = 60_000L
         private const val UPLOAD_LIMIT = 50
     }
+}
+
+private object AutoRunExecutionLock {
+    val mutex = Mutex()
 }
 

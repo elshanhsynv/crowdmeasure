@@ -23,8 +23,10 @@ data class CarrierInfo(
     val carrierName: String?,
     val mcc: String?,
     val mnc: String?,
-    val operatorId: String?,   // MCC+MNC combined
-    val countryIso: String?,   // derived (very useful)
+    val simOperatorId: String?,   // MCC+MNC combined
+    val simOperatorName: String?,
+    val countryIso: String?,
+    val duplexMode: String?
 )
 
 @Serializable

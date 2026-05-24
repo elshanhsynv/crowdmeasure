@@ -17,7 +17,7 @@ object ChromeResolver {
             )
 
             route == Routes.HISTORY -> ChromeConfig(
-                title = "History",
+                title = "CrowdMeasure",
                 showTopBar = true,
                 showBottomBar = true,
                 showBackButton = false,
@@ -25,7 +25,7 @@ object ChromeResolver {
             )
 
             route == Routes.SETTINGS -> ChromeConfig(
-                title = "Settings",
+                title = "CrowdMeasure",
                 showTopBar = true,
                 showBottomBar = true,
                 showBackButton = false,
@@ -57,7 +57,7 @@ object ChromeResolver {
         title = "CrowdMeasure",
         showTopBar = true,
         showBottomBar = true,
-        showBackButton = true,
+        showBackButton = false,
         topBarElevated = false
     )
 }

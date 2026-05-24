@@ -15,6 +15,7 @@ data class HomeUiState(
 
     // Derived permission state
     val canCollect: Boolean = false,
+    val locationServicesOn: Boolean = true,
 
     // Data state
     val queuedCount: Int = 0,

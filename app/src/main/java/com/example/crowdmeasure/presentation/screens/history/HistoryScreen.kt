@@ -1,62 +1,81 @@
 package com.example.crowdmeasure.presentation.screens.history
 
-import com.example.crowdmeasure.presentation.ui.components.input.AppSearchBar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContent
+import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowRightAlt
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowRightAlt
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.crowdmeasure.presentation.ui.components.states.AppEmptyState
-import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
+import com.example.crowdmeasure.presentation.ui.components.input.AppSearchBar
 import com.example.crowdmeasure.presentation.util.UiState
 
 @Composable
 fun HistoryScreen(
     contentPadding: PaddingValues,
     onNavigateToDetail: (String) -> Unit,
-    viewModel: HistoryViewModel = hiltViewModel<HistoryViewModel>()
+    onNavigateToNewMeasurement: () -> Unit = {},
+    onFilterClick: () -> Unit = {},
+    viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
     HistoryContent(
         contentPadding = contentPadding,
         state = uiState,
         onQueryChange = viewModel::onQueryChange,
         onClearFilter = viewModel::clearFilter,
         onRefresh = viewModel::refresh,
-        onNavigateToDetail = onNavigateToDetail
+        onNavigateToDetail = onNavigateToDetail,
+        onNewMeasurement = onNavigateToNewMeasurement,
+        onFilterClick = onFilterClick
     )
 }
 
@@ -67,70 +86,66 @@ private fun HistoryContent(
     onQueryChange: (String) -> Unit,
     onClearFilter: () -> Unit,
     onRefresh: () -> Unit,
-    onNavigateToDetail: (String) -> Unit
+    onNavigateToDetail: (String) -> Unit,
+    onNewMeasurement: () -> Unit,
+    onFilterClick: () -> Unit
 ) {
-    val spacing = LocalSpacing.current
-
     LazyColumn(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding)
-            .windowInsetsPadding(WindowInsets.navigationBars),
+            .fillMaxSize(),
         contentPadding = PaddingValues(
-            horizontal = spacing.screenPadding,
-            vertical = spacing.sm
+            start = 16.dp,
+            top = contentPadding.calculateTopPadding(),
+            end = 16.dp,
+            bottom = WindowInsets.safeContent.asPaddingValues().calculateBottomPadding() * 2 + 16.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(spacing.cardSpacing)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Search filter (always visible at top)
         item(key = "search") {
-            SearchField(
+            SearchRow(
                 query = state.queryText,
                 onQueryChange = onQueryChange,
                 onClear = onClearFilter,
-                resultCount = state.items?.size
+                onFilterClick = onFilterClick
             )
         }
 
-        // Content based on state
-        when (val itemsState = state.itemsState) {
-            UiState.Loading -> {
-                item(key = "loading") {
-                    LoadingState()
+
+        item(key = "new_cta") {
+            NewMeasurementCard(onClick = onNewMeasurement)
+        }
+
+        when (val s = state.itemsState) {
+            UiState.Loading -> item(key = "loading") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
 
-            is UiState.Error -> {
-                item(key = "error") {
-                    ErrorState(
-                        message = itemsState.message,
-                        onRetry = onRefresh
-                    )
-                }
+            is UiState.Error -> item(key = "error") {
+                ErrorCard(message = s.message, onRetry = onRefresh)
             }
 
             is UiState.Success -> {
-                val items = itemsState.data
-
+                val items = s.data
+                item(key = "header") {
+                    HistoryHeader(count = items.size)
+                }
                 if (items.isEmpty()) {
                     item(key = "empty") {
-                        HistoryEmptyState(
+                        EmptyHistoryContent(
                             hasFilter = state.appliedTag != null,
                             onClearFilter = onClearFilter
                         )
                     }
                 } else {
-                    // List header
-                    item(key = "list_header") {
-                        ListHeader(count = items.size)
-                    }
-
-                    // Measurement items
-                    items(
-                        items = items,
-                        key = { it.id }
-                    ) { item ->
-                        MeasurementListItem(
+                    items(items, key = { it.id }) { item ->
+                        MeasurementCard(
                             item = item,
                             onClick = { onNavigateToDetail(item.id) }
                         )
@@ -138,209 +153,241 @@ private fun HistoryContent(
                 }
             }
 
-            UiState.Idle -> { /* Should not happen */
-            }
-        }
-
-        // Bottom spacing
-        item(key = "bottom_spacer") {
-            Spacer(Modifier.height(spacing.lg))
+            UiState.Idle -> Unit
         }
     }
 }
 
 @Composable
-private fun SearchField(
+private fun SearchRow(
     query: String,
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
-    resultCount: Int?
+    onFilterClick: () -> Unit
 ) {
-    AppSearchBar(
-        query = query,
-        onQueryChange = onQueryChange,
-        onClear = onClear
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppSearchBar(
+            query = query,
+            onQueryChange = onQueryChange,
+            onClear = onClear,
+            modifier = Modifier.weight(1f),
+            shape = MaterialTheme.shapes.extraLarge
+        )
+        Surface(
+            onClick = onFilterClick,
+            modifier = Modifier.size(56.dp),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            tonalElevation = 0.dp
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.FilterList,
+                    contentDescription = "Filter measurements",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+    }
 }
 
 @Composable
-private fun ListHeader(count: Int) {
-    val spacing = LocalSpacing.current
+private fun NewMeasurementCard(onClick: () -> Unit) {
+    val gradientStart = MaterialTheme.colorScheme.primary
+    val gradientEnd = MaterialTheme.colorScheme.secondary
 
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(Brush.linearGradient(listOf(gradientStart, gradientEnd)))
+            .clickable(onClick = onClick)
+            .padding(20.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Wifi,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Capture a New Measurement",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+//                Text(
+//                    text = "Start a network measurement",
+//                    style = MaterialTheme.typography.bodyMedium,
+//                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+//                )
+            }
+
+            FilledIconButton(
+                onClick = onClick,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowRightAlt, contentDescription = "Start new measurement")
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryHeader(count: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = spacing.xs),
+            .padding(top = 12.dp, bottom = 4.dp, start = 4.dp, end = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Recent Measurements",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            text = "History",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
         )
-        Text(
-            text = "$count",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (count > 0) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Text(
+                    text = "$count",
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
     }
 }
 
-
 @Composable
-private fun MeasurementListItem(
-    item: HistoryItemUi,
-    onClick: () -> Unit
-) {
-    val spacing = LocalSpacing.current
+private fun MeasurementCard(item: HistoryItemUi, onClick: () -> Unit) {
+    val transportIcon: ImageVector = if (
+        item.transportText.contains("wifi", ignoreCase = true) ||
+        item.transportText.contains("wlan", ignoreCase = true)
+    ) Icons.Filled.Wifi else Icons.Filled.SignalCellularAlt
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(spacing.cardPadding),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Main content
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = transportIcon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Timestamp
                 Text(
                     text = item.timeText,
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-
-                // Transport + metrics
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(spacing.md)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = item.transportText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "•",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    // Transport type pill badge
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Text(
+                            text = item.transportText,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                     Text(
                         text = "RTT ${item.rttText}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "•",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
                         text = "TTFB ${item.ttfbText}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
-
-                // Location indicator + feedback tag
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (item.hasLocation) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.LocationOn,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.tertiary
-                            )
-                            Text(
-                                text = "Location",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                        }
-                    }
-
-                    if (item.hasLocation) {
-                        Text(
-                            text = "•",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                }
-
             }
 
-            // Chevron
-            Spacer(Modifier.width(spacing.sm))
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = "View details",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
             )
         }
     }
 }
 
-
 @Composable
-private fun LoadingState() {
-    val spacing = LocalSpacing.current
-
+private fun ErrorCard(message: String, onRetry: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(spacing.sm)
-        ) {
-            Text(
-                text = "Loading measurements...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-
-@Composable
-private fun ErrorState(
-    message: String,
-    onRetry: () -> Unit
-) {
-    val spacing = LocalSpacing.current
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer
         )
@@ -348,79 +395,89 @@ private fun ErrorState(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(spacing.cardPadding),
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(spacing.md)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                textAlign = TextAlign.Center
             )
-            TextButton(onClick = onRetry) {
-                Text("Retry")
-            }
+            TextButton(onClick = onRetry) { Text("Retry") }
         }
     }
 }
 
 @Composable
-private fun HistoryEmptyState(
-    hasFilter: Boolean,
-    onClearFilter: () -> Unit
-) {
-    val spacing = LocalSpacing.current
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+private fun EmptyHistoryContent(hasFilter: Boolean, onClearFilter: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(spacing.md)
-        ) {
-            if (hasFilter) {
-                // No results for this search
-                AppEmptyState(
-                    title = "No results",
-                    description = "Clear filter to see all measurements",
-                    icon = Icons.Filled.Close,
-                    action = {
-                        TextButton(onClick = onClearFilter) {
-                            Text("Clear filter")
-                        }
-                    }
-                )
-            } else {
-                // No measurements at all
-                AppEmptyState(
-                    title = "No measurements yet",
-                    description = "Tap 'Start measurement' to begin",
-                    icon = Icons.Filled.Search
-                )
-            }
+        Icon(
+            imageVector = Icons.Outlined.Inbox,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(48.dp)
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = if (hasFilter) "No results found" else "No measurements yet",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = if (hasFilter) "Try a different search term" else "Run your first measurement to see data",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(0.7f)
+        )
+        if (hasFilter) {
+            Spacer(Modifier.height(4.dp))
+            TextButton(onClick = onClearFilter) { Text("Clear filter") }
         }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun HistoryScreenPreview() {
+private fun HistoryContentPreview() {
     HistoryContent(
         contentPadding = PaddingValues(0.dp),
         state = HistoryUiState(
             itemsState = UiState.Success(
-                data = listOf()
+                data = listOf(
+                    HistoryItemUi(
+                        id = "1",
+                        timeText = "May 21, 2026 • 14:42",
+                        transportText = "WIFI",
+                        rttText = "541 ms",
+                        ttfbText = "224 ms",
+                        hasLocation = true
+                    ),
+                    HistoryItemUi(
+                        id = "2",
+                        timeText = "May 21, 2026 • 15:42",
+                        transportText = "CELL",
+                        rttText = "451 ms",
+                        ttfbText = "424 ms",
+                        hasLocation = true
+                    )
+                )
             )
         ),
         onQueryChange = {},
         onClearFilter = {},
         onRefresh = {},
-        onNavigateToDetail = {}
+        onNavigateToDetail = {},
+        onNewMeasurement = {},
+        onFilterClick = {}
     )
 }

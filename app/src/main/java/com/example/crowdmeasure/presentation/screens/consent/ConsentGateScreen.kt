@@ -5,22 +5,13 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,18 +24,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.PinDrop
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -58,177 +54,118 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
-import com.example.crowdmeasure.presentation.util.AppPermissions
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.times
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.crowdmeasure.domain.repo.AppSettings
+import com.example.crowdmeasure.presentation.util.AppPermissions
 
 
-/**
- * Full-screen consent gate that appears on first launch or when consent is needed.
- *
- * Design:
- * - Professional, enterprise-grade UI
- * - Clear hierarchy (what, why, how)
- * - Privacy-first messaging
- * - Progressive disclosure (optional permissions separate)
- * - Non-blocking (user can skip if they want)
- *
- * UX Flow:
- * 1. Show privacy promise and value proposition
- * 2. User accepts consent
- * 3. User enables collection (separate step for clarity)
- * 4. Optional: grant permissions for better data
- * 5. Done button enabled when consent + collection are enabled
- *
- * Performance:
- * - Minimal recomposition (stable state, derived values)
- * - Permission state refreshed on screen visibility
- * - Smooth animations for state changes
- *
- * @param visible Whether the screen should be shown
- * @param onComplete Callback when user completes setup (consent + collection enabled)
- * @param onDismiss Callback when user dismisses without completing
- * @param viewModel ViewModel for consent state and actions
- */
 @Composable
 fun ConsentGateScreen(
     visible: Boolean,
     onComplete: () -> Unit,
     onDismiss: () -> Unit,
-    viewModel: ConsentGateViewModel = hiltViewModel<ConsentGateViewModel>(),
+    viewModel: ConsentGateViewModel = hiltViewModel()
 ) {
-
     val context = LocalContext.current
-    val settings = viewModel.settings.collectAsStateWithLifecycle().value
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
 
     var fineLocationGranted by remember { mutableStateOf(false) }
     var phoneStateGranted by remember { mutableStateOf(false) }
     var backgroundLocationGranted by remember { mutableStateOf(false) }
 
-
-    LaunchedEffect(visible) {
-        if (visible) {
-            fineLocationGranted = AppPermissions.hasFineLocation(context)
-            phoneStateGranted = AppPermissions.hasPhoneState(context)
-            backgroundLocationGranted = AppPermissions.hasBackgroundLocation(context)
-        }
+    fun refreshPermissions() {
+        fineLocationGranted = AppPermissions.hasFineLocation(context)
+        phoneStateGranted = AppPermissions.hasPhoneState(context)
+        backgroundLocationGranted = AppPermissions.hasBackgroundLocation(context)
     }
 
-    val requestFineLocation = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted -> fineLocationGranted = granted })
+    LaunchedEffect(visible) { if (visible) refreshPermissions() }
 
-    val requestPhoneState = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted -> phoneStateGranted = granted })
+    val requestFine = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
+    val requestBackground = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
+    val requestPhone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
 
-    val requestBackgroundLocation = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted -> backgroundLocationGranted = granted })
-
-
-    fun canCollect(settings: AppSettings?, context: Context): Boolean {
-        return settings.let {
-            it != null && !it.consentGateDismissed
-        } && AppPermissions.hasFineLocation(context) && AppPermissions.hasPhoneState(context) && AppPermissions.hasBackgroundLocation(
-            context
-        )
-    }
-
-    val canCollect = canCollect(settings, context)
+    val canCollect = settings != null &&
+            settings?.consentGateDismissed == false &&
+            fineLocationGranted &&
+            phoneStateGranted &&
+            backgroundLocationGranted
 
     ConsentGateContent(
         visible = visible,
         onComplete = onComplete,
-        onDismiss = onDismiss,
         fineLocationGranted = fineLocationGranted,
         backgroundLocationGranted = backgroundLocationGranted,
         phoneStateGranted = phoneStateGranted,
-        onRequestFineLocation = {
-            requestFineLocation.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        },
-        onRequestBackgroundLocation = {
-            requestBackgroundLocation.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        },
-        onRequestPhoneState = {
-            requestPhoneState.launch(Manifest.permission.READ_PHONE_STATE)
-        },
-        canCollect = canCollect
+        canComplete = canCollect,
+        onRequestFineLocation = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+        onRequestBackgroundLocation = { requestBackground.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION) },
+        onRequestPhoneState = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) }
     )
 }
+
 
 @Composable
 private fun ConsentGateContent(
     visible: Boolean,
     onComplete: () -> Unit,
-    onDismiss: () -> Unit,
     fineLocationGranted: Boolean,
-    phoneStateGranted: Boolean,
     backgroundLocationGranted: Boolean,
+    phoneStateGranted: Boolean,
+    canComplete: Boolean,
     onRequestFineLocation: () -> Unit,
-    onRequestPhoneState: () -> Unit,
     onRequestBackgroundLocation: () -> Unit,
-    canCollect: Boolean = false,
+    onRequestPhoneState: () -> Unit
 ) {
-    val spacing = LocalSpacing.current
-
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
-        exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 }),
+        exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 4 })
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
+            color = MaterialTheme.colorScheme.background
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.systemBars)
             ) {
+                // Scrollable body
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = spacing.screenPadding)
-                        .padding(top = spacing.xl),
-                    verticalArrangement = Arrangement.spacedBy(spacing.lg)
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 40.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    ConsentHeader()
+                    ConsentHero()
 
-                    Spacer(Modifier.height(spacing.xs))
+                    Spacer(Modifier.height(8.dp))
 
                     PrivacyPromiseCard()
 
-                    OptionalPermissionsCard(
+                    PermissionsCard(
                         fineLocationGranted = fineLocationGranted,
                         backgroundLocationGranted = backgroundLocationGranted,
                         phoneStateGranted = phoneStateGranted,
-                        enabled = true,
                         onRequestFineLocation = onRequestFineLocation,
                         onRequestBackgroundLocation = onRequestBackgroundLocation,
                         onRequestPhoneState = onRequestPhoneState
                     )
-
-                    Spacer(Modifier.height(spacing.xl))
                 }
 
-                ConsentActions(
-                    canComplete = canCollect,
-                    onComplete = onComplete,
-                    onDismiss = onDismiss,
-                )
+                // Sticky bottom CTA
+                GetStartedBar(canComplete = canComplete, onComplete = onComplete)
             }
         }
     }
@@ -236,158 +173,257 @@ private fun ConsentGateContent(
 
 
 @Composable
-private fun ConsentHeader() {
-    val spacing = LocalSpacing.current
+private fun ConsentHero() {
+    val primary = MaterialTheme.colorScheme.primary
 
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = Icons.Filled.Security,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
+        // Shield with concentric decorative rings
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(120.dp)
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                listOf(48.dp, 56.dp, 64.dp).forEach { r ->
+                    drawCircle(
+                        color = primary.copy(alpha = 0.12f),
+                        radius = r.toPx(),
+                        center = androidx.compose.ui.geometry.Offset(cx, cy),
+                        style = Stroke(width = 1.dp.toPx())
+                    )
+                }
+            }
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(72.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.Security,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+        }
 
-        Spacer(Modifier.height(spacing.md))
+        Spacer(Modifier.height(20.dp))
 
         Text(
             text = "Privacy & Consent",
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
 
-        Spacer(Modifier.height(spacing.sm))
+        Spacer(Modifier.height(8.dp))
 
         Text(
             text = "Help improve telecom quality by contributing anonymous network measurements",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = spacing.lg)
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
     }
 }
 
+
+private val privacyBullets = listOf(
+    "No personal identifiers (name, email, phone number) are collected",
+    "Network measurements are anonymized before upload",
+    "You can pause or stop collection anytime",
+    "Data is used only for improving network quality insights"
+)
+
 @Composable
 private fun PrivacyPromiseCard() {
-    val spacing = LocalSpacing.current
+    val onContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
     Card(
-        modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
-        Column(
-            modifier = Modifier.padding(spacing.cardPadding),
-            verticalArrangement = Arrangement.spacedBy(spacing.sm)
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(spacing.iconTextGap)
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy((-8).dp),
+                verticalAlignment = Alignment.Bottom
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Info,
+                    imageVector = Icons.Outlined.Lock,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = onContainer.copy(alpha = 0.10f),
+                    modifier = Modifier.size(72.dp)
                 )
-                Text(
-                    text = "Our Privacy Promise",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                Icon(
+                    imageVector = Icons.Outlined.BarChart,
+                    contentDescription = null,
+                    tint = onContainer.copy(alpha = 0.10f),
+                    modifier = Modifier.size(56.dp)
                 )
             }
 
-            PrivacyBullet("No personal identifiers (name, email, phone number) are collected")
-            PrivacyBullet("Network measurements are anonymized before upload")
-            PrivacyBullet("You can pause or stop collection anytime")
-            PrivacyBullet("Data is used only for improving network quality insights")
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = onContainer.copy(alpha = 0.15f),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = onContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Our Privacy Promise",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = onContainer
+                    )
+                }
+
+                privacyBullets.forEachIndexed { index, bullet ->
+                    PrivacyBullet(text = bullet)
+                    if (index < privacyBullets.lastIndex) {
+                        HorizontalDivider(
+                            color = onContainer.copy(alpha = 0.15f),
+                            modifier = Modifier.padding(start = 30.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun PrivacyBullet(text: String) {
-    val spacing = LocalSpacing.current
-
+    val onContainer = MaterialTheme.colorScheme.onPrimaryContainer
     Row(
-        modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing.sm)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
     ) {
         Icon(
             imageVector = Icons.Outlined.CheckCircle,
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+            modifier = Modifier
+                .size(20.dp)
+                .padding(top = 1.dp),
+            tint = onContainer
         )
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = onContainer,
             modifier = Modifier.weight(1f)
         )
     }
 }
 
+
 @Composable
-private fun OptionalPermissionsCard(
+private fun PermissionsCard(
     fineLocationGranted: Boolean,
     backgroundLocationGranted: Boolean,
     phoneStateGranted: Boolean,
-    enabled: Boolean,
     onRequestFineLocation: () -> Unit,
     onRequestBackgroundLocation: () -> Unit,
-    onRequestPhoneState: () -> Unit,
+    onRequestPhoneState: () -> Unit
 ) {
-    val spacing = LocalSpacing.current
-
     Card(
-        modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
         Column(
-            modifier = Modifier.padding(spacing.cardPadding),
-            verticalArrangement = Arrangement.spacedBy(spacing.md)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Permissions",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Text(
-                text = "These permissions improve measurement quality. You can grant them now or later in Settings.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(Modifier.height(spacing.xs))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            imageVector = Icons.Outlined.Shield,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = "Permissions",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "These permissions improve measurement quality. You can grant them now or later in Settings.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
             PermissionItem(
-                icon = Icons.Filled.LocationOn,
+                icon = Icons.Outlined.PinDrop,
                 title = "Fine Location",
                 subtitle = "Improves accuracy using precise location (GPS)",
                 granted = fineLocationGranted,
-                enabled = enabled,
                 onRequest = onRequestFineLocation
             )
-
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             PermissionItem(
-                icon = Icons.Filled.LocationOn,
+                icon = Icons.Outlined.Wifi,
                 title = "Background Location",
-                subtitle = "Improves accuracy using approximate location (WiFi)",
+                subtitle = "Improves accuracy using approximate location (Wi-Fi)",
                 granted = backgroundLocationGranted,
-                enabled = enabled,
                 onRequest = onRequestBackgroundLocation
             )
-
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             PermissionItem(
-                icon = Icons.Filled.PhoneAndroid,
+                icon = Icons.Outlined.PhoneAndroid,
                 title = "Phone State",
                 subtitle = "Enables cell network metrics for better signal insights",
                 granted = phoneStateGranted,
-                enabled = enabled,
                 onRequest = onRequestPhoneState
             )
         }
@@ -400,45 +436,40 @@ private fun PermissionItem(
     title: String,
     subtitle: String,
     granted: Boolean,
-    enabled: Boolean,
-    onRequest: () -> Unit,
+    onRequest: () -> Unit
 ) {
-    val spacing = LocalSpacing.current
-
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(spacing.md),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon, contentDescription = null, tint = if (granted) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            modifier = Modifier.size(44.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(22.dp)
+                )
             }
-        )
+        }
 
         Column(
-            modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(spacing.xxs)
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (granted) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Granted",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
@@ -446,91 +477,92 @@ private fun PermissionItem(
             )
         }
 
-        if (!granted) {
-            val infinite = rememberInfiniteTransition(label = "grant_attention")
-
-            val pulse by infinite.animateFloat(
-                initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = 1100, easing = LinearEasing),
-                    repeatMode = RepeatMode.Reverse
-                ), label = "pulse"
-            )
-
-            val borderWidth by animateDpAsState(
-                targetValue = if (enabled) (1.dp + (pulse * 2.dp)) else 1.dp, label = "borderWidth"
-            )
-
-            val scale by animateFloatAsState(
-                targetValue = if (enabled) 1.03f else 1f,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                label = "scale"
-            )
-
-            val borderColor = if (enabled) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.55f + 0.35f * pulse)
-            } else {
-                MaterialTheme.colorScheme.outline
+        if (granted) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.tertiaryContainer
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    Text(
+                        text = "Granted",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
             }
-
+        } else {
             OutlinedButton(
                 onClick = onRequest,
-                enabled = enabled,
-                modifier = Modifier.graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                },
-                border = BorderStroke(borderWidth, borderColor),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-                    else Color.Transparent
-                ),
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding
             ) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                 Text("Grant")
             }
         }
     }
 }
 
-@Composable
-private fun ConsentActions(
-    canComplete: Boolean,
-    onComplete: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val spacing = LocalSpacing.current
 
+@Composable
+private fun GetStartedBar(canComplete: Boolean, onComplete: () -> Unit) {
     Surface(
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp,
-        shadowElevation = 3.dp,
+        shadowElevation = 8.dp
     ) {
-        Row(
+        Button(
+            onClick = onComplete,
+            enabled = canComplete,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(spacing.cardPadding),
-            horizontalArrangement = Arrangement.spacedBy(spacing.md),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .height(52.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
         ) {
-
-            Button(
-                onClick = onComplete, enabled = canComplete, modifier = Modifier.weight(1f)
-            ) {
-                Text("Get Started")
-            }
+            Icon(
+                imageVector = Icons.Outlined.Shield,
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize)
+            )
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            Text(
+                text = "Get Started",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
 
-@Preview
+
+@Preview(showBackground = true)
 @Composable
-private fun ConsentGateScreenPreview() {
+private fun ConsentGatePreview() {
     ConsentGateContent(
         visible = true,
         onComplete = {},
-        onDismiss = {},
         fineLocationGranted = false,
         backgroundLocationGranted = false,
-        phoneStateGranted = false,
+        phoneStateGranted = true,
+        canComplete = false,
         onRequestFineLocation = {},
         onRequestBackgroundLocation = {},
-        onRequestPhoneState = {})
+        onRequestPhoneState = {}
+    )
 }

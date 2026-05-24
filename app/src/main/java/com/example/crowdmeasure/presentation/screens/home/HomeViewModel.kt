@@ -1,5 +1,6 @@
 package com.example.crowdmeasure.presentation.screens.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.crowdmeasure.domain.model.Measurement
@@ -7,8 +8,10 @@ import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.RunMeasurementUseCase
 import com.example.crowdmeasure.domain.usecase.UploadNowUseCase
+import com.example.crowdmeasure.presentation.util.AppPermissions
 import com.example.crowdmeasure.presentation.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,35 +26,48 @@ class HomeViewModel @Inject constructor(
     private val runMeasurementUseCase: RunMeasurementUseCase,
     private val measurementRepository: MeasurementRepository,
     private val uploadNowUseCase: UploadNowUseCase,
-    userSessionRepository: UserSessionRepository
+    userSessionRepository: UserSessionRepository,
+    @ApplicationContext context: Context
 ) : ViewModel() {
 
+    private val appContext = context.applicationContext
     private var currentMeasurementJob: Job? = null
     private val measurementState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
     private val uploadState = MutableStateFlow<UiState<Int>>(UiState.Idle)
 
-    val uiState: StateFlow<HomeUiState> = combine(
+    private val baseState = combine(
         userSessionRepository.settings,
         measurementRepository.observeLastMeasurement(),
         measurementRepository.observeQueueCount(),
-        measurementState,
-        uploadState
-    ) { settings, lastMeasurement, queueCount, measurementOp, uploadOp ->
+        AppPermissions.locationServicesEnabledFlow(appContext),
+    ) { settings, lastMeasurement, queueCount, locationServicesOn ->
 
         val uploadsEnabled = settings.firestoreUploadsEnabled
 
         HomeUiState(
             uploadsEnabled = uploadsEnabled,
             canCollect = true,
+            locationServicesOn = locationServicesOn,
             queuedCount = queueCount,
-            measurementState = measurementOp,
-            uploadState = uploadOp,
             lastMeasurement = lastMeasurement?.toUiModel()
+        )
+    }
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        baseState,
+        measurementState,
+        uploadState
+    ) { state, measurementOp, uploadOp ->
+        state.copy(
+            measurementState = measurementOp,
+            uploadState = uploadOp
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-        initialValue = HomeUiState()
+        initialValue = HomeUiState(
+            locationServicesOn = AppPermissions.isLocationServicesEnabled(appContext)
+        )
     )
 
     fun startMeasurement() {

@@ -1,12 +1,9 @@
 package com.example.crowdmeasure.presentation.nav
 
-import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -14,84 +11,87 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.ui.unit.IntOffset
-import androidx.navigation.NavBackStackEntry
 
 object NavigationConfig {
 
-    private val springSpec = spring<IntOffset>(
+    private const val ForwardSlideFraction = 3
+    private const val BackSlideFraction = 4
+    private const val BackgroundScale = 0.98f
+    private const val IncomingScale = 1.01f
+
+    private val offsetSpring = spring<IntOffset>(
         dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMediumLow
     )
 
-    private val floatSpringSpec = spring<Float>(
+    private val fadeSpring = spring<Float>(
         dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = Spring.StiffnessMediumLow
+        stiffness = Spring.StiffnessLow
     )
 
     /**
-     * Enter transition for forward navigation (push).
-     * The new screen slides in from the right.
+     * Forward navigation.
+     *
+     * New destination enters with subtle horizontal motion
+     * and light fade for continuity.
      */
-    fun enterTransition(): EnterTransition {
-        return slideInHorizontally(
-            animationSpec = springSpec,
-            initialOffsetX = { it } // Start fully off-screen right
-        ) + fadeIn(floatSpringSpec)
-    }
+    val enterTransition: EnterTransition =
+        slideInHorizontally(
+            animationSpec = offsetSpring,
+            initialOffsetX = { it / ForwardSlideFraction }
+        ) + fadeIn(animationSpec = fadeSpring)
 
     /**
-     * Exit transition when navigating forward (current screen exits).
-     * The current screen slides slightly left, fades out, and SCALES DOWN
-     * to create a "depth" effect (putting it in the background).
+     * Current screen moves slightly left and fades.
+     *
+     * Small scale reduction creates hierarchy
+     * without obvious zooming.
      */
-    fun exitTransition(): ExitTransition {
-        return slideOutHorizontally(
-            animationSpec = springSpec,
-            targetOffsetX = { -it / 4 } // Move slightly left
-        ) + fadeOut(floatSpringSpec) + scaleOut(
-            animationSpec = floatSpringSpec,
-            targetScale = 0.95f // Subtle scale down
-        )
-    }
+    val exitTransition: ExitTransition =
+        slideOutHorizontally(
+            animationSpec = offsetSpring,
+            targetOffsetX = { -it / BackSlideFraction }
+        ) + fadeOut(animationSpec = fadeSpring) +
+                scaleOut(
+                    targetScale = BackgroundScale,
+                    animationSpec = fadeSpring
+                )
 
     /**
-     * Enter transition when popping back stack (returning to previous screen).
-     * The previous screen slides back from left, fades in, and SCALES UP
-     * returning from the background.
+     * Back navigation restores previous screen naturally.
      */
-    fun popEnterTransition(): EnterTransition {
-        return slideInHorizontally(
-            animationSpec = springSpec,
-            initialOffsetX = { -it / 4 } // Start slightly left
-        ) + fadeIn(floatSpringSpec) + scaleIn(
-            animationSpec = floatSpringSpec,
-            initialScale = 0.95f // Start slightly smaller
-        )
-    }
+    val popEnterTransition: EnterTransition =
+        slideInHorizontally(
+            animationSpec = offsetSpring,
+            initialOffsetX = { -it / BackSlideFraction }
+        ) + fadeIn(animationSpec = fadeSpring) +
+                scaleIn(
+                    initialScale = BackgroundScale,
+                    animationSpec = fadeSpring
+                )
 
     /**
-     * Exit transition when popping (current screen exits to the right).
-     * The current screen slides out to the right.
+     * Current screen exits quickly to the right.
      */
-    fun popExitTransition(): ExitTransition {
-        return slideOutHorizontally(
-            animationSpec = springSpec,
-            targetOffsetX = { it } // Move fully off-screen right
-        ) + fadeOut(floatSpringSpec)
-    }
+    val popExitTransition: ExitTransition =
+        slideOutHorizontally(
+            animationSpec = offsetSpring,
+            targetOffsetX = { it / ForwardSlideFraction }
+        ) + fadeOut(animationSpec = fadeSpring)
 
     /**
-     * Lateral navigation (Bottom Bar switches).
-     * Uses a Crossfade with a slight scale for a "breathing" effect.
+     * Bottom navigation / sibling destinations.
+     *
+     * Crossfade only.
+     * Avoid directional movement between equal hierarchy screens.
      */
-    fun crossfadeTransition(): EnterTransition = fadeIn(
-        animationSpec = tween(200)
-    ) + scaleIn(
-        initialScale = 0.92f,
-        animationSpec = tween(300)
-    )
+    val crossfadeEnterTransition: EnterTransition =
+        fadeIn(animationSpec = fadeSpring) +
+                scaleIn(
+                    initialScale = IncomingScale,
+                    animationSpec = fadeSpring
+                )
 
-    fun crossfadeExit(): ExitTransition = fadeOut(
-        animationSpec = tween(200)
-    )
+    val crossfadeExitTransition: ExitTransition =
+        fadeOut(animationSpec = fadeSpring)
 }

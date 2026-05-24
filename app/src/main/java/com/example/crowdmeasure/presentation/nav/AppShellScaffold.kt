@@ -39,18 +39,12 @@ fun AppShellScaffold(
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
-    val chrome by remember {
-        derivedStateOf { ChromeResolver.resolve(destination) }
-    }
+    val chrome = ChromeResolver.resolve(destination)
 
     val activity = LocalActivity.current
     var showExitDialog by remember { mutableStateOf(false) }
 
-    val isAtRoot by remember(destination) {
-        derivedStateOf {
-            destination?.route == Routes.HOME
-        }
-    }
+    val isAtRoot = destination?.route == Routes.HOME
 
     BackHandler(enabled = isAtRoot) {
         showExitDialog = true
@@ -89,7 +83,6 @@ fun AppShellScaffold(
                     title = chrome.title,
                     showBackButton = chrome.showBackButton,
                     onBackClick = {
-                        // If popBackStack returns false, the stack is empty (we are at root)
                         if (!navController.popBackStack()) {
                             showExitDialog = true
                         }
@@ -108,7 +101,7 @@ fun AppShellScaffold(
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         content = { padding ->
-            content(padding)
+            content(PaddingValues(top=padding.calculateTopPadding()))
         }
     )
 }

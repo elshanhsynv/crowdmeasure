@@ -38,6 +38,9 @@ class UploadRepositoryFirestore @Inject constructor(
 
         pending.forEach { e ->
             val payloadMap = jsonToMap(e.json)
+            val runDate = Instant.ofEpochMilli(e.timestampUtcMs)
+                .atZone(ZoneId.systemDefault())
+                .format(formatter)
 
             val doc = firestore.collection("measurements").document(e.measurementId)
             batch.set(
@@ -45,8 +48,8 @@ class UploadRepositoryFirestore @Inject constructor(
                 mapOf(
                     "install_id" to installId,
                     "measurement_id" to e.measurementId,
-                    "timestamp_utc_ms" to e.timestampUtcMs,
                     "transport" to e.transport,
+                    "run_date" to runDate,
                     "uploaded_at" to humanReadableTime,
                     "payload" to payloadMap
                 )
@@ -54,7 +57,6 @@ class UploadRepositoryFirestore @Inject constructor(
         }
 
         batch.commit().await()
-
 
         dao.updateState(pending.map { it.measurementId }, RecordState.UPLOADED.name)
         pending.size

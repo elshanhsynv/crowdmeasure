@@ -1,7 +1,15 @@
-// workers/WorkScheduler.kt
 package com.example.crowdmeasure.workers
 
-import androidx.work.*
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.crowdmeasure.data.prefs.WorkerStatusStore
 import com.example.crowdmeasure.domain.repo.AppSettings
 import kotlinx.coroutines.flow.first
@@ -46,7 +54,6 @@ class WorkScheduler @Inject constructor(
         )
             .setConstraints(
                 Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
                     .setRequiresBatteryNotLow(true)
                     .build()
             )
@@ -76,7 +83,6 @@ class WorkScheduler @Inject constructor(
         val allowed = settings.autoRunEnabled
         if (!allowed) {
             cancelAutoRun()
-            workManager.cancelUniqueWork(AUTO_RUN_KICKOFF_NAME)
             return
         }
 
@@ -90,7 +96,7 @@ class WorkScheduler @Inject constructor(
         }
     }
 
-    suspend fun scheduleAutoRun(intervalMinutes: Long, wifiOnly: Boolean) {
+    suspend fun scheduleAutoRun(intervalMinutes: Long, wifiOnly: Boolean = false) {
         val safeMinutes = intervalMinutes.coerceAtLeast(MIN_PERIODIC_MINUTES)
         val safeFlexMinutes = (safeMinutes / 3L).coerceAtLeast(MIN_FLEX_MINUTES)
 
@@ -100,18 +106,13 @@ class WorkScheduler @Inject constructor(
                     last.lastScheduleWifiOnly == wifiOnly
         if (scheduleUnchanged && isWorkActive(AUTO_RUN_NAME)) return
 
-        val constraints = Constraints.Builder()
-            .setRequiresBatteryNotLow(true)
-            .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
-            .build()
-
         val req = PeriodicWorkRequestBuilder<AutoRunWorker>(
             safeMinutes,
             TimeUnit.MINUTES,
             safeFlexMinutes,
             TimeUnit.MINUTES
         )
-            .setConstraints(constraints)
+            .setConstraints(autoRunConstraints(wifiOnly = wifiOnly))
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
             .setInputData(workDataOf(AutoRunWorker.KEY_TRIGGER_SOURCE to AutoRunWorker.TRIGGER_PERIODIC))
             .addTag(TAG_AUTORUN)
@@ -127,12 +128,8 @@ class WorkScheduler @Inject constructor(
     }
 
     fun kickoffAutoRunOnce(wifiOnly: Boolean = false) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
-            .build()
-
         val req = OneTimeWorkRequestBuilder<AutoRunWorker>()
-            .setConstraints(constraints)
+            .setConstraints(autoRunConstraints(wifiOnly = wifiOnly))
             .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)
             .setInputData(workDataOf(AutoRunWorker.KEY_TRIGGER_SOURCE to AutoRunWorker.TRIGGER_KICKOFF))
             .addTag("${TAG_AUTORUN}_kickoff")
@@ -147,15 +144,12 @@ class WorkScheduler @Inject constructor(
 
     fun cancelAutoRun() {
         workManager.cancelUniqueWork(AUTO_RUN_NAME)
+        workManager.cancelUniqueWork(AUTO_RUN_KICKOFF_NAME)
     }
 
     fun enqueueRescheduleWorker() {
         val req = OneTimeWorkRequestBuilder<WorkRescheduleWorker>()
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
+            .setConstraints(Constraints.NONE)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .setInputData(
                 workDataOf(
@@ -197,5 +191,15 @@ class WorkScheduler @Inject constructor(
         return workInfo?.state in ACTIVE_STATES
     }
 
-}
+    private fun autoRunConstraints(
+        wifiOnly: Boolean = false,
+        requireBatteryNotLow: Boolean = false
+    ): Constraints {
+        val networkType = if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED
+        return Constraints.Builder()
+            .setRequiredNetworkType(networkType)
+            .setRequiresBatteryNotLow(requireBatteryNotLow)
+            .build()
+    }
 
+}

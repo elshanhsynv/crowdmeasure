@@ -13,7 +13,7 @@ data class Meta(
     val sdkInt: Int,
     val appVersion: String,
 
-    // Session grouping (very useful for ML)
+    // Session grouping
     val sessionId: String?,  // multiple tests in a row
     val userIdHash: String?, // optional privacy-safe cohorting
 )

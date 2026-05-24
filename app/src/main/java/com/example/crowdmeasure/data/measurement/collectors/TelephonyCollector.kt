@@ -10,6 +10,7 @@ import android.telephony.CellInfoNr
 import android.telephony.CellInfoTdscdma
 import android.telephony.CellInfoWcdma
 import android.telephony.CellSignalStrengthNr
+import android.telephony.ServiceState
 import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
 import android.telephony.CellInfo as AndroidCellInfo
@@ -39,7 +40,7 @@ object TelephonyCollector {
     fun collect(context: Context): CellInfo {
         val tm = context.getSystemService<TelephonyManager>()
             ?: return CellInfo(
-                carrier = CarrierInfo(null, null, null, null, null),
+                carrier = CarrierInfo(null, null, null, null, null, null, null),
                 rat = null,
                 nrState = NrState.NONE,
                 serving = null,
@@ -76,12 +77,28 @@ object TelephonyCollector {
             }
         } else null
 
+        val serviceState = if (phoneGranted) {
+            try {
+                tm.serviceState
+            } catch (e: SecurityException) {
+                null
+            }
+        } else null
+
+        val duplexModeString: String = when (serviceState?.duplexMode) {
+            ServiceState.DUPLEX_MODE_FDD -> "FDD"
+            ServiceState.DUPLEX_MODE_TDD -> "TDD"
+            else -> ""
+        }
+
         val carrier = CarrierInfo(
             carrierName = safe { tm.networkOperatorName },
             mcc = op.takeIf { it.length >= 3 }?.substring(0, 3),
             mnc = op.takeIf { it.length >= 5 }?.substring(3),
-            operatorId = op.takeIf { it.isNotEmpty() },
+            simOperatorId = tm.simOperator,
+            simOperatorName = tm.simOperatorName,
             countryIso = safe { tm.simCountryIso },
+            duplexMode = duplexModeString
         )
 
         val base = CellInfo(
@@ -147,10 +164,6 @@ object TelephonyCollector {
         )
     }
 
-    // -------------------------------------------------------------------------
-    // Safe accessors
-    // -------------------------------------------------------------------------
-
     private inline fun <T> safe(block: () -> T): T? = try {
         block()
     } catch (_: SecurityException) {
@@ -159,36 +172,15 @@ object TelephonyCollector {
         null
     }
 
-    /**
-     * Sentinel values Android uses for "not available" in cell info fields.
-     * Both Int.MAX_VALUE (2,147,483,647) and Int.MIN_VALUE are used depending on the field.
-     * For identity fields, negative values are also invalid.
-     */
     private fun Int.validId(): Int? =
         takeIf { it != Int.MAX_VALUE && it != Int.MIN_VALUE && it >= 0 }
 
     private fun Long.validId(): Long? =
         takeIf { it != Long.MAX_VALUE && it != Long.MIN_VALUE && it >= 0 }
 
-    /** Signal values can legitimately be negative (dBm); only sentinel extremes are invalid. */
     private fun Int.validSig(): Int? =
         takeIf { it != Int.MAX_VALUE && it != Int.MIN_VALUE }
 
-    // -------------------------------------------------------------------------
-    // Timestamp helper — fixes unit mismatch between API levels
-    // -------------------------------------------------------------------------
-
-    /**
-     * Returns how many milliseconds ago this [AndroidCellInfo] was captured.
-     *
-     * API 30+: [AndroidCellInfo.getTimestampMillis] returns milliseconds from
-     *   [SystemClock.elapsedRealtime] — subtract directly; no unit conversion needed.
-     *
-     * API < 30: [AndroidCellInfo.getTimeStamp] returns nanoseconds from
-     *   [SystemClock.elapsedRealtimeNanos] — divide by 1,000,000 to get ms.
-     *
-     * Result is coerced to >= 0 to guard against clock skew on pathological devices.
-     */
     @Suppress("DEPRECATION")
     private fun AndroidCellInfo.ageMs(): Long =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -197,25 +189,6 @@ object TelephonyCollector {
             ((SystemClock.elapsedRealtimeNanos() - timeStamp) / 1_000_000L).coerceAtLeast(0L)
         }
 
-    // -------------------------------------------------------------------------
-    // NR state derivation
-    // -------------------------------------------------------------------------
-
-    /**
-     * Derives [NrState] using a two-tier approach:
-     *
-     * **Tier 1 — [TelephonyDisplayInfo] (API 30+, preferred):**
-     * The override network type reliably distinguishes NSA (`NR_NSA*`) from SA
-     * (`NR_ADVANCED` or plain `NR` as the base network type).
-     *
-     * **Tier 2 — Heuristic (API < 30 or DisplayInfo unavailable):**
-     * - `NETWORK_TYPE_NR` + no visible NR cell (scan may be suppressed) → [NrState.SA]
-     * - `NETWORK_TYPE_NR` + visible NR cells → [NrState.NSA] (conservative; cannot confirm SA)
-     * - `NETWORK_TYPE_LTE` + visible NR cells → [NrState.NSA]
-     * - Anything else → [NrState.NONE]
-     *
-     * Note: uses Kotlin 2.1+ guard-condition `when` syntax.
-     */
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun deriveNrState(
         context: Context,
@@ -241,13 +214,11 @@ object TelephonyCollector {
             }
         }
 
-        // Tier 2: Heuristic fallback (Kotlin 2.1+ guard-condition when syntax)
         val hasNrCell = infos.any { it is CellInfoNr }
         return when (dataNetworkType) {
-            TelephonyManager.NETWORK_TYPE_NR if !hasNrCell -> NrState.SA
-            TelephonyManager.NETWORK_TYPE_NR -> NrState.NSA
-            TelephonyManager.NETWORK_TYPE_LTE if hasNrCell -> NrState.NSA
-            else -> NrState.NONE
+            TelephonyManager.NETWORK_TYPE_NR -> if (hasNrCell) NrState.NSA else NrState.SA
+            TelephonyManager.NETWORK_TYPE_LTE -> if (hasNrCell) NrState.NSA else NrState.NONE
+            else -> if (hasNrCell) NrState.NSA else NrState.NONE
         }
     }
 
@@ -268,20 +239,11 @@ object TelephonyCollector {
                 .get(tm) as? TelephonyDisplayInfo
         }.getOrNull()
 
-    // -------------------------------------------------------------------------
-    // Cell parsing dispatch
-    // -------------------------------------------------------------------------
-
     private data class Parsed(
         val snapshot: CellRadioSnapshot?,
         val rat: String?,
     )
 
-    /**
-     * Dispatches to the appropriate RAT-specific parser.
-     * Returns a snapshot with null signal/identity fields for unrecognized RATs
-     * (rat is set to the class simple name for debugging).
-     */
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun parseCell(ci: AndroidCellInfo): Parsed = try {
         when (ci) {
@@ -295,10 +257,6 @@ object TelephonyCollector {
     } catch (_: Throwable) {
         Parsed(null, ci.javaClass.simpleName)
     }
-
-    // -------------------------------------------------------------------------
-    // LTE (4G)
-    // -------------------------------------------------------------------------
 
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun parseLte(ci: CellInfoLte): Parsed {
@@ -352,10 +310,6 @@ object TelephonyCollector {
             rat = "LTE",
         )
     }
-
-    // -------------------------------------------------------------------------
-    // NR (5G)
-    // -------------------------------------------------------------------------
 
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun parseNr(ci: CellInfoNr): Parsed {
@@ -419,21 +373,6 @@ object TelephonyCollector {
         )
     }
 
-    // -------------------------------------------------------------------------
-    // WCDMA (3G)
-    // -------------------------------------------------------------------------
-
-    /**
-     * Parses a WCDMA (UMTS/3G) cell.
-     *
-     * Signal mapping:
-     * - [CellRadioSnapshot.rsrpDbm] ← RSCP (Received Signal Code Power, dBm) — closest to RSRP
-     * - [CellRadioSnapshot.sinrDb]  ← Ec/No (Energy-per-chip / Noise density, dB) — closest to SINR
-     * - [CellRadioSnapshot.dbm]     ← same as RSCP (Android's unified dbm for WCDMA)
-     *
-     * Ec/No ([CellRadioSnapshot.sinrDb]) requires API 30 (R); null on API 29.
-     * Band ([CellRadioSnapshot.band]) is calculated from UARFCN.
-     */
     private fun parseWcdma(ci: CellInfoWcdma): Parsed {
         val id = ci.cellIdentity
         val sig = ci.cellSignalStrength
@@ -484,9 +423,6 @@ object TelephonyCollector {
         )
     }
 
-    /**
-     * Maps the WCDMA (UMTS) Downlink UARFCN to its corresponding 3GPP Operating Band.
-     */
     private fun getWcdmaBand(uarfcn: Int?): Int? {
         if (uarfcn == null) return null
         return when (uarfcn) {
@@ -514,20 +450,6 @@ object TelephonyCollector {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // TD-SCDMA (3G — China/some Asian markets)
-    // -------------------------------------------------------------------------
-
-    /**
-     * Parses a TD-SCDMA cell. All TD-SCDMA APIs are API 29 (Q); no inline checks needed.
-     *
-     * [CellIdentityTdscdma.getCpid] (Cell Parameters ID) plays the same role
-     * as PSC in WCDMA — stored in [CellRadioSnapshot.psc].
-     *
-     * Signal mapping:
-     * - [CellRadioSnapshot.rsrpDbm] ← RSCP (Received Signal Code Power, dBm)
-     * - [CellRadioSnapshot.dbm]     ← same as RSCP
-     */
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun parseTdscdma(ci: CellInfoTdscdma): Parsed {
         val id = ci.cellIdentity
@@ -569,23 +491,6 @@ object TelephonyCollector {
         )
     }
 
-    // -------------------------------------------------------------------------
-    // GSM (2G)
-    // -------------------------------------------------------------------------
-
-    /**
-     * Parses a GSM (2G) cell.
-     *
-     * Signal mapping:
-     * - [CellRadioSnapshot.rssiDbm] ← GSM received signal level (getDbm() returns RSSI-equivalent)
-     * - [CellRadioSnapshot.dbm]     ← same value — Android's unified dBm for GSM
-     * - [CellRadioSnapshot.timingAdvance] ← distance estimate (0-63 units, ~550 m each)
-     *
-     * [CellRadioSnapshot.arfcn] (GERAN ARFCN) and [CellRadioSnapshot.bsic] are available
-     * from API 24, which is below minSdk=Q, so no inline SDK checks are needed.
-     *
-     * Band is calculated from ARFCN.
-     */
     private fun parseGsm(ci: CellInfoGsm): Parsed {
         val id = ci.cellIdentity
         val sig = ci.cellSignalStrength
@@ -629,9 +534,6 @@ object TelephonyCollector {
         )
     }
 
-    /**
-     * Maps the GSM ARFCN to its corresponding band.
-     */
     private fun getGsmBand(arfcn: Int?): Int? {
         if (arfcn == null) return null
         return when (arfcn) {
@@ -645,10 +547,6 @@ object TelephonyCollector {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Carrier aggregation (best-effort; LTE + NR only — CA is not a 2G/3G concept)
-    // -------------------------------------------------------------------------
-
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun buildAggregation(
         infos: List<AndroidCellInfo>,
@@ -661,7 +559,7 @@ object TelephonyCollector {
 
         if (secondaries.isEmpty()) return null
         return CarrierAggregationInfo(
-            active = null, // Requires TelephonyCallback.DisplayInfoListener; unknowable one-shot
+            active = null,
             secondaryCells = secondaries,
         )
     }
@@ -710,24 +608,11 @@ object TelephonyCollector {
         null
     }
 
-    // -------------------------------------------------------------------------
-    // Reflection helper (for @hide APIs; fails safely with null)
-    // -------------------------------------------------------------------------
-
     private fun reflectInt(obj: Any?, methodName: String): Int? = runCatching {
         if (obj == null) return null
         obj.javaClass.getMethod(methodName).invoke(obj) as? Int
     }.getOrNull()
 
-    // -------------------------------------------------------------------------
-    // Network type name mapping
-    // -------------------------------------------------------------------------
-
-    /**
-     * Returns a stable string identifier for known network types.
-     * Unknown types return null — embedding a raw int ("UNKNOWN(35)") in
-     * serialized payloads would make server-side parsing fragile.
-     */
     private fun networkTypeName(type: Int): String? = when (type) {
         TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
         TelephonyManager.NETWORK_TYPE_NR -> "NR"

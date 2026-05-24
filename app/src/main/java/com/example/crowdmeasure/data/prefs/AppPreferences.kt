@@ -24,9 +24,6 @@ class AppPreferences(private val context: Context) {
         val minutes = prefs[DataStoreKeys.AUTO_RUN_INTERVAL_MINUTES] ?: DEFAULT_AUTORUN_MINUTES
 
         AppSettings(
-//            consentAccepted = prefs[DataStoreKeys.CONSENT_ACCEPTED] ?: true,
-//            collectionEnabled = prefs[DataStoreKeys.COLLECTION_ENABLED] ?: true,
-
             consentVersion = CONSENT_VERSION,
             endpointUrl = prefs[DataStoreKeys.ENDPOINT_URL] ?: DEFAULT_ENDPOINT,
             collectOnlyWifi = prefs[DataStoreKeys.COLLECT_ONLY_WIFI] ?: false,
@@ -46,14 +43,6 @@ class AppPreferences(private val context: Context) {
                 prefs[DataStoreKeys.INSTALL_ID] = UUID.randomUUID().toString()
             }
         }
-    }
-
-    suspend fun setConsentAccepted(accepted: Boolean) {
-        context.dataStore.edit { it[DataStoreKeys.CONSENT_ACCEPTED] = accepted }
-    }
-
-    suspend fun setCollectionEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[DataStoreKeys.COLLECTION_ENABLED] = enabled }
     }
 
     suspend fun setEndpointUrl(url: String) {
@@ -76,10 +65,6 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setConsentGateDismissed(dismissed: Boolean) {
         context.dataStore.edit { it[DataStoreKeys.CONSENT_GATE_DISMISSED] = dismissed }
-    }
-
-    suspend fun resetConsentGateDismissed() {
-        context.dataStore.edit { it[DataStoreKeys.CONSENT_GATE_DISMISSED] = false }
     }
 
     suspend fun setFirestoreUploadsEnabled(enabled: Boolean) {

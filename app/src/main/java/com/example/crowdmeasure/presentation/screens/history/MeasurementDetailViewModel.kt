@@ -166,6 +166,10 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             c.rat?.let { add("RAT" to it) }
             c.dataNetworkType?.let { add("Data Network Type" to it) }
             c.voiceNetworkType?.let { add("Voice Network Type" to it) }
+            c.carrier.duplexMode?.let { add("Duplex Mode" to it) }
+            c.carrier.countryIso?.let { add("Country" to it) }
+            c.carrier.simOperatorName?.let { add("SIM Name" to it) }
+            c.carrier.simOperatorId?.let { add("SIM ID" to it) }
             c.roaming?.let { add("Roaming" to it.toString()) }
         }
     }
@@ -187,7 +191,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             sc.cqi?.let { add("CQI" to "$it") }
             sc.rssiDbm?.let { add("RSSI" to "$it dBm") }
             sc.bandwidthMhz?.let { add("Bandwidth" to "$it MHz") }
-            sc.mimoLayers?.let { add("Mimo Layers") to "$it" }
+            sc.mimoLayers?.let { add("Mimo Layers" to "$it") }
         }.joinToString(" • ").takeIf {
             it.isNotEmpty() || it.isNotBlank()
         }
@@ -196,7 +200,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     // IP info
     val ipUi = environment.network.ip.let { i ->
         buildList {
-            add("Public IP" to i.publicIpHash.toString())
+            add("Public IP" to i.publicIp.toString())
             add("ISP" to i.ispName.toString())
             add("ASN" to i.asn.toString())
         }.takeIf { it.isNotEmpty() }

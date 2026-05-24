@@ -102,7 +102,13 @@ class AutoRunWorker @AssistedInject constructor(
     }
 
     private fun String.toStatusError(): String? =
-        if (this == AutoRunWorkRepository.CODE_OK) null else this
+        when (this) {
+            AutoRunWorkRepository.CODE_OK,
+            AutoRunWorkRepository.CODE_GATE_BLOCKED,
+            AutoRunWorkRepository.CODE_SKIPPED_RECENT_RUN,
+            AutoRunWorkRepository.CODE_SKIPPED_CONCURRENT_RUN -> null
+            else -> this
+        }
 
     companion object {
         private const val TAG = "AutoRunWorker"
