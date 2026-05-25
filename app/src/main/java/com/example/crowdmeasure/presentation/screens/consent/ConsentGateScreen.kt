@@ -1,7 +1,6 @@
 package com.example.crowdmeasure.presentation.screens.consent
 
 import android.Manifest
-import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -61,7 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.presentation.util.AppPermissions
 
@@ -71,7 +70,7 @@ fun ConsentGateScreen(
     visible: Boolean,
     onComplete: () -> Unit,
     onDismiss: () -> Unit,
-    viewModel: ConsentGateViewModel = hiltViewModel()
+    viewModel: ConsentGateViewModel = hiltViewModel<ConsentGateViewModel>()
 ) {
     val context = LocalContext.current
     val settings by viewModel.settings.collectAsStateWithLifecycle()

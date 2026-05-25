@@ -6,6 +6,7 @@ import com.example.crowdmeasure.domain.model.Measurement
 import com.example.crowdmeasure.domain.usecase.GetHistoryUseCase
 import com.example.crowdmeasure.presentation.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -49,6 +50,7 @@ class HistoryViewModel @Inject constructor(
     private val refreshes: Flow<Unit> =
         manualRefreshTrigger.onStart { emit(Unit) }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     val itemsState: StateFlow<UiState<List<HistoryItemUi>>> =
         combine(appliedQuery, refreshes) { query, _ -> query }
             .flatMapLatest { query ->
@@ -199,6 +201,6 @@ private fun safeEndpointHost(endpointId: String?): String? {
     return runCatching {
         // works for full URLs; if it's already an ID/host, URI may treat it oddly -> fallback null
         val uri = URI(endpointId)
-        uri.host ?: null
+        uri.host
     }.getOrNull()
 }

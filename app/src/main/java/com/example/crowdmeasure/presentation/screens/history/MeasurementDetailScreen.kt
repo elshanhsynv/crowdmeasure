@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,7 +19,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -29,8 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CompareArrows
 import androidx.compose.material.icons.automirrored.outlined.FactCheck
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
-import androidx.compose.material.icons.automirrored.outlined.TrendingDown
-import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.BarChart
@@ -40,10 +35,8 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.CellTower
 import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.DataUsage
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Flight
 import androidx.compose.material.icons.outlined.HourglassEmpty
@@ -63,13 +56,10 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material.icons.outlined.SettingsCell
-import androidx.compose.material.icons.outlined.ShowChart
 import androidx.compose.material.icons.outlined.SignalCellularAlt
 import androidx.compose.material.icons.outlined.SimCard
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Timeline
-import androidx.compose.material.icons.outlined.TrendingDown
-import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material.icons.outlined.VpnKey
@@ -89,14 +79,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.presentation.ui.components.DetailSectionCard
 import com.example.crowdmeasure.presentation.ui.components.MetricChip
@@ -166,14 +155,12 @@ private fun iconForMetric(label: String): ImageVector = when (label) {
     else -> Icons.Outlined.Info
 }
 
-// ─── Entry Point ─────────────────────────────────────────────────────────────
-
 @Composable
 fun MeasurementDetailScreen(
     id: String,
     contentPadding: PaddingValues,
     onNavigateBack: () -> Unit,
-    viewModel: MeasurementDetailViewModel = hiltViewModel()
+    viewModel: MeasurementDetailViewModel = hiltViewModel<MeasurementDetailViewModel>()
 ) {
     LaunchedEffect(id) { viewModel.load(id) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -185,8 +172,6 @@ fun MeasurementDetailScreen(
         onRetry = { viewModel.load(id) }
     )
 }
-
-// ─── Content ─────────────────────────────────────────────────────────────────
 
 @Composable
 private fun MeasurementDetailContent(
@@ -263,8 +248,6 @@ private fun MeasurementDetailContent(
         item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
     }
 }
-
-// ─── Hero Summary Card ────────────────────────────────────────────────────────
 
 @Composable
 private fun SummaryHeroCard(measurement: MeasurementDetailUi) {
@@ -355,8 +338,6 @@ private fun SummaryHeroCard(measurement: MeasurementDetailUi) {
         }
     }
 }
-
-// ─── Sections ─────────────────────────────────────────────────────────────────
 
 @Composable
 private fun DeviceSection(pairs: List<Pair<String, String?>>) {
@@ -530,8 +511,6 @@ private fun PerformanceGroup(
     }
 }
 
-// ─── States ───────────────────────────────────────────────────────────────────
-
 @Composable
 private fun LoadingState() {
     Box(
@@ -572,8 +551,6 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
         }
     }
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 @Composable
 private fun MetricChipGrid(

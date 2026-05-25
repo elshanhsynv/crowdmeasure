@@ -34,7 +34,6 @@ import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.MyLocation
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.PinDrop
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Shield
@@ -67,7 +66,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.presentation.ui.components.AssistiveHint
@@ -83,7 +82,7 @@ import com.example.crowdmeasure.presentation.util.UiState
 @Composable
 fun SettingsScreen(
     contentPadding: PaddingValues,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel<SettingsViewModel>()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val backgroundWorkState by viewModel.backgroundWorkState.collectAsStateWithLifecycle()

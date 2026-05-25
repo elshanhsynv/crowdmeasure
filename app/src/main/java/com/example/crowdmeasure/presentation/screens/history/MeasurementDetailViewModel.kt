@@ -152,7 +152,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             w.rxLinkSpeedMbps?.let { add("RX Link Speed" to "$it Mbps") }
             w.frequencyMhz?.let { add("Frequency" to "$it MHz") }
             w.channelWidthMhz?.let { add("Channel Width" to "$it MHz") }
-            w.standard?.let { add("Wi-Fi Standard" to it.name) }
+            add("Wi-Fi Standard" to w.standard.name)
             w.bssidHash?.let { add("BSSID Hash" to it) }
         }.takeIf { it.isNotEmpty() }
     }
