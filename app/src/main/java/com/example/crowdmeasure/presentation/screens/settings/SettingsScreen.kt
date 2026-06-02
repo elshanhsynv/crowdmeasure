@@ -1,6 +1,7 @@
 package com.example.crowdmeasure.presentation.screens.settings
 
 import android.Manifest
+import android.os.Build
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -82,10 +83,12 @@ import com.example.crowdmeasure.presentation.util.UiState
 @Composable
 fun SettingsScreen(
     contentPadding: PaddingValues,
-    viewModel: SettingsViewModel = hiltViewModel<SettingsViewModel>()
+    viewModel: SettingsViewModel = hiltViewModel<SettingsViewModel>(),
+    onOpenCallSessions: () -> Unit = {}
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val backgroundWorkState by viewModel.backgroundWorkState.collectAsStateWithLifecycle()
+    val callSamplingStatus by viewModel.callSamplingStatus.collectAsStateWithLifecycle()
     val exportState by viewModel.exportState.collectAsStateWithLifecycle()
     val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
 
@@ -97,8 +100,11 @@ fun SettingsScreen(
         exportState = exportState,
         deleteState = deleteState,
         backgroundWorkState = backgroundWorkState,
+        callSamplingStatus = callSamplingStatus,
         onRunNow = viewModel::runAutoRunNow,
         onReschedule = viewModel::rescheduleBackgroundWork,
+        onSetCallSamplingEnabled = viewModel::setCallSamplingEnabled,
+        onOpenCallSessions = onOpenCallSessions,
         onExport = viewModel::exportData,
         onClearExportState = viewModel::clearExportState,
         onDelete = viewModel::deleteAllData,
@@ -113,8 +119,11 @@ private fun SettingsScreenContent(
     exportState: UiState<Unit>,
     deleteState: UiState<Unit>,
     backgroundWorkState: BackgroundWorkUiState,
+    callSamplingStatus: CallSamplingStatusUiState,
     onRunNow: () -> Unit,
     onReschedule: () -> Unit,
+    onSetCallSamplingEnabled: (Boolean) -> Unit,
+    onOpenCallSessions: () -> Unit,
     onExport: (Context, Int) -> Unit,
     onClearExportState: () -> Unit,
     onDelete: () -> Unit,
@@ -135,7 +144,10 @@ private fun SettingsScreenContent(
                 settings = settings,
                 backgroundWorkState = backgroundWorkState,
                 onRunNow = onRunNow,
-                onReschedule = onReschedule
+                onReschedule = onReschedule,
+                callSamplingStatus = callSamplingStatus,
+                onSetCallSamplingEnabled = onSetCallSamplingEnabled,
+                onOpenCallSessions = onOpenCallSessions
             )
             2 -> DataTab(
                 exportState = exportState,
@@ -478,9 +490,42 @@ private fun CollectionTab(
     settings: AppSettings?,
     backgroundWorkState: BackgroundWorkUiState,
     onRunNow: () -> Unit,
-    onReschedule: () -> Unit
+    onReschedule: () -> Unit,
+    callSamplingStatus: CallSamplingStatusUiState,
+    onSetCallSamplingEnabled: (Boolean) -> Unit,
+    onOpenCallSessions: () -> Unit
 ) {
     val context = LocalContext.current
+    var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(context)) }
+    var fineGranted by remember { mutableStateOf(AppPermissions.hasFineLocation(context)) }
+    var backgroundGranted by remember { mutableStateOf(AppPermissions.hasBackgroundLocation(context)) }
+    var notificationsGranted by remember { mutableStateOf(AppPermissions.hasPostNotifications(context)) }
+    var batteryIgnored by remember { mutableStateOf(AppPermissions.ignoresBatteryOptimizations(context)) }
+    var locationServicesOn by remember { mutableStateOf(isLocationServicesEnabled(context)) }
+
+    fun refreshCallSamplingPrerequisites() {
+        phoneGranted = AppPermissions.hasPhoneState(context)
+        fineGranted = AppPermissions.hasFineLocation(context)
+        backgroundGranted = AppPermissions.hasBackgroundLocation(context)
+        notificationsGranted = AppPermissions.hasPostNotifications(context)
+        batteryIgnored = AppPermissions.ignoresBatteryOptimizations(context)
+        locationServicesOn = isLocationServicesEnabled(context)
+    }
+
+    val requestPhone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        refreshCallSamplingPrerequisites()
+    }
+    val requestFine = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        refreshCallSamplingPrerequisites()
+    }
+    val requestBackground = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        refreshCallSamplingPrerequisites()
+    }
+    val requestNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        refreshCallSamplingPrerequisites()
+    }
+
+    LaunchedEffect(Unit) { refreshCallSamplingPrerequisites() }
 
     Column(
         modifier = Modifier
@@ -501,7 +546,166 @@ private fun CollectionTab(
                 SystemSettingsIntents.openBatteryOptimizationSettings(context)
             }
         )
+        CallSamplingSettingsCard(
+            enabled = settings?.callSamplingEnabled == true,
+            phoneGranted = phoneGranted,
+            fineGranted = fineGranted,
+            backgroundGranted = backgroundGranted,
+            notificationsGranted = notificationsGranted,
+            batteryIgnored = batteryIgnored,
+            locationServicesOn = locationServicesOn,
+            lastMissedLabel = callSamplingStatus.lastMissedLabel,
+            onEnableChanged = onSetCallSamplingEnabled,
+            onRequestPhone = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) },
+            onRequestFine = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+            onRequestBackground = { requestBackground.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION) },
+            onRequestNotifications = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            },
+            onOpenLocationSettings = {
+                context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            },
+            onOpenBatterySettings = {
+                SystemSettingsIntents.openBatteryOptimizationSettings(context)
+            },
+            onRefresh = ::refreshCallSamplingPrerequisites,
+            onOpenSessions = onOpenCallSessions
+        )
         Spacer(Modifier.safeContentPadding())
+    }
+}
+
+@Composable
+private fun CallSamplingSettingsCard(
+    enabled: Boolean,
+    phoneGranted: Boolean,
+    fineGranted: Boolean,
+    backgroundGranted: Boolean,
+    notificationsGranted: Boolean,
+    batteryIgnored: Boolean,
+    locationServicesOn: Boolean,
+    lastMissedLabel: String,
+    onEnableChanged: (Boolean) -> Unit,
+    onRequestPhone: () -> Unit,
+    onRequestFine: () -> Unit,
+    onRequestBackground: () -> Unit,
+    onRequestNotifications: () -> Unit,
+    onOpenLocationSettings: () -> Unit,
+    onOpenBatterySettings: () -> Unit,
+    onRefresh: () -> Unit,
+    onOpenSessions: () -> Unit
+) {
+    val ready = phoneGranted &&
+        fineGranted &&
+        backgroundGranted &&
+        notificationsGranted &&
+        batteryIgnored &&
+        locationServicesOn
+
+    SettingsSectionCard(
+        title = "Call Cell Sampling",
+        description = "Local-only cell stats during active calls",
+        icon = Icons.Outlined.PhoneAndroid
+    ) {
+        KeyValueLine("Status", if (enabled) "Enabled" else "Disabled")
+        KeyValueLine("Ready", if (ready) "Yes" else "No")
+        KeyValueLine("Last Missed Start", lastMissedLabel)
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+        PermissionRow(
+            title = "Phone State",
+            subtitle = "Required to detect active calls",
+            granted = phoneGranted,
+            enabled = true,
+            onRequest = onRequestPhone,
+            icon = Icons.Outlined.PhoneAndroid
+        )
+        PermissionRow(
+            title = "Fine Location",
+            subtitle = "Required for detailed cell info",
+            granted = fineGranted,
+            enabled = true,
+            onRequest = onRequestFine,
+            icon = Icons.Outlined.PinDrop
+        )
+        PermissionRow(
+            title = "Background Location",
+            subtitle = "Required for background call sampling",
+            granted = backgroundGranted,
+            enabled = true,
+            onRequest = onRequestBackground,
+            icon = Icons.Outlined.MyLocation
+        )
+        PermissionRow(
+            title = "Notifications",
+            subtitle = "Required for the foreground service notification",
+            granted = notificationsGranted,
+            enabled = true,
+            onRequest = onRequestNotifications,
+            icon = Icons.Outlined.Warning
+        )
+
+        if (!locationServicesOn) {
+            Button(onClick = onOpenLocationSettings, modifier = Modifier.fillMaxWidth()) {
+                Text("Turn On Location Services")
+            }
+        }
+        if (!batteryIgnored) {
+            Button(onClick = onOpenBatterySettings, modifier = Modifier.fillMaxWidth()) {
+                Text("Allow Battery Exemption")
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { onEnableChanged(!enabled) },
+                enabled = ready || enabled,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (enabled) "Disable" else "Enable")
+            }
+            FilledTonalButton(
+                onClick = onOpenSessions,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("View Sessions")
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(onClick = onRefresh) {
+                Text("Refresh")
+            }
+        }
+    }
+}
+
+@Composable
+private fun KeyValueLine(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -680,8 +884,11 @@ private fun SettingsScreenPreview() {
         exportState = UiState.Idle,
         deleteState = UiState.Idle,
         backgroundWorkState = BackgroundWorkUiState.loading(),
+        callSamplingStatus = CallSamplingStatusUiState.empty(),
         onRunNow = {},
         onReschedule = {},
+        onSetCallSamplingEnabled = {},
+        onOpenCallSessions = {},
         onExport = { _, _ -> },
         onClearExportState = {},
         onDelete = {},

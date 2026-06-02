@@ -3,6 +3,7 @@ package com.example.crowdmeasure.di
 import android.content.Context
 import androidx.room.Room
 import com.example.crowdmeasure.data.db.AppDatabase
+import com.example.crowdmeasure.data.db.CallSamplingDao
 import com.example.crowdmeasure.data.db.MeasurementDao
 import com.example.crowdmeasure.data.db.Migrations
 import dagger.Module
@@ -26,4 +27,7 @@ object DatabaseModule {
     }
     @Provides
     fun provideDao(db: AppDatabase): MeasurementDao = db.measurementDao()
+
+    @Provides
+    fun provideCallSamplingDao(db: AppDatabase): CallSamplingDao = db.callSamplingDao()
 }

@@ -11,7 +11,8 @@ data class AppSettings(
     val retentionDays: Int,
     val installId: String,
     val consentGateDismissed: Boolean,
-    val firestoreUploadsEnabled: Boolean
+    val firestoreUploadsEnabled: Boolean,
+    val callSamplingEnabled: Boolean
 )
 
 interface UserSessionRepository {
@@ -22,4 +23,5 @@ interface UserSessionRepository {
     suspend fun setRetentionDays(days: Int)
     suspend fun setConsentGateDismissed(enabled: Boolean)
     suspend fun setFirestoreUploadsEnabled(enabled: Boolean)
+    suspend fun setCallSamplingEnabled(enabled: Boolean)
 }

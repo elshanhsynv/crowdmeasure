@@ -41,6 +41,14 @@ object ChromeResolver {
                 topBarElevated = true
             )
 
+            route == Routes.CALL_SESSIONS -> ChromeConfig(
+                title = "Call Cell Sessions",
+                showTopBar = true,
+                showBottomBar = false,
+                showBackButton = true,
+                topBarElevated = true
+            )
+
             else -> defaultChrome()
         }
     }

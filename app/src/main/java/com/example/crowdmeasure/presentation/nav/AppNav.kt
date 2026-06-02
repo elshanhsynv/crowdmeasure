@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.crowdmeasure.presentation.screens.callsampling.CallSessionsScreen
 import com.example.crowdmeasure.presentation.screens.history.HistoryScreen
 import com.example.crowdmeasure.presentation.screens.history.HistoryViewModel
 import com.example.crowdmeasure.presentation.screens.history.MeasurementDetailScreen
@@ -121,8 +122,29 @@ fun AppNav() {
             ) {
                 SettingsScreen(
                     viewModel = settingsViewModel,
-                    contentPadding = paddingValues
+                    contentPadding = paddingValues,
+                    onOpenCallSessions = {
+                        navController.navigate(Routes.CALL_SESSIONS)
+                    }
                 )
+            }
+
+            composable(
+                route = Routes.CALL_SESSIONS,
+                enterTransition = {
+                    with(NavigationConfig) { enterTransition }
+                },
+                exitTransition = {
+                    with(NavigationConfig) { exitTransition }
+                },
+                popEnterTransition = {
+                    with(NavigationConfig) { popEnterTransition }
+                },
+                popExitTransition = {
+                    with(NavigationConfig) { popExitTransition }
+                },
+            ) {
+                CallSessionsScreen(contentPadding = paddingValues)
             }
 
             composable(

@@ -33,6 +33,7 @@ class AppPreferences(private val context: Context) {
             installId = installId,
             consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: false,
             firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: true,
+            callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: false,
         )
     }
 
@@ -69,5 +70,9 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setFirestoreUploadsEnabled(enabled: Boolean) {
         context.dataStore.edit { it[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] = enabled }
+    }
+
+    suspend fun setCallSamplingEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[DataStoreKeys.CALL_SAMPLING_ENABLED] = enabled }
     }
 }

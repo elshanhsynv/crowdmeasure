@@ -18,4 +18,8 @@ class UserSessionRepositoryImpl(
     override suspend fun setFirestoreUploadsEnabled(enabled: Boolean) {
         prefs.setFirestoreUploadsEnabled(enabled)
     }
+
+    override suspend fun setCallSamplingEnabled(enabled: Boolean) {
+        prefs.setCallSamplingEnabled(enabled)
+    }
 }

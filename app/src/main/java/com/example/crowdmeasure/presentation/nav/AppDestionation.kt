@@ -32,6 +32,7 @@ object Routes {
     const val HOME = "home"
     const val HISTORY = "history"
     const val SETTINGS = "settings"
+    const val CALL_SESSIONS = "call_sessions"
 
     // Detail screen uses path parameter
     const val DETAIL_PATTERN = "detail/{id}"

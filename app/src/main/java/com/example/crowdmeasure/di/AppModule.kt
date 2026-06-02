@@ -5,9 +5,11 @@ import com.example.crowdmeasure.data.export.Exporter
 import com.example.crowdmeasure.data.measurement.MeasurementRunner
 import com.example.crowdmeasure.data.measurement.net.OkHttpClientProvider
 import com.example.crowdmeasure.data.prefs.AppPreferences
+import com.example.crowdmeasure.data.repo.CallSamplingRepositoryImpl
 import com.example.crowdmeasure.data.repo.MeasurementRepositoryImpl
 import com.example.crowdmeasure.domain.repo.UploadRepositoryFirestore
 import com.example.crowdmeasure.data.repo.UserSessionRepositoryImpl
+import com.example.crowdmeasure.domain.repo.CallSamplingRepository
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UploadRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
@@ -52,6 +54,12 @@ object AppModule {
         @IoDispatcher io: CoroutineDispatcher
     ): MeasurementRepository =
         MeasurementRepositoryImpl(dao, runner, io)
+
+    @Provides @Singleton
+    fun provideCallSamplingRepository(
+        dao: com.example.crowdmeasure.data.db.CallSamplingDao,
+        @IoDispatcher io: CoroutineDispatcher
+    ): CallSamplingRepository = CallSamplingRepositoryImpl(dao, io)
 
     @Provides @Singleton
     fun provideUploadRepo(

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import com.example.crowdmeasure.data.export.ShareUtils
+import com.example.crowdmeasure.data.prefs.CallSamplingStatusStore
 import com.example.crowdmeasure.data.prefs.WorkerStatusStore
 import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -32,11 +34,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    userSessionRepository: UserSessionRepository,
+    private val userSessionRepository: UserSessionRepository,
     private val deleteAllDataUseCase: DeleteAllDataUseCase,
     private val exportMeasurementsUseCase: ExportMeasurementsUseCase,
     private val workScheduler: WorkScheduler,
     measurementRepository: MeasurementRepository,
+    callSamplingStatusStore: CallSamplingStatusStore,
     workerStatusStore: WorkerStatusStore,
 ) : ViewModel() {
     private val timeFormatter = DateTimeFormatter
@@ -167,12 +170,31 @@ class SettingsViewModel @Inject constructor(
             initialValue = UiState.Idle
         )
 
+    val callSamplingStatus: StateFlow<CallSamplingStatusUiState> =
+        callSamplingStatusStore.status.map { status ->
+            val reason = status.lastMissedReason?.takeIf { it.isNotBlank() }
+            val timestamp = formatTimestamp(status.lastMissedAtUtcMs)
+            CallSamplingStatusUiState(
+                lastMissedLabel = if (reason == null) "None" else "$timestamp • $reason"
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = CallSamplingStatusUiState.empty()
+        )
+
     fun runAutoRunNow() {
         workScheduler.runAutoRunOnceNowDebug(ignoreConstraints = true)
     }
 
     fun rescheduleBackgroundWork() {
         workScheduler.enqueueRescheduleWorker()
+    }
+
+    fun setCallSamplingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userSessionRepository.setCallSamplingEnabled(enabled)
+        }
     }
 
     fun exportData(context: Context, count: Int) {
