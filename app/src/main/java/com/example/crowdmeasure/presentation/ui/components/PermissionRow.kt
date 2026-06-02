@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.outlined.MyLocation
+import com.example.crowdmeasure.presentation.ui.theme.ExtendedColors
 
 @Composable
 fun PermissionRow(
@@ -77,13 +78,13 @@ fun PermissionRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = if (granted) "Status: Granted" else "Status: Not granted",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
-                color = if (granted) MaterialTheme.colorScheme.tertiary
-                else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+//            Text(
+//                text = if (granted) "Status: Granted" else "Status: Not granted",
+//                style = MaterialTheme.typography.bodySmall,
+//                fontWeight = FontWeight.Medium,
+//                color = if (granted) MaterialTheme.colorScheme.tertiary
+//                else MaterialTheme.colorScheme.onSurfaceVariant
+//            )
         }
 
         if (granted) {
@@ -103,7 +104,7 @@ fun PermissionRow(
 private fun GrantedPill() {
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.tertiaryContainer
+        color = ExtendedColors.successDark
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),

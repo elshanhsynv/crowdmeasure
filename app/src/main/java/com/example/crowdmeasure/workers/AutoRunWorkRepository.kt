@@ -2,7 +2,6 @@ package com.example.crowdmeasure.workers
 
 import com.example.crowdmeasure.data.prefs.WorkerStatusStore
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
-import com.example.crowdmeasure.domain.repo.UploadRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -14,6 +13,7 @@ data class AutoRunExecution(
     val code: String,
     val uploadedCount: Int = 0,
     val measurementId: String? = null,
+    val measurementTimestampUtcMs: Long = 0L,
     val cause: Throwable? = null
 ) {
     enum class Outcome { SUCCESS, RETRY, FAILURE }
@@ -22,7 +22,6 @@ data class AutoRunExecution(
 class AutoRunWorkRepository @Inject constructor(
     private val sessionRepo: UserSessionRepository,
     private val measurementRepo: MeasurementRepository,
-    private val uploadRepo: UploadRepository,
     private val statusStore: WorkerStatusStore
 ) {
     suspend fun execute(nowUtcMs: Long, runAttemptCount: Int): AutoRunExecution {
@@ -50,8 +49,12 @@ class AutoRunWorkRepository @Inject constructor(
             )
         }
 
-        val intervalMinutes = settings.autoRunIntervalMinutes.coerceAtLeast(MIN_PERIODIC_MINUTES)
-        val intervalMs = intervalMinutes * 60_000L
+        val intervalMinutes = settings.autoRunIntervalMinutes.coerceIn(
+            MIN_PERIODIC_MINUTES,
+            MAX_PERIODIC_MINUTES
+        )
+        val intervalMs = intervalMinutes.toLong() * 60_000L
+
         val lastSuccessFromStatus = statusStore.getLastSuccessUtcMs()
         val lastPersistedMeasurementUtcMs =
             measurementRepo.getLastN(limit = 1).firstOrNull()?.meta?.timestampUtcMs ?: 0L
@@ -79,25 +82,11 @@ class AutoRunWorkRepository @Inject constructor(
         runCatching { statusStore.setLastSuccessUtcMs(nowUtcMs) }
             .onFailure { WorkerLog.w(TAG, "failed to persist lastSuccess timestamp", it) }
 
-        var uploadedCount = 0
-        var uploadError: Throwable? = null
-        if (settings.firestoreUploadsEnabled) {
-            uploadRepo.uploadPending(limit = UPLOAD_LIMIT).fold(
-                onSuccess = { uploadedCount = it },
-                onFailure = { uploadError = it }
-            )
-        }
-
-        if (uploadError != null) {
-            WorkerLog.w(TAG, "pending upload failed; keeping run successful", uploadError)
-        }
-
         return AutoRunExecution(
             outcome = AutoRunExecution.Outcome.SUCCESS,
-            code = if (uploadError == null) CODE_OK else CODE_UPLOAD_FAILED,
-            uploadedCount = uploadedCount,
+            code = CODE_OK,
             measurementId = measurement.meta.measurementId,
-            cause = uploadError
+            measurementTimestampUtcMs = measurement.meta.timestampUtcMs,
         )
     }
 
@@ -121,11 +110,10 @@ class AutoRunWorkRepository @Inject constructor(
         const val CODE_SKIPPED_CONCURRENT_RUN = "skipped_concurrent_run"
         const val CODE_MEASUREMENT_FAILED = "measurement_failed"
         const val CODE_DB_INSERT_FAILED = "db_insert_failed"
-        const val CODE_UPLOAD_FAILED = "upload_failed"
         private const val TAG = "AutoRunWorkRepository"
-        private const val MIN_PERIODIC_MINUTES = 15
+        private const val MIN_PERIODIC_MINUTES = 20
+        private const val MAX_PERIODIC_MINUTES = 60
         private const val RECENT_RUN_TOLERANCE_MS = 60_000L
-        private const val UPLOAD_LIMIT = 50
     }
 }
 

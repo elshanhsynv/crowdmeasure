@@ -28,12 +28,16 @@ class WorkScheduler @Inject constructor(
         const val AUTO_RUN_NAME = "auto_run_measurement"
         const val AUTO_RUN_KICKOFF_NAME = "auto_run_measurement_kickoff"
         const val AUTO_RUN_DEBUG_ONCE_NAME = "auto_run_measurement_debug_once"
+        const val UPLOAD_NAME = "upload_pending_measurements"
         const val MAINTENANCE_NAME = "maintenance_cleanup"
         const val RESCHEDULE_NAME = "reschedule_background_work"
-        private const val MIN_PERIODIC_MINUTES = 15L
+        private const val MIN_PERIODIC_MINUTES = 20L
+        private const val UPLOAD_PERIODIC_MINUTES = 60L
+        private const val UPLOAD_FLEX_MINUTES = 15L
         private const val MIN_FLEX_MINUTES = 5L
         const val TAG_RESCHEDULE = "reschedule"
         const val TAG_AUTORUN = "autorun"
+        const val TAG_UPLOAD = "upload"
         const val TAG_MAINTENANCE = "maintenance"
         private val ACTIVE_STATES = setOf(
             WorkInfo.State.ENQUEUED,
@@ -44,6 +48,9 @@ class WorkScheduler @Inject constructor(
 
     fun observeAutoRunWorkInfo() =
         workManager.getWorkInfosForUniqueWorkFlow(AUTO_RUN_NAME).map { it.firstOrNull() }
+
+    fun observeUploadWorkInfo() =
+        workManager.getWorkInfosForUniqueWorkFlow(UPLOAD_NAME).map { it.firstOrNull() }
 
     fun scheduleMaintenanceDaily() {
         val req = PeriodicWorkRequestBuilder<MaintenanceWorker>(
@@ -80,6 +87,12 @@ class WorkScheduler @Inject constructor(
     ) {
         scheduleMaintenanceDaily()
 
+        if (settings.firestoreUploadsEnabled) {
+            scheduleUploadPeriodic()
+        } else {
+            cancelUpload()
+        }
+
         val allowed = settings.autoRunEnabled
         if (!allowed) {
             cancelAutoRun()
@@ -112,7 +125,7 @@ class WorkScheduler @Inject constructor(
             safeFlexMinutes,
             TimeUnit.MINUTES
         )
-            .setConstraints(autoRunConstraints(wifiOnly = wifiOnly))
+            .setConstraints(autoRunConstraints(wifiOnly = wifiOnly, requireBatteryNotLow = true))
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
             .setInputData(workDataOf(AutoRunWorker.KEY_TRIGGER_SOURCE to AutoRunWorker.TRIGGER_PERIODIC))
             .addTag(TAG_AUTORUN)
@@ -147,6 +160,30 @@ class WorkScheduler @Inject constructor(
         workManager.cancelUniqueWork(AUTO_RUN_KICKOFF_NAME)
     }
 
+    fun scheduleUploadPeriodic() {
+        val req = PeriodicWorkRequestBuilder<UploadWorker>(
+            UPLOAD_PERIODIC_MINUTES,
+            TimeUnit.MINUTES,
+            UPLOAD_FLEX_MINUTES,
+            TimeUnit.MINUTES
+        )
+            .setConstraints(uploadConstraints())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
+            .setInputData(workDataOf(UploadWorker.KEY_TRIGGER_SOURCE to UploadWorker.TRIGGER_PERIODIC))
+            .addTag(TAG_UPLOAD)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            UPLOAD_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            req
+        )
+    }
+
+    fun cancelUpload() {
+        workManager.cancelUniqueWork(UPLOAD_NAME)
+    }
+
     fun enqueueRescheduleWorker() {
         val req = OneTimeWorkRequestBuilder<WorkRescheduleWorker>()
             .setConstraints(Constraints.NONE)
@@ -161,7 +198,7 @@ class WorkScheduler @Inject constructor(
 
         workManager.enqueueUniqueWork(
             RESCHEDULE_NAME,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             req
         )
     }
@@ -201,5 +238,11 @@ class WorkScheduler @Inject constructor(
             .setRequiresBatteryNotLow(requireBatteryNotLow)
             .build()
     }
+
+    private fun uploadConstraints(): Constraints =
+        Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.UNMETERED)
+            .setRequiresBatteryNotLow(true)
+            .build()
 
 }

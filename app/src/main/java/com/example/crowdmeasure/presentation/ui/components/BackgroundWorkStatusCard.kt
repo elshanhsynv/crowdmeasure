@@ -40,7 +40,7 @@ fun BackgroundWorkStatusCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Scheduler State",
+                text = "Next Work State",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -49,7 +49,7 @@ fun BackgroundWorkStatusCard(
                 color = MaterialTheme.colorScheme.secondaryContainer
             ) {
                 Text(
-                    text = state.workManagerStateLabel,
+                    text = state.nextScheduledWorkStateLabel,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
@@ -60,11 +60,36 @@ fun BackgroundWorkStatusCard(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Auto-run",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             KeyValueRow("Interval", state.intervalMinutesLabel)
             KeyValueRow("Last Start", state.lastStartLabel)
             KeyValueRow("Last End", state.lastEndLabel)
             KeyValueRow("Result", state.lastResultLabel)
+            KeyValueRow("Code", state.autoRunLastCodeLabel)
+            KeyValueRow("Last Successful Collection", state.autoRunLastSuccessfulCollectionLabel)
+            KeyValueRow("Last Measurement", state.autoRunLastMeasurementLabel)
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Upload",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            KeyValueRow("Last Start", state.uploadLastStartLabel)
+            KeyValueRow("Last End", state.uploadLastEndLabel)
+            KeyValueRow("Result", state.uploadLastResultLabel)
+            KeyValueRow("Code", state.uploadLastCodeLabel)
+            KeyValueRow("Last Successful Upload", state.uploadLastSuccessfulUploadLabel)
             KeyValueRow("Uploaded", state.lastUploadedLabel)
+            KeyValueRow("Pending Records", state.pendingRecordsLabel)
+            KeyValueRow("Failed Records", state.failedRecordsLabel)
         }
 
         if (state.lastErrorLabel != "None") {

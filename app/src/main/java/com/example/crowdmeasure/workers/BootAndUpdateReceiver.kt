@@ -24,7 +24,7 @@ class BootAndUpdateReceiver : BroadcastReceiver() {
 
         val req = OneTimeWorkRequestBuilder<WorkRescheduleWorker>()
             .setConstraints(Constraints.NONE)
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
             .setInputData(
                 workDataOf(
                     WorkRescheduleWorker.KEY_TRIGGER_SOURCE to

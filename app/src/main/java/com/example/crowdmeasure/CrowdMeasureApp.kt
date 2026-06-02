@@ -15,9 +15,16 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
-class CrowdMeasureApp : Application() {
+class CrowdMeasureApp : Application(), Configuration.Provider {
 
+    @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var workScheduler: WorkScheduler
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .setMinimumLoggingLevel(Log.WARN)
+            .build()
 
     override fun onCreate() {
         super.onCreate()
@@ -25,23 +32,13 @@ class CrowdMeasureApp : Application() {
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
-        val factory = EntryPointAccessors.fromApplication(
-            this,
-            WorkManagerFactoryEntryPoint::class.java
-        ).hiltWorkerFactory()
 
-        val config = Configuration.Builder()
-            .setWorkerFactory(factory)
-            .setMinimumLoggingLevel(Log.WARN)
-            .build()
-
-        WorkManager.initialize(this, config)
         workScheduler.enqueueRescheduleWorker()
     }
 }
 
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface WorkManagerFactoryEntryPoint {
-    fun hiltWorkerFactory(): HiltWorkerFactory
-}
+//@EntryPoint
+//@InstallIn(SingletonComponent::class)
+//interface WorkManagerFactoryEntryPoint {
+//    fun hiltWorkerFactory(): HiltWorkerFactory
+//}

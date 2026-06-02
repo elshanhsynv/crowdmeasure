@@ -22,10 +22,12 @@ class AutoRunWorker @AssistedInject constructor(
         val now = System.currentTimeMillis()
         val trigger = inputData.getString(KEY_TRIGGER_SOURCE) ?: TRIGGER_UNKNOWN
 
-        runCatching { statusStore.markAutoRunStart(now) }.onFailure {
-            WorkerLog.w(
-                TAG, "failed to persist worker start", it
-            )
+        try {
+            statusStore.markAutoRunStart(now)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            WorkerLog.w(TAG, "failed to persist worker start", error)
         }
         WorkerLog.i(TAG, "start attempt=$runAttemptCount trigger=$trigger")
 
@@ -44,7 +46,8 @@ class AutoRunWorker @AssistedInject constructor(
                 result = statusResult,
                 code = execution.code,
                 uploadedCount = execution.uploadedCount,
-                measurementId = execution.measurementId
+                measurementId = execution.measurementId,
+                measurementTimestampUtcMs = execution.measurementTimestampUtcMs
             )
 
             when (execution.outcome) {
@@ -75,7 +78,8 @@ class AutoRunWorker @AssistedInject constructor(
                 result = if (retry) STATUS_RETRY else STATUS_FAILURE,
                 code = resultCode,
                 uploadedCount = 0,
-                measurementId = null
+                measurementId = null,
+                measurementTimestampUtcMs = 0L
             )
             if (retry) {
                 WorkerLog.w(TAG, "retrying unexpected error", error)
@@ -88,27 +92,27 @@ class AutoRunWorker @AssistedInject constructor(
     }
 
     private suspend fun markEndSafely(
-        result: String, code: String, uploadedCount: Int, measurementId: String?
+        result: String,
+        code: String,
+        uploadedCount: Int,
+        measurementId: String?,
+        measurementTimestampUtcMs: Long
     ) {
-        runCatching {
+        try {
             statusStore.markAutoRunEnd(
                 nowUtcMs = System.currentTimeMillis(),
                 result = result,
-                error = code.toStatusError(),
+                code = code,
                 uploadedCount = uploadedCount,
-                measurementId = measurementId
+                measurementId = measurementId,
+                measurementTimestampUtcMs = measurementTimestampUtcMs
             )
-        }.onFailure { WorkerLog.w(TAG, "failed to persist worker end", it) }
-    }
-
-    private fun String.toStatusError(): String? =
-        when (this) {
-            AutoRunWorkRepository.CODE_OK,
-            AutoRunWorkRepository.CODE_GATE_BLOCKED,
-            AutoRunWorkRepository.CODE_SKIPPED_RECENT_RUN,
-            AutoRunWorkRepository.CODE_SKIPPED_CONCURRENT_RUN -> null
-            else -> this
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            WorkerLog.w(TAG, "failed to persist worker end", error)
         }
+    }
 
     companion object {
         private const val TAG = "AutoRunWorker"

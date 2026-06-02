@@ -42,6 +42,10 @@ class MeasurementRepositoryImpl(
 
     override fun observeQueueCount(): Flow<Int> = dao.observeQueueCount()
 
+    override fun observePendingCount(): Flow<Int> = dao.observePendingCount()
+
+    override fun observeFailedCount(): Flow<Int> = dao.observeFailedCount()
+
     override fun observeHistory(limit: Int, feedbackTag: String?): Flow<List<Measurement>> {
         val src = dao.observeHistory(limit)
 
@@ -65,5 +69,13 @@ class MeasurementRepositoryImpl(
 
     override suspend fun getLastN(limit: Int): List<Measurement> = withContext(io) {
         dao.getLastN(limit).mapNotNull { e -> runCatching { Converters.jsonToMeasurement(e.json) }.getOrNull() }
+    }
+
+    override suspend fun getPendingCount(): Int = withContext(io) {
+        dao.getPendingCount()
+    }
+
+    override suspend fun getFailedCount(): Int = withContext(io) {
+        dao.getFailedCount()
     }
 }

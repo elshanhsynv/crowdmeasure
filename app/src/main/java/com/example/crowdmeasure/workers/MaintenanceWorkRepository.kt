@@ -4,6 +4,7 @@ import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 
 data class MaintenanceExecution(
     val outcome: Outcome,
@@ -20,14 +21,31 @@ class MaintenanceWorkRepository @Inject constructor(
     suspend fun execute(nowUtcMs: Long, runAttemptCount: Int): MaintenanceExecution {
         return try {
             val settings = sessionRepo.settings.first()
-            val days = settings.retentionDays.coerceAtLeast(1)
+
+            val days = settings.retentionDays.coerceIn(
+                MIN_RETENTION_DAYS,
+                MAX_RETENTION_DAYS
+            )
+
             val cutoffUtcMs = nowUtcMs - (days.toLong() * MILLIS_PER_DAY)
+
             measurementRepo.deleteOlderThan(cutoffUtcMs)
-            MaintenanceExecution(MaintenanceExecution.Outcome.SUCCESS, CODE_OK)
+
+            MaintenanceExecution(
+                outcome = MaintenanceExecution.Outcome.SUCCESS,
+                code = CODE_OK
+            )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (error: Exception) {
             val retry = WorkRetryClassifier.shouldRetry(error, runAttemptCount)
+
             MaintenanceExecution(
-                outcome = if (retry) MaintenanceExecution.Outcome.RETRY else MaintenanceExecution.Outcome.FAILURE,
+                outcome = if (retry) {
+                    MaintenanceExecution.Outcome.RETRY
+                } else {
+                    MaintenanceExecution.Outcome.FAILURE
+                },
                 code = CODE_CLEANUP_FAILED,
                 cause = error
             )
@@ -37,6 +55,9 @@ class MaintenanceWorkRepository @Inject constructor(
     companion object {
         const val CODE_OK = "cleanup_ok"
         const val CODE_CLEANUP_FAILED = "cleanup_failed"
+
+        private const val MIN_RETENTION_DAYS = 1
+        private const val MAX_RETENTION_DAYS = 90
         private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
     }
 }

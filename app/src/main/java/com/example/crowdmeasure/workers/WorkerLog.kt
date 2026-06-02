@@ -8,7 +8,7 @@ internal object WorkerLog {
     fun w(tag: String, msg: String, t: Throwable? = null) = AppLog.w(tag, msg, t)
     fun e(tag: String, msg: String, t: Throwable? = null) = AppLog.e(tag, msg, t)
 
-    fun redact(msg: String): String = msg
+    private fun redact(msg: String): String = msg
         .replace(Regex("measurementId=\\S+"), "measurementId=<redacted>")
         .replace(Regex("consent=\\S+"), "consent=<redacted>")
 }

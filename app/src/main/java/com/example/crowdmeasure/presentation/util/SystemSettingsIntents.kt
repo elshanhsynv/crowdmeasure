@@ -2,8 +2,8 @@ package com.example.crowdmeasure.presentation.util
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
 
 object SystemSettingsIntents {
 
@@ -16,24 +16,32 @@ object SystemSettingsIntents {
     }
 
     /**
-     * Opens a relevant battery optimization screen.
+     * Requests the user to allow this app to ignore battery optimizations.
      */
     fun openBatteryOptimizationSettings(context: Context) {
         val appContext = context.applicationContext
 
-        val candidates = listOf(
-            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", appContext.packageName, null)
-            }
-        )
+        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = android.net.Uri.parse("package:${appContext.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
 
-        for (intent in candidates) {
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
             if (intent.resolveActivity(appContext.packageManager) != null) {
                 appContext.startActivity(intent)
-                return
+            } else {
+                Toast.makeText(
+                    appContext,
+                    "Could not open battery settings",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
+        } catch (e: Exception) {
+            Toast.makeText(
+                appContext,
+                "Could not open battery settings",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 }

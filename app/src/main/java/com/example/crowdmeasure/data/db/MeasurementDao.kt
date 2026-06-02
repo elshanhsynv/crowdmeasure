@@ -18,6 +18,18 @@ interface MeasurementDao {
     @Query("SELECT COUNT(*) FROM measurements WHERE recordState IN ('PENDING','FAILED')")
     fun observeQueueCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM measurements WHERE recordState = 'PENDING'")
+    fun observePendingCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM measurements WHERE recordState = 'FAILED'")
+    fun observeFailedCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM measurements WHERE recordState = 'PENDING'")
+    suspend fun getPendingCount(): Int
+
+    @Query("SELECT COUNT(*) FROM measurements WHERE recordState = 'FAILED'")
+    suspend fun getFailedCount(): Int
+
     @Query("SELECT * FROM measurements ORDER BY timestampUtcMs DESC LIMIT :limit")
     fun observeHistory(limit: Int): Flow<List<MeasurementEntity>>
 
