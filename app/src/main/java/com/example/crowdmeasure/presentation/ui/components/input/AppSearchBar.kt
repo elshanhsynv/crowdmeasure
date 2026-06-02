@@ -60,8 +60,6 @@ fun AppSearchBar(
             if (query.isNotEmpty()) {
                 IconButton(onClick = {
                     onClear()
-                    // Optional: Keep focus or clear it depending on preference.
-                    // Usually keeping focus is better UX for rapid typing.
                 }) {
                     Icon(
                         imageVector = Icons.Filled.Close,
@@ -83,7 +81,7 @@ fun AppSearchBar(
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Text,
             imeAction = ImeAction.Search,
-            autoCorrect = false // Important for technical telecom data
+            autoCorrectEnabled = false
         ),
         keyboardActions = KeyboardActions(
             onSearch = {

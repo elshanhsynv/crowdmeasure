@@ -48,12 +48,20 @@ class Exporter(
         val meta = JSONObject().apply {
             putOpt("measurement_id", m.meta.measurementId)
             putOpt("timestamp_utc_ms", m.meta.timestampUtcMs)
-            putOpt("device_model", m.meta.deviceModel)
-            putOpt("os_version", m.meta.osVersion)
-            putOpt("sdk_int", m.meta.sdkInt)
             putOpt("app_version", m.meta.appVersion)
+            putOpt("android_release", m.meta.androidRelease)
+            putOpt("android_sdk", m.meta.androidSdk)
+            putOpt("device_model", m.meta.deviceModel)
+
+            putOpt("brand", m.meta.brand)
+            putOpt("device_manufacturer", m.meta.deviceManufacturer)
+            putOpt("device_os", m.meta.deviceOS)
+            putOpt("build_id", m.meta.buildID)
+            putOpt("hardware", m.meta.hardware)
+            putOpt("chipset", m.meta.chipset)
+            putOpt("chipset_manufacturer", m.meta.chipsetManufacturer)
             putOpt("session_id", m.meta.sessionId)
-            putOpt("user_id_hash", m.meta.userIdHash)
+            putOpt("user_id", m.meta.userIdHash)
         }
 
         val environment = JSONObject().apply {
@@ -65,7 +73,7 @@ class Exporter(
                     put("accuracy_meters", loc.accuracyMeters)
                 }
             })
-            putOpt("network", m.environment.network?.let { net ->
+            putOpt("network", m.environment.network.let { net ->
                 JSONObject().apply {
                     put("transport", net.transport)
                     putOpt("ip", net.ip)

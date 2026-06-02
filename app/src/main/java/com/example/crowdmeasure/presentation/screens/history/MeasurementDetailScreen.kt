@@ -25,7 +25,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CompareArrows
 import androidx.compose.material.icons.automirrored.outlined.FactCheck
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
+import androidx.compose.material.icons.outlined.Adb
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.BarChart
@@ -36,12 +38,16 @@ import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.CellTower
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.DataUsage
+import androidx.compose.material.icons.outlined.DeveloperBoard
+import androidx.compose.material.icons.outlined.Domain
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Flight
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Label
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Lock
@@ -51,6 +57,7 @@ import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.PhonelinkSetup
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Security
@@ -100,6 +107,13 @@ private fun iconForMetric(label: String): ImageVector = when (label) {
     "OS Version" -> Icons.Outlined.Android
     "Android SDK" -> Icons.Outlined.Code
     "App Version" -> Icons.Outlined.Apps
+    "Brand" -> Icons.AutoMirrored.Outlined.Label
+    "Device Manufacturer" -> Icons.Outlined.Business
+    "Device OS" -> Icons.Outlined.Adb
+    "Build ID" -> Icons.Outlined.Fingerprint
+    "Hardware" -> Icons.Outlined.DeveloperBoard
+    "Chipset" -> Icons.Outlined.Memory
+    "Chipset Manufacturer" -> Icons.Outlined.Domain
     "Memory Usage" -> Icons.Outlined.Memory
     "Thermal State" -> Icons.Outlined.Tune
 
@@ -260,7 +274,9 @@ private fun SummaryHeroCard(measurement: MeasurementDetailUi) {
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().heightIn(max=150.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 150.dp),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {

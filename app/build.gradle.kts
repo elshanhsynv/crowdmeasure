@@ -15,7 +15,12 @@ android {
     }
 
     sourceSets {
-        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        getByName("androidTest").assets.directories.addAll(
+            listOf(
+                "$projectDir/schemas",
+                "$projectDir/additional-schemas"
+            )
+        )
     }
 
 
@@ -24,7 +29,7 @@ android {
         minSdk = 28
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -62,16 +67,20 @@ ksp {
 }
 
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-crashlytics")
-    implementation("com.google.firebase:firebase-firestore")
+    // Firebase BoM and Services
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.firestore)
 
-    implementation("androidx.work:work-runtime-ktx:2.11.1")
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
 
-    implementation("androidx.startup:startup-runtime:1.1.1")
+    // Startup Runtime
+    implementation(libs.androidx.startup.runtime)
 
-    implementation("androidx.appcompat:appcompat:1.7.1")
+    // AppCompat
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.animation.core)
 
     // Test

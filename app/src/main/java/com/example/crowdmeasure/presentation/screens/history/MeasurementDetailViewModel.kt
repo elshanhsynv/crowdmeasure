@@ -117,9 +117,18 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
 
     val metaPairs = listOf(
         "Device Model" to meta.deviceModel,
-        "OS Version" to meta.osVersion,
-        "Android SDK" to meta.sdkInt.toString(),
+        "OS Version" to meta.androidRelease,
+        "Android SDK" to meta.androidSdk.toString(),
         "App Version" to meta.appVersion,
+
+        "Brand" to meta.brand,
+        "Device Manufacturer" to meta.deviceManufacturer,
+        "Device OS" to meta.deviceOS,
+        "Build ID" to meta.buildID,
+        "Hardware" to meta.hardware,
+        "Chipset" to meta.chipset,
+        "Chipset Manufacturer" to meta.chipsetManufacturer,
+
         "Session ID" to meta.sessionId,
         "User ID" to meta.userIdHash
     )

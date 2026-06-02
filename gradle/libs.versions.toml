@@ -31,8 +31,11 @@ animationCore = "1.11.2"
 
 timber = "5.0.1"
 
-[libraries]
+firebaseBom = "34.13.0"
+startupRuntime = "1.2.0"
+appcompat = "1.7.1"
 
+[libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -88,6 +91,18 @@ androidx-compose-animation-core = { group = "androidx.compose.animation", name =
 
 # Timber
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
+
+# Firebase (Added)
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+
+# Startup (Added)
+androidx-startup-runtime = { group = "androidx.startup", name = "startup-runtime", version.ref = "startupRuntime" }
+
+# AppCompat (Added)
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

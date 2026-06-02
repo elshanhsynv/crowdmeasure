@@ -4,7 +4,7 @@ import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
- import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -33,6 +33,7 @@ fun CrowdMeasureTheme(
                 dynamicLightColorScheme(context)
             }
         }
+
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
@@ -44,8 +45,6 @@ fun CrowdMeasureTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as? Activity)?.window ?: return@SideEffect
-            window.statusBarColor = colorScheme.background.toArgb()
-            window.navigationBarColor = colorScheme.background.toArgb()
             val windowInsetsController = WindowCompat.getInsetsController(window, view)
             windowInsetsController.isAppearanceLightStatusBars = !darkTheme
             windowInsetsController.isAppearanceLightNavigationBars = !darkTheme

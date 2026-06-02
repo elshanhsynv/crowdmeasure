@@ -59,10 +59,18 @@ class MeasurementRunner(
             val meta = Meta(
                 measurementId = measurementId,
                 timestampUtcMs = System.currentTimeMillis(),
-                deviceModel = device.deviceModel,
-                osVersion = device.androidRelease,
-                sdkInt = device.androidSdk,
                 appVersion = device.appVersion,
+                androidRelease = device.androidRelease,
+                androidSdk = device.androidSdk,
+                deviceModel = device.deviceModel,
+                brand = device.brand,
+                deviceManufacturer = device.deviceManufacturer,
+                deviceOS = device.deviceOS,
+                buildID = device.buildID,
+                hardware = device.hardware,
+                chipset = device.chipset,
+                chipsetManufacturer = device.chipsetManufacturer,
+
                 sessionId = null,
                 userIdHash = null
             )
