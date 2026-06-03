@@ -9,7 +9,6 @@ import java.util.UUID
 import kotlinx.coroutines.flow.first
 
 class AppPreferences(private val context: Context) {
-
     suspend fun settingsFirst(): AppSettings = settings.first()
 
     companion object {
@@ -33,7 +32,7 @@ class AppPreferences(private val context: Context) {
             installId = installId,
             consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: false,
             firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: true,
-            callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: false,
+            callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: true,
         )
     }
 
@@ -60,6 +59,7 @@ class AppPreferences(private val context: Context) {
             it[DataStoreKeys.AUTO_RUN_INTERVAL_MINUTES] = intervalMinutes.coerceIn(15, 7 * 24 * 60)
         }
     }
+
     suspend fun setRetentionDays(days: Int) {
         context.dataStore.edit { it[DataStoreKeys.RETENTION_DAYS] = days.coerceIn(1, 60) }
     }

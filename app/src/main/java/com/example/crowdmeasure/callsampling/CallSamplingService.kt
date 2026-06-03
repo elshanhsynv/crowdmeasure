@@ -35,21 +35,26 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class CallSamplingService : Service() {
-
-    @Inject lateinit var repository: CallSamplingRepository
-    @Inject lateinit var statusStore: CallSamplingStatusStore
-    @Inject @IoDispatcher lateinit var io: CoroutineDispatcher
-
+    @Inject
+    lateinit var repository: CallSamplingRepository
+    @Inject
+    lateinit var statusStore: CallSamplingStatusStore
+    @Inject
+    @IoDispatcher
+    lateinit var io: CoroutineDispatcher
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var samplingJob: Job? = null
     private var activeSession: CallSession? = null
     private var telephonyCallback: TelephonyCallback? = null
     private var phoneStateListener: PhoneStateListener? = null
     private var foregroundStarted = false
+
+    private var cType: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -58,13 +63,27 @@ class CallSamplingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val callType = intent
+            ?.getStringExtra(EXTRA_CALL_TYPE)
+        cType = callType
+
         when (intent?.action) {
-            ACTION_STOP -> serviceScope.launch { stopSampling(END_REASON_CALL_ENDED) }
+            ACTION_STOP -> {
+                serviceScope.launch {
+                    stopSampling(END_REASON_CALL_ENDED)
+                }
+            }
+
             else -> {
                 startInForeground()
-                serviceScope.launch { startSampling() }
+                serviceScope.launch {
+                    Timber.tag("CallSamplingService").d("Started sampling during Call...")
+                    startSampling()
+                    Timber.tag("CallSamplingService").d("Call Type = $callType")
+                }
             }
         }
+
         return START_STICKY
     }
 
@@ -127,7 +146,7 @@ class CallSamplingService : Service() {
                 sessionId = session.sessionId,
                 sampledAtUtcMs = sampledAt,
                 elapsedMs = sampledAt - session.startedAtUtcMs,
-                cellInfo = cell
+                cellInfo = cell,
             )
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -205,7 +224,8 @@ class CallSamplingService : Service() {
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
-    private inner class CallStateCallback : TelephonyCallback(), TelephonyCallback.CallStateListener {
+    private inner class CallStateCallback : TelephonyCallback(),
+        TelephonyCallback.CallStateListener {
         override fun onCallStateChanged(state: Int) {
             if (state == TelephonyManager.CALL_STATE_IDLE) {
                 serviceScope.launch { stopSampling(END_REASON_CALL_ENDED) }
@@ -216,6 +236,7 @@ class CallSamplingService : Service() {
     companion object {
         const val ACTION_START = "com.example.crowdmeasure.callsampling.START"
         const val ACTION_STOP = "com.example.crowdmeasure.callsampling.STOP"
+        const val EXTRA_CALL_TYPE = "extra_call_type"
         private const val CHANNEL_ID = "call_cell_sampling"
         private const val NOTIFICATION_ID = 40_030
         private const val SAMPLE_INTERVAL_SECONDS = 30

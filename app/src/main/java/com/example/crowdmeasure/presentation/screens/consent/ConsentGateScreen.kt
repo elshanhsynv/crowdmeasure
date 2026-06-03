@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.PinDrop
 import androidx.compose.material.icons.outlined.Security
@@ -53,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -62,6 +64,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.crowdmeasure.presentation.ui.theme.ExtendedColors
 import com.example.crowdmeasure.presentation.util.AppPermissions
 
 
@@ -78,18 +81,25 @@ fun ConsentGateScreen(
     var fineLocationGranted by remember { mutableStateOf(false) }
     var phoneStateGranted by remember { mutableStateOf(false) }
     var backgroundLocationGranted by remember { mutableStateOf(false) }
+    var notificationsGranted by remember { mutableStateOf(false) }
 
     fun refreshPermissions() {
         fineLocationGranted = AppPermissions.hasFineLocation(context)
         phoneStateGranted = AppPermissions.hasPhoneState(context)
         backgroundLocationGranted = AppPermissions.hasBackgroundLocation(context)
+        notificationsGranted = AppPermissions.hasPostNotifications(context)
     }
 
     LaunchedEffect(visible) { if (visible) refreshPermissions() }
 
-    val requestFine = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
-    val requestBackground = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
-    val requestPhone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
+    val requestFine =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
+    val requestBackground =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
+    val requestPhone =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
+    val requestNotifications =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshPermissions() }
 
     val canCollect = settings != null &&
             settings?.consentGateDismissed == false &&
@@ -103,10 +113,12 @@ fun ConsentGateScreen(
         fineLocationGranted = fineLocationGranted,
         backgroundLocationGranted = backgroundLocationGranted,
         phoneStateGranted = phoneStateGranted,
+        notificationsGranted = notificationsGranted,
         canComplete = canCollect,
         onRequestFineLocation = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
         onRequestBackgroundLocation = { requestBackground.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION) },
-        onRequestPhoneState = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) }
+        onRequestPhoneState = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) },
+        onRequestNotifications = { requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS) }
     )
 }
 
@@ -118,10 +130,12 @@ private fun ConsentGateContent(
     fineLocationGranted: Boolean,
     backgroundLocationGranted: Boolean,
     phoneStateGranted: Boolean,
+    notificationsGranted: Boolean,
     canComplete: Boolean,
     onRequestFineLocation: () -> Unit,
     onRequestBackgroundLocation: () -> Unit,
-    onRequestPhoneState: () -> Unit
+    onRequestPhoneState: () -> Unit,
+    onRequestNotifications: () -> Unit
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -159,7 +173,9 @@ private fun ConsentGateContent(
                         phoneStateGranted = phoneStateGranted,
                         onRequestFineLocation = onRequestFineLocation,
                         onRequestBackgroundLocation = onRequestBackgroundLocation,
-                        onRequestPhoneState = onRequestPhoneState
+                        onRequestPhoneState = onRequestPhoneState,
+                        notificationsGranted = notificationsGranted,
+                        onRequestNotifications = onRequestNotifications,
                     )
                 }
 
@@ -179,7 +195,6 @@ private fun ConsentHero() {
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Shield with concentric decorative rings
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.size(120.dp)
@@ -191,7 +206,7 @@ private fun ConsentHero() {
                     drawCircle(
                         color = primary.copy(alpha = 0.12f),
                         radius = r.toPx(),
-                        center = androidx.compose.ui.geometry.Offset(cx, cy),
+                        center = Offset(cx, cy),
                         style = Stroke(width = 1.dp.toPx())
                     )
                 }
@@ -352,9 +367,11 @@ private fun PermissionsCard(
     fineLocationGranted: Boolean,
     backgroundLocationGranted: Boolean,
     phoneStateGranted: Boolean,
+    notificationsGranted: Boolean,
     onRequestFineLocation: () -> Unit,
     onRequestBackgroundLocation: () -> Unit,
-    onRequestPhoneState: () -> Unit
+    onRequestPhoneState: () -> Unit,
+    onRequestNotifications: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -395,7 +412,7 @@ private fun PermissionsCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "These permissions improve measurement quality. You can grant them now or later in Settings.",
+                        text = "These permissions improve measurement quality.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -413,7 +430,7 @@ private fun PermissionsCard(
             PermissionItem(
                 icon = Icons.Outlined.Wifi,
                 title = "Background Location",
-                subtitle = "Improves accuracy using approximate location (Wi-Fi)",
+                subtitle = "Improves accuracy using approximate location",
                 granted = backgroundLocationGranted,
                 onRequest = onRequestBackgroundLocation
             )
@@ -424,6 +441,14 @@ private fun PermissionsCard(
                 subtitle = "Enables cell network metrics for better signal insights",
                 granted = phoneStateGranted,
                 onRequest = onRequestPhoneState
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            PermissionItem(
+                icon = Icons.Outlined.Notifications,
+                title = "Notification",
+                subtitle = "Required for the foreground service notification",
+                granted = notificationsGranted,
+                onRequest = onRequestNotifications
             )
         }
     }
@@ -479,7 +504,7 @@ private fun PermissionItem(
         if (granted) {
             Surface(
                 shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.tertiaryContainer
+                color = ExtendedColors.successDark
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -559,9 +584,11 @@ private fun ConsentGatePreview() {
         fineLocationGranted = false,
         backgroundLocationGranted = false,
         phoneStateGranted = true,
+        notificationsGranted = true,
         canComplete = false,
         onRequestFineLocation = {},
         onRequestBackgroundLocation = {},
-        onRequestPhoneState = {}
+        onRequestPhoneState = {},
+        onRequestNotifications = {}
     )
 }

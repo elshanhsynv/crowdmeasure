@@ -2,6 +2,9 @@
   <dictionary name="project">
     <words>
       <w>passpoint</w>
+      <w>rsrp</w>
+      <w>rsrq</w>
+      <w>sinr</w>
       <w>snackbars</w>
       <w>ttfb</w>
     </words>

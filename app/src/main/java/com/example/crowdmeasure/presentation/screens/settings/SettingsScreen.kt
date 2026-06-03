@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.LightbulbCircle
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.MyLocation
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.PinDrop
 import androidx.compose.material.icons.outlined.Security
@@ -149,6 +150,7 @@ private fun SettingsScreenContent(
                 onSetCallSamplingEnabled = onSetCallSamplingEnabled,
                 onOpenCallSessions = onOpenCallSessions
             )
+
             2 -> DataTab(
                 exportState = exportState,
                 deleteState = deleteState,
@@ -235,17 +237,28 @@ private fun PrivacyTab() {
     var fineGranted by remember { mutableStateOf(hasFineLocation(context)) }
     var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(context)) }
     var locationServicesOn by remember { mutableStateOf(isLocationServicesEnabled(context)) }
+    var notificationsGranted by remember {
+        mutableStateOf(
+            AppPermissions.hasPostNotifications(
+                context
+            )
+        )
+    }
 
     fun refresh() {
         coarseGranted = AppPermissions.hasCoarseLocation(context)
         fineGranted = hasFineLocation(context)
         phoneGranted = AppPermissions.hasPhoneState(context)
         locationServicesOn = isLocationServicesEnabled(context)
+        notificationsGranted = AppPermissions.hasPostNotifications(context)
     }
 
-    val requestCoarse = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
-    val requestFine = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
-    val requestPhone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
+    val requestCoarse =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
+    val requestFine =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
+    val requestPhone =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
 
     LaunchedEffect(Unit) { refresh() }
 
@@ -253,8 +266,7 @@ private fun PrivacyTab() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Spacer(Modifier.height(4.dp))
 
@@ -268,8 +280,7 @@ private fun PrivacyTab() {
                 LocationServicesWarningBanner(
                     onClick = {
                         context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                    }
-                )
+                    })
             }
 
             PermissionRow(
@@ -303,9 +314,19 @@ private fun PrivacyTab() {
                 icon = Icons.Outlined.PhoneAndroid
             )
 
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            PermissionRow(
+                title = "Notifications",
+                subtitle = "Enables post notifications",
+                granted = notificationsGranted,
+                enabled = true,
+                onRequest = { requestPhone.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                icon = Icons.Outlined.Notifications
+            )
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = { refresh() }) {
                     Text("Refresh Status")
@@ -374,16 +395,14 @@ private fun PermissionUsageSection() {
         )
         // 2×2 grid via two Rows
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items.take(2).forEach { (icon, label) ->
                 UsageFeatureChip(icon = icon, label = label, modifier = Modifier.weight(1f))
             }
         }
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items.drop(2).forEach { (icon, label) ->
                 UsageFeatureChip(icon = icon, label = label, modifier = Modifier.weight(1f))
@@ -441,7 +460,9 @@ private fun TipsSection() {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -451,7 +472,9 @@ private fun TipsSection() {
                         color = MaterialTheme.colorScheme.secondaryContainer,
                         modifier = Modifier.size(40.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()
+                        ) {
                             Icon(
                                 imageVector = Icons.Outlined.LightbulbCircle,
                                 contentDescription = null,
@@ -499,8 +522,20 @@ private fun CollectionTab(
     var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(context)) }
     var fineGranted by remember { mutableStateOf(AppPermissions.hasFineLocation(context)) }
     var backgroundGranted by remember { mutableStateOf(AppPermissions.hasBackgroundLocation(context)) }
-    var notificationsGranted by remember { mutableStateOf(AppPermissions.hasPostNotifications(context)) }
-    var batteryIgnored by remember { mutableStateOf(AppPermissions.ignoresBatteryOptimizations(context)) }
+    var notificationsGranted by remember {
+        mutableStateOf(
+            AppPermissions.hasPostNotifications(
+                context
+            )
+        )
+    }
+    var batteryIgnored by remember {
+        mutableStateOf(
+            AppPermissions.ignoresBatteryOptimizations(
+                context
+            )
+        )
+    }
     var locationServicesOn by remember { mutableStateOf(isLocationServicesEnabled(context)) }
 
     fun refreshCallSamplingPrerequisites() {
@@ -512,18 +547,22 @@ private fun CollectionTab(
         locationServicesOn = isLocationServicesEnabled(context)
     }
 
-    val requestPhone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        refreshCallSamplingPrerequisites()
-    }
-    val requestFine = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        refreshCallSamplingPrerequisites()
-    }
-    val requestBackground = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        refreshCallSamplingPrerequisites()
-    }
-    val requestNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        refreshCallSamplingPrerequisites()
-    }
+    val requestPhone =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            refreshCallSamplingPrerequisites()
+        }
+    val requestFine =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            refreshCallSamplingPrerequisites()
+        }
+    val requestBackground =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            refreshCallSamplingPrerequisites()
+        }
+    val requestNotifications =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            refreshCallSamplingPrerequisites()
+        }
 
     LaunchedEffect(Unit) { refreshCallSamplingPrerequisites() }
 
@@ -531,21 +570,16 @@ private fun CollectionTab(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Spacer(Modifier.height(4.dp))
         BackgroundWorkStatusCard(
-            state = backgroundWorkState,
-            onRunNow = onRunNow,
-            onReschedule = onReschedule
+            state = backgroundWorkState, onRunNow = onRunNow, onReschedule = onReschedule
         )
         BackgroundReliabilityCard(
-            onFixScheduling = onReschedule,
-            onOpenBatterySettings = {
+            onFixScheduling = onReschedule, onOpenBatterySettings = {
                 SystemSettingsIntents.openBatteryOptimizationSettings(context)
-            }
-        )
+            })
         CallSamplingSettingsCard(
             enabled = settings?.callSamplingEnabled == true,
             phoneGranted = phoneGranted,
@@ -597,12 +631,8 @@ private fun CallSamplingSettingsCard(
     onRefresh: () -> Unit,
     onOpenSessions: () -> Unit
 ) {
-    val ready = phoneGranted &&
-        fineGranted &&
-        backgroundGranted &&
-        notificationsGranted &&
-        batteryIgnored &&
-        locationServicesOn
+    val ready =
+        phoneGranted && fineGranted && backgroundGranted && notificationsGranted && batteryIgnored && locationServicesOn
 
     SettingsSectionCard(
         title = "Call Cell Sampling",
@@ -614,39 +644,6 @@ private fun CallSamplingSettingsCard(
         KeyValueLine("Last Missed Start", lastMissedLabel)
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-        PermissionRow(
-            title = "Phone State",
-            subtitle = "Required to detect active calls",
-            granted = phoneGranted,
-            enabled = true,
-            onRequest = onRequestPhone,
-            icon = Icons.Outlined.PhoneAndroid
-        )
-        PermissionRow(
-            title = "Fine Location",
-            subtitle = "Required for detailed cell info",
-            granted = fineGranted,
-            enabled = true,
-            onRequest = onRequestFine,
-            icon = Icons.Outlined.PinDrop
-        )
-        PermissionRow(
-            title = "Background Location",
-            subtitle = "Required for background call sampling",
-            granted = backgroundGranted,
-            enabled = true,
-            onRequest = onRequestBackground,
-            icon = Icons.Outlined.MyLocation
-        )
-        PermissionRow(
-            title = "Notifications",
-            subtitle = "Required for the foreground service notification",
-            granted = notificationsGranted,
-            enabled = true,
-            onRequest = onRequestNotifications,
-            icon = Icons.Outlined.Warning
-        )
 
         if (!locationServicesOn) {
             Button(onClick = onOpenLocationSettings, modifier = Modifier.fillMaxWidth()) {
@@ -660,8 +657,7 @@ private fun CallSamplingSettingsCard(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Button(
                 onClick = { onEnableChanged(!enabled) },
@@ -671,16 +667,14 @@ private fun CallSamplingSettingsCard(
                 Text(if (enabled) "Disable" else "Enable")
             }
             FilledTonalButton(
-                onClick = onOpenSessions,
-                modifier = Modifier.weight(1f)
+                onClick = onOpenSessions, modifier = Modifier.weight(1f)
             ) {
                 Text("View Sessions")
             }
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
         ) {
             TextButton(onClick = onRefresh) {
                 Text("Refresh")
@@ -728,8 +722,7 @@ private fun DataTab(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Spacer(Modifier.height(4.dp))
 
@@ -746,14 +739,12 @@ private fun DataTab(
                 placeholder = { Text("50") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
-                supportingText = { Text("Export last N measurements (1–10 000)") }
-            )
+                supportingText = { Text("Export last N measurements (1–10 000)") })
             FilledTonalButton(
                 onClick = {
                     val count = exportCount.toIntOrNull()?.coerceIn(1, 10_000) ?: 50
                     onExport(context, count)
-                },
-                modifier = Modifier.fillMaxWidth()
+                }, modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Export & Share JSON")
             }
@@ -780,13 +771,10 @@ private fun DataTab(
         }
 
         if (showDeleteDialog) {
-            DeleteConfirmationDialog(
-                onConfirm = {
-                    onDelete()
-                    showDeleteDialog = false
-                },
-                onDismiss = { showDeleteDialog = false }
-            )
+            DeleteConfirmationDialog(onConfirm = {
+                onDelete()
+                showDeleteDialog = false
+            }, onDismiss = { showDeleteDialog = false })
         }
 
         Spacer(Modifier.safeContentPadding())
@@ -809,6 +797,7 @@ private fun ExportStateRow(exportState: UiState<Unit>, onClearExportState: () ->
                 onClearExportState()
             }
         }
+
         is UiState.Error -> {
             Text(
                 text = exportState.message,
@@ -836,6 +825,7 @@ private fun DeleteStateRow(deleteState: UiState<Unit>, onClearDeleteState: () ->
                 onClearDeleteState()
             }
         }
+
         is UiState.Error -> {
             Text(
                 text = deleteState.message,
@@ -855,25 +845,21 @@ private fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Uni
         text = { Text("This will permanently delete all local measurements. This action cannot be undone.") },
         confirmButton = {
             TextButton(
-                onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(
+                onClick = onConfirm, colors = ButtonDefaults.textButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 )
             ) { Text("Delete") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
+        })
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-private fun hasFineLocation(context: Context): Boolean =
-    ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_FINE_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
+private fun hasFineLocation(context: Context): Boolean = ContextCompat.checkSelfPermission(
+    context, Manifest.permission.ACCESS_FINE_LOCATION
+) == PackageManager.PERMISSION_GRANTED
 
 @Preview(showBackground = true)
 @Composable
@@ -892,6 +878,5 @@ private fun SettingsScreenPreview() {
         onExport = { _, _ -> },
         onClearExportState = {},
         onDelete = {},
-        onClearDeleteState = {}
-    )
+        onClearDeleteState = {})
 }

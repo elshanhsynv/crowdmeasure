@@ -2,6 +2,7 @@ package com.example.crowdmeasure.domain.repo
 
 import com.example.crowdmeasure.domain.model.CallCellSample
 import com.example.crowdmeasure.domain.model.CallSession
+import com.example.crowdmeasure.domain.model.CallType
 import com.example.crowdmeasure.domain.model.CellInfo
 import kotlinx.coroutines.flow.Flow
 
@@ -11,8 +12,9 @@ interface CallSamplingRepository {
         sessionId: String,
         sampledAtUtcMs: Long,
         elapsedMs: Long,
-        cellInfo: CellInfo
+        cellInfo: CellInfo,
     )
+
     suspend fun finishSession(sessionId: String, endedAtUtcMs: Long, endReason: String)
     fun observeRecentSessions(limit: Int = 50): Flow<List<CallSession>>
     fun observeSamples(sessionId: String): Flow<List<CallCellSample>>
