@@ -20,6 +20,8 @@ data class MeasurementDetailUi(
     val env: List<Pair<String, String>>,
     val wifi: List<Pair<String, String>>?,
     val cell: List<Pair<String, String>>?,
+    val sims: List<SimCarrierUi> = emptyList(),
+    val collectedSimText: String? = null,
     val ip: List<Pair<String, String>>?,
     val performance: PerformanceUi,
 
@@ -30,16 +32,24 @@ data class MeasurementDetailUi(
 )
 
 @Immutable
+data class SimCarrierUi(
+    val title: String,
+    val subtitle: String?,
+    val isCollected: Boolean,
+    val pairs: List<Pair<String, String>>
+)
+
+@Immutable
 data class PerformanceUi(
     val protocol: String,
     val dns: String,
-    val tcp: String,
+    val connect: String,
     val tls: String,
-    val ttfb: String,
-    val rttAvg: String,
-    val rttP95: String,
+    val ttfbAvg: String,
+    val httpLatencyAvg: String,
+    val httpLatencyP95: String,
     val jitter: String,
-    val loss: String,
+    val probeFailure: String,
     val httpStatus: String,
     val serverRegion: String,
     val stallsCount: String,

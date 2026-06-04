@@ -12,7 +12,8 @@ data class AppSettings(
     val installId: String,
     val consentGateDismissed: Boolean,
     val firestoreUploadsEnabled: Boolean,
-    val callSamplingEnabled: Boolean
+    val callSamplingEnabled: Boolean,
+    val whatsappCallSamplingEnabled: Boolean
 )
 
 interface UserSessionRepository {
@@ -24,4 +25,5 @@ interface UserSessionRepository {
     suspend fun setConsentGateDismissed(enabled: Boolean)
     suspend fun setFirestoreUploadsEnabled(enabled: Boolean)
     suspend fun setCallSamplingEnabled(enabled: Boolean)
+    suspend fun setWhatsappCallSamplingEnabled(enabled: Boolean)
 }

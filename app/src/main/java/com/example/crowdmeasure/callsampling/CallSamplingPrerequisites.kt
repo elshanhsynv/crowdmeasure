@@ -12,15 +12,15 @@ data class CallSamplingPrerequisiteState(
     val backgroundLocationGranted: Boolean,
 //    val locationServicesEnabled: Boolean,
     val notificationGranted: Boolean,
-    val batteryOptimizationIgnored: Boolean
+//    val batteryOptimizationIgnored: Boolean
 ) {
     val canStart: Boolean =
         phoneStateGranted &&
             fineLocationGranted &&
             backgroundLocationGranted &&
 //            locationServicesEnabled &&
-            notificationGranted &&
-            batteryOptimizationIgnored
+//            batteryOptimizationIgnored
+            notificationGranted
 
     val missingReason: String
         get() = when {
@@ -29,7 +29,7 @@ data class CallSamplingPrerequisiteState(
             !backgroundLocationGranted -> "missing_background_location"
 //            !locationServicesEnabled -> "location_services_off"
             !notificationGranted -> "missing_post_notifications"
-            !batteryOptimizationIgnored -> "battery_optimization_not_ignored"
+//            !batteryOptimizationIgnored -> "battery_optimization_not_ignored"
             else -> "ready"
         }
 }
@@ -45,6 +45,6 @@ class CallSamplingPrerequisites @Inject constructor(
             backgroundLocationGranted = AppPermissions.hasBackgroundLocation(context),
 //            locationServicesEnabled = AppPermissions.isLocationServicesEnabled(context),
             notificationGranted = AppPermissions.hasPostNotifications(context),
-            batteryOptimizationIgnored = AppPermissions.ignoresBatteryOptimizations(context)
+//            batteryOptimizationIgnored = AppPermissions.ignoresBatteryOptimizations(context)
         )
 }

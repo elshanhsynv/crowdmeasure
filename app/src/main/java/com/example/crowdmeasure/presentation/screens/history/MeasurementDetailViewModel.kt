@@ -2,6 +2,7 @@ package com.example.crowdmeasure.presentation.screens.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.crowdmeasure.domain.model.CarrierInfo
 import com.example.crowdmeasure.domain.model.Measurement
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.presentation.util.UiState
@@ -169,18 +170,28 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     // Cell section
     val cellPairs = environment.network.cell?.let { c ->
         buildList {
-            c.carrier.mcc?.let { add("MCC" to it) }
-            c.carrier.mnc?.let { add("MNC" to it) }
-            c.carrier.carrierName?.let { add("Carrier" to it) }
             c.rat?.let { add("RAT" to it) }
             c.dataNetworkType?.let { add("Data Network Type" to it) }
             c.voiceNetworkType?.let { add("Voice Network Type" to it) }
-            c.carrier.duplexMode?.let { add("Duplex Mode" to it) }
-            c.carrier.countryIso?.let { add("Country" to it) }
-            c.carrier.simOperatorName?.let { add("SIM Name" to it) }
-            c.carrier.simOperatorId?.let { add("SIM ID" to it) }
             c.roaming?.let { add("Roaming" to it.toString()) }
+            c.neighbors.size.let { add("Neighbor Cells" to it.toString()) }
         }
+    }
+
+    val simUi = environment.network.cell?.let { c ->
+        c.simCarriers.mapIndexed { index, sim ->
+            sim.toSimCarrierUi(
+                fallbackIndex = index,
+                collectedSubscriptionId = c.collectedSubscriptionId,
+                collectedSimSlotIndex = c.collectedSimSlotIndex
+            )
+        }
+    }.orEmpty()
+
+    val collectedSimText = environment.network.cell?.let { c ->
+        val collected = simUi.firstOrNull { it.isCollected }
+        collected?.title ?: c.collectedSimSlotIndex?.let { "SIM ${it + 1}" }
+        ?: c.collectedSubscriptionId?.let { "Subscription $it" }
     }
 
     // Sensitive: Cell IDs
@@ -218,13 +229,13 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     val performanceUi = PerformanceUi(
         protocol = performance.protocol.toString(),
         dns = performance.dnsMs?.let { "$it ms" } ?: "—",
-        tcp = performance.tcpMs?.let { "$it ms" } ?: "—",
+        connect = performance.connectMs?.let { "$it ms" } ?: "—",
         tls = performance.tlsMs?.let { "$it ms" } ?: "—",
-        ttfb = performance.ttfbMs?.let { "$it ms" } ?: "—",
-        rttAvg = performance.rttAvgMs?.let { "$it ms" } ?: "—",
-        rttP95 = performance.rttP95Ms?.let { "$it ms" } ?: "—",
+        ttfbAvg = performance.ttfbAvgMs?.let { "$it ms" } ?: "—",
+        httpLatencyAvg = performance.httpLatencyAvgMs?.let { "$it ms" } ?: "—",
+        httpLatencyP95 = performance.httpLatencyP95Ms?.let { "$it ms" } ?: "—",
         jitter = performance.jitterMs?.let { "$it ms" } ?: "—",
-        loss = performance.packetLossPct?.let { "${"%.1f".format(it)}%" } ?: "—",
+        probeFailure = performance.probeFailurePct?.let { "${"%.1f".format(it)}%" } ?: "—",
         httpStatus = performance.httpStatus?.toString() ?: "—",
         serverRegion = performance.serverRegion ?: "—",
         stallsCount = performance.stallsCount?.toString() ?: "—",
@@ -243,10 +254,55 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         env = envPairs,
         wifi = wifiPairs,
         cell = cellPairs,
+        sims = simUi,
+        collectedSimText = collectedSimText,
         ip = ipUi,
         performance = performanceUi,
         endpointId = performance.endpointId,
         locationText = locationText,
         cellIdsText = cellIdsText
+    )
+}
+
+private fun CarrierInfo.toSimCarrierUi(
+    fallbackIndex: Int,
+    collectedSubscriptionId: Int?,
+    collectedSimSlotIndex: Int?,
+): SimCarrierUi {
+    val slotNumber = simSlotIndex?.plus(1)
+    val title = slotNumber?.let { "SIM $it" } ?: "SIM ${fallbackIndex + 1}"
+    val isCollected = (subscriptionId != null && subscriptionId == collectedSubscriptionId) ||
+        (simSlotIndex != null && simSlotIndex == collectedSimSlotIndex)
+
+    val pairs = buildList {
+        carrierName?.let { add("Carrier" to it) }
+        displayName?.let { add("Display Name" to it) }
+        simOperatorName?.let { add("SIM Operator" to it) }
+        simOperatorId?.let { add("SIM Operator ID" to it) }
+        mcc?.let { add("MCC" to it) }
+        mnc?.let { add("MNC" to it) }
+        countryIso?.let { add("Country" to it) }
+        duplexMode?.takeIf { it.isNotBlank() }?.let { add("Duplex Mode" to it) }
+        simSlotIndex?.let { add("Slot Index" to it.toString()) }
+        subscriptionId?.let { add("Subscription ID" to it.toString()) }
+        carrierId?.let { add("Carrier ID" to it.toString()) }
+        portIndex?.let { add("Port Index" to it.toString()) }
+        cardId?.let { add("Card ID" to it.toString()) }
+        dataRoaming?.let { add("Data Roaming" to it.toString()) }
+        isEmbedded?.let { add("eSIM" to it.toString()) }
+        isOpportunistic?.let { add("Opportunistic" to it.toString()) }
+        isActiveData?.takeIf { it }?.let { add("Active Data" to it.toString()) }
+        isDefaultData?.takeIf { it }?.let { add("Default Data" to it.toString()) }
+        isDefaultVoice?.takeIf { it }?.let { add("Default Voice" to it.toString()) }
+        isDefaultSms?.takeIf { it }?.let { add("Default SMS" to it.toString()) }
+        if (isCollected) add("Collected Here" to "true")
+    }
+
+    val subtitle = carrierName ?: simOperatorName ?: displayName
+    return SimCarrierUi(
+        title = title,
+        subtitle = subtitle,
+        isCollected = isCollected,
+        pairs = pairs
     )
 }

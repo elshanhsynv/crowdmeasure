@@ -13,6 +13,8 @@ data class CallSessionEntity(
     @PrimaryKey val sessionId: String,
     val startedAtUtcMs: Long,
     val endedAtUtcMs: Long?,
+    val callType: String,
+    val callSource: String,
     val sampleIntervalSeconds: Int,
     val sampleCount: Int,
     val endReason: String?

@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +36,7 @@ fun AppShellScaffold(
     navController: NavHostController,
     modifier: Modifier = Modifier,
     badgeCounts: Map<String, Int> = emptyMap(),
+    topBarActions: @Composable RowScope.(String?) -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -88,6 +90,9 @@ fun AppShellScaffold(
                         }
                     },
                     elevated = chrome.topBarElevated,
+                    actions = {
+                        topBarActions(destination?.route)
+                    }
                 )
             }
         },

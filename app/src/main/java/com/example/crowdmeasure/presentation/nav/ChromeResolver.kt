@@ -42,7 +42,7 @@ object ChromeResolver {
             )
 
             route == Routes.CALL_SESSIONS -> ChromeConfig(
-                title = "Call Cell Sessions",
+                title = "Call Sessions",
                 showTopBar = true,
                 showBottomBar = false,
                 showBackButton = true,

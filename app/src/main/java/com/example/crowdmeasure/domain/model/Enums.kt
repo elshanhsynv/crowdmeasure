@@ -66,14 +66,16 @@ enum class ThermalStatus {
     UNKNOWN,     // < API 29 or unrecognized value
 }
 
-enum class PhaseType {
-    PRETEST,
-    IDLE_LATENCY,
-    DOWNLOAD,
-    UPLOAD,
-}
-
 enum class CallType {
     INCOMING,
-    OUTGOING
+    OUTGOING,
+    UNKNOWN
+}
+
+enum class CallSource {
+    CELLULAR,
+    WHATSAPP_VOICE,
+    WHATSAPP_VIDEO,
+    WHATSAPP_UNKNOWN,
+    UNKNOWN
 }

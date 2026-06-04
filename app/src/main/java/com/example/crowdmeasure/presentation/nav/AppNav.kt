@@ -4,8 +4,13 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -14,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.crowdmeasure.presentation.screens.callsampling.CallSessionsScreen
 import com.example.crowdmeasure.presentation.screens.history.HistoryScreen
+import com.example.crowdmeasure.presentation.screens.history.HistoryTopBarActions
 import com.example.crowdmeasure.presentation.screens.history.HistoryViewModel
 import com.example.crowdmeasure.presentation.screens.history.MeasurementDetailScreen
 import com.example.crowdmeasure.presentation.screens.history.MeasurementDetailViewModel
@@ -35,9 +41,21 @@ fun AppNav() {
     val settingsViewModel = hiltViewModel<SettingsViewModel>()
     val measurementDetailViewModel = hiltViewModel<MeasurementDetailViewModel>()
     val historyViewModel = hiltViewModel<HistoryViewModel>()
+    val historyUiState by historyViewModel.uiState.collectAsStateWithLifecycle()
+    var historySearchVisible by rememberSaveable { mutableStateOf(false) }
 
     AppShellScaffold(
         navController = navController,
+        topBarActions = { route ->
+            if (route == Routes.HISTORY) {
+                HistoryTopBarActions(
+                    state = historyUiState,
+                    searchVisible = historySearchVisible,
+                    onToggleSearch = { historySearchVisible = !historySearchVisible },
+                    onFilterSelected = historyViewModel::setTransportFilter
+                )
+            }
+        }
     ) { paddingValues ->
         NavHost(
             navController = navController,
@@ -98,6 +116,7 @@ fun AppNav() {
                 HistoryScreen(
                     viewModel = historyViewModel,
                     contentPadding = paddingValues,
+                    searchVisible = historySearchVisible,
                     onNavigateToNewMeasurement = {
                         navController.navigate(Routes.HOME) {
                             popUpTo(navController.graph.startDestinationId) {
@@ -109,7 +128,10 @@ fun AppNav() {
                     },
                     onNavigateToDetail = { id ->
                         navController.navigateToDetail(Routes.detail(id))
-                    }
+                    },
+                    onNavigateToCallSessions = {
+                        navController.navigate(Routes.CALL_SESSIONS)
+                    },
                 )
             }
 
@@ -122,10 +144,7 @@ fun AppNav() {
             ) {
                 SettingsScreen(
                     viewModel = settingsViewModel,
-                    contentPadding = paddingValues,
-                    onOpenCallSessions = {
-                        navController.navigate(Routes.CALL_SESSIONS)
-                    }
+                    contentPadding = paddingValues
                 )
             }
 

@@ -14,6 +14,7 @@ import com.example.crowdmeasure.presentation.util.UiState
 data class HistoryUiState(
     val queryText: String = "",
     val appliedTag: String? = null,
+    val transportFilter: HistoryTransportFilter = HistoryTransportFilter.All,
     val itemsState: UiState<List<HistoryItemUi>> = UiState.Loading
 ) {
     /**
@@ -41,6 +42,12 @@ data class HistoryUiState(
         get() = items?.isEmpty() == true
 }
 
+enum class HistoryTransportFilter(val label: String) {
+    All("All"),
+    Wifi("Wi-Fi"),
+    Cellular("Cellular")
+}
+
 /**
  * UI model for a single measurement in the history list.
  *
@@ -52,7 +59,8 @@ data class HistoryItemUi(
     val id: String,
     val timeText: String,
     val transportText: String,
-    val rttText: String,
+    val httpLatText: String,
+    val dnsText: String,
     val ttfbText: String,
     val hasLocation: Boolean,
     val carrierName: String? = null,
@@ -60,4 +68,8 @@ data class HistoryItemUi(
     val dataNetworkType: String? = null,
     val protocol: String? = null,
     val endpointIdOrHost: String? = null
-)
+) {
+    val isWifi: Boolean
+        get() = transportText.contains("wifi", ignoreCase = true) ||
+                transportText.contains("wlan", ignoreCase = true)
+}

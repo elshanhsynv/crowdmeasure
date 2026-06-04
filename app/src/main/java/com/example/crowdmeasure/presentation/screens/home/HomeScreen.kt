@@ -400,13 +400,13 @@ private fun MeasurementPreview(measurement: MeasurementUi) {
             icon = Icons.Filled.Timeline
         ),
         MetricTileData(
-            label = "RTT Average",
-            value = measurement.performance.rttAvgMs?.let { "$it ms" } ?: "-",
+            label = "HTTP Lat",
+            value = measurement.performance.httpLatencyAvgMs?.let { "$it ms" } ?: "-",
             icon = Icons.Filled.Speed
         ),
         MetricTileData(
-            label = "TTFB",
-            value = measurement.performance.ttfbMs?.let { "$it ms" } ?: "-",
+            label = "TTFB Avg",
+            value = measurement.performance.ttfbAvgMs?.let { "$it ms" } ?: "-",
             icon = Icons.Filled.Speed
         ),
         MetricTileData(
@@ -450,7 +450,7 @@ private fun MetricTile(
     Surface(
         modifier = modifier.heightIn(min = 82.dp),
         shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Row(
             modifier = Modifier.padding(spacing.md),

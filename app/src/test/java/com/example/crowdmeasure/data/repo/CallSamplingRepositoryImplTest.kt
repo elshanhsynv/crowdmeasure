@@ -6,6 +6,8 @@ import com.example.crowdmeasure.data.db.CallSessionEntity
 import com.example.crowdmeasure.domain.model.CarrierInfo
 import com.example.crowdmeasure.domain.model.CellInfo
 import com.example.crowdmeasure.domain.model.CellRadioSnapshot
+import com.example.crowdmeasure.domain.model.CallSource
+import com.example.crowdmeasure.domain.model.CallType
 import com.example.crowdmeasure.domain.model.NrState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -25,16 +27,50 @@ class CallSamplingRepositoryImplTest {
 
     @Test
     fun startSession_reusesActiveSession() = runBlocking {
-        val first = repository.startSession(intervalSeconds = 30)
-        val second = repository.startSession(intervalSeconds = 30)
+        val first = repository.startSession(
+            callType = CallType.INCOMING,
+            callSource = CallSource.CELLULAR,
+            intervalSeconds = 30
+        )
+        val second = repository.startSession(
+            callType = CallType.INCOMING,
+            callSource = CallSource.CELLULAR,
+            intervalSeconds = 30
+        )
 
         assertEquals(first.sessionId, second.sessionId)
+        assertEquals(CallType.INCOMING, first.callType)
+        assertEquals(CallSource.CELLULAR, first.callSource)
         assertEquals(1, dao.sessions.size)
     }
 
     @Test
+    fun startSession_replacesActiveSessionWhenSourceChanges() = runBlocking {
+        val cellular = repository.startSession(
+            callType = CallType.OUTGOING,
+            callSource = CallSource.CELLULAR,
+            intervalSeconds = 30
+        )
+        val whatsapp = repository.startSession(
+            callType = CallType.UNKNOWN,
+            callSource = CallSource.WHATSAPP_VOICE,
+            intervalSeconds = 30
+        )
+
+        assertEquals(2, dao.sessions.size)
+        assertEquals("replaced_by_whatsapp_voice", dao.sessions.first().endReason)
+        assertEquals(CallSource.WHATSAPP_VOICE, whatsapp.callSource)
+        assertEquals(whatsapp.sessionId, dao.getActiveSession()?.sessionId)
+        assertEquals(false, cellular.sessionId == whatsapp.sessionId)
+    }
+
+    @Test
     fun insertSample_persistsSampleAndIncrementsSessionCount() = runBlocking {
-        val session = repository.startSession(intervalSeconds = 30)
+        val session = repository.startSession(
+            callType = CallType.INCOMING,
+            callSource = CallSource.CELLULAR,
+            intervalSeconds = 30
+        )
 
         repository.insertSample(
             sessionId = session.sessionId,
@@ -54,7 +90,11 @@ class CallSamplingRepositoryImplTest {
 
     @Test
     fun finishSession_closesOnlyActiveSession() = runBlocking {
-        val session = repository.startSession(intervalSeconds = 30)
+        val session = repository.startSession(
+            callType = CallType.INCOMING,
+            callSource = CallSource.CELLULAR,
+            intervalSeconds = 30
+        )
 
         repository.finishSession(
             sessionId = session.sessionId,
@@ -70,7 +110,11 @@ class CallSamplingRepositoryImplTest {
 
     @Test
     fun deleteOlderThan_removesOldSessions() = runBlocking {
-        repository.startSession(intervalSeconds = 30)
+        repository.startSession(
+            callType = CallType.INCOMING,
+            callSource = CallSource.CELLULAR,
+            intervalSeconds = 30
+        )
 
         repository.deleteOlderThan(Long.MAX_VALUE)
 
@@ -79,15 +123,23 @@ class CallSamplingRepositoryImplTest {
 
     private fun testCellInfo(): CellInfo =
         CellInfo(
-            carrier = CarrierInfo(
-                carrierName = "Test",
-                mcc = "001",
-                mnc = "01",
-                simOperatorId = "00101",
-                simOperatorName = "Test",
-                countryIso = "az",
-                duplexMode = "FDD"
+            simCarriers = listOf(
+                CarrierInfo(
+                    carrierName = "Test",
+                    mcc = "001",
+                    mnc = "01",
+                    simOperatorId = "00101",
+                    simOperatorName = "Test",
+                    countryIso = "az",
+                    duplexMode = "FDD",
+                    subscriptionId = 1,
+                    simSlotIndex = 0,
+                    isDefaultData = true,
+                    isActiveData = true
+                )
             ),
+            collectedSubscriptionId = 1,
+            collectedSimSlotIndex = 0,
             rat = "LTE",
             nrState = NrState.NONE,
             dataNetworkType = "LTE",
@@ -146,6 +198,12 @@ private class FakeCallSamplingDao : CallSamplingDao {
         samplesFlow.map { all ->
             all.filter { it.sessionId == sessionId }.sortedBy(CallCellSampleEntity::sampledAtUtcMs)
         }
+
+    override suspend fun getRecentSessions(limit: Int): List<CallSessionEntity> =
+        sessions.sortedByDescending(CallSessionEntity::startedAtUtcMs).take(limit)
+
+    override suspend fun getSamples(sessionId: String): List<CallCellSampleEntity> =
+        samples.filter { it.sessionId == sessionId }.sortedBy(CallCellSampleEntity::sampledAtUtcMs)
 
     override fun observeRecentSamples(sessionLimit: Int): Flow<List<CallCellSampleEntity>> =
         samplesFlow

@@ -11,6 +11,7 @@ import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.DeleteAllDataUseCase
+import com.example.crowdmeasure.domain.usecase.ExportCallSessionsUseCase
 import com.example.crowdmeasure.domain.usecase.ExportMeasurementsUseCase
 import com.example.crowdmeasure.domain.usecase.SetAutoRunUseCase
 import com.example.crowdmeasure.domain.usecase.SetCollectOnlyWifiUseCase
@@ -37,6 +38,7 @@ class SettingsViewModel @Inject constructor(
     private val userSessionRepository: UserSessionRepository,
     private val deleteAllDataUseCase: DeleteAllDataUseCase,
     private val exportMeasurementsUseCase: ExportMeasurementsUseCase,
+    private val exportCallSessionsUseCase: ExportCallSessionsUseCase,
     private val workScheduler: WorkScheduler,
     measurementRepository: MeasurementRepository,
     callSamplingStatusStore: CallSamplingStatusStore,
@@ -47,6 +49,7 @@ class SettingsViewModel @Inject constructor(
         .withZone(ZoneId.systemDefault())
 
     private val _exportState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
+    private val _callExportState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
 
     private val _deleteState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
 
@@ -163,6 +166,12 @@ class SettingsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = UiState.Idle
         )
+    val callExportState: StateFlow<UiState<Unit>> = _callExportState
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = UiState.Idle
+        )
     val deleteState: StateFlow<UiState<Unit>> = _deleteState
         .stateIn(
             scope = viewModelScope,
@@ -197,6 +206,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setWhatsappCallSamplingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userSessionRepository.setWhatsappCallSamplingEnabled(enabled)
+        }
+    }
+
     fun exportData(context: Context, count: Int) {
         viewModelScope.launch {
             _exportState.value = UiState.Loading
@@ -220,6 +235,35 @@ class SettingsViewModel @Inject constructor(
 
     fun clearExportState() {
         _exportState.value = UiState.Idle
+    }
+
+    fun exportCallData(context: Context, count: Int) {
+        viewModelScope.launch {
+            _callExportState.value = UiState.Loading
+
+            val safeCount = count.coerceIn(1, 1_000)
+
+            exportCallSessionsUseCase(safeCount).fold(
+                onSuccess = { uri ->
+                    ShareUtils.shareJson(
+                        context = context,
+                        uri = uri,
+                        chooserTitle = "Share call sessions JSON"
+                    )
+                    _callExportState.value = UiState.Success(Unit)
+                },
+                onFailure = { error ->
+                    _callExportState.value = UiState.Error(
+                        message = "Call export failed. Try again.",
+                        throwable = error
+                    )
+                }
+            )
+        }
+    }
+
+    fun clearCallExportState() {
+        _callExportState.value = UiState.Idle
     }
 
     fun deleteAllData() {

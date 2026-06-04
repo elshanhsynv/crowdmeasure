@@ -55,7 +55,7 @@ fun AppBottomBar(
             .navigationBarsPadding()
             .padding(horizontal = 64.dp, vertical = 12.dp),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.99f),
         shadowElevation = 4.dp,
         tonalElevation = 4.dp
     ) {

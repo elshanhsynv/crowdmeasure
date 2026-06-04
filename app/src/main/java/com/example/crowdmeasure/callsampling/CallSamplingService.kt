@@ -15,12 +15,15 @@ import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import com.example.crowdmeasure.R
 import com.example.crowdmeasure.data.measurement.collectors.TelephonyCollector
 import com.example.crowdmeasure.data.prefs.CallSamplingStatusStore
 import com.example.crowdmeasure.di.IoDispatcher
 import com.example.crowdmeasure.domain.model.CallSession
+import com.example.crowdmeasure.domain.model.CallSource
+import com.example.crowdmeasure.domain.model.CallType
 import com.example.crowdmeasure.domain.repo.CallSamplingRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
@@ -37,13 +40,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @AndroidEntryPoint
 class CallSamplingService : Service() {
     @Inject
     lateinit var repository: CallSamplingRepository
+
     @Inject
     lateinit var statusStore: CallSamplingStatusStore
+
     @Inject
     @IoDispatcher
     lateinit var io: CoroutineDispatcher
@@ -53,33 +59,43 @@ class CallSamplingService : Service() {
     private var telephonyCallback: TelephonyCallback? = null
     private var phoneStateListener: PhoneStateListener? = null
     private var foregroundStarted = false
-
-    private var cType: String? = null
+    private var callType: CallType = CallType.UNKNOWN
+    private var callSource: CallSource = CallSource.UNKNOWN
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        registerCallStateListener()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val callType = intent
-            ?.getStringExtra(EXTRA_CALL_TYPE)
-        cType = callType
+        val requestedCallType = intent?.getStringExtra(EXTRA_CALL_TYPE)
+            ?.let { runCatching { CallType.valueOf(it) }.getOrNull() } ?: CallType.UNKNOWN
+        val requestedCallSource = intent?.getStringExtra(EXTRA_CALL_SOURCE)
+            ?.let { runCatching { CallSource.valueOf(it) }.getOrNull() } ?: CallSource.UNKNOWN
 
         when (intent?.action) {
             ACTION_STOP -> {
                 serviceScope.launch {
-                    stopSampling(END_REASON_CALL_ENDED)
+                    stopSampling(
+                        endReason = END_REASON_CALL_ENDED, requestedSource = requestedCallSource
+                    )
                 }
             }
 
             else -> {
+                if (samplingJob?.isActive == true) {
+                    Timber.tag("CallSamplingService")
+                        .d("Ignoring start while ${callSource.name} sampling is active.")
+                    return START_STICKY
+                }
+                callType = requestedCallType
+                callSource = requestedCallSource
                 startInForeground()
                 serviceScope.launch {
-                    Timber.tag("CallSamplingService").d("Started sampling during Call...")
+                    Timber.tag("CallSamplingService").d("Started sampling during call.")
                     startSampling()
-                    Timber.tag("CallSamplingService").d("Call Type = $callType")
+                    Timber.tag("CallSamplingService")
+                        .d("Call source = ${callSource.name}, type = ${callType.name}")
                 }
             }
         }
@@ -104,21 +120,33 @@ class CallSamplingService : Service() {
         }
 
         repository.deleteOlderThan(System.currentTimeMillis() - RETENTION_MS)
-        val session = repository.startSession(SAMPLE_INTERVAL_SECONDS)
+        if (callSource == CallSource.CELLULAR) {
+            registerCallStateListener()
+        }
+        val session = repository.startSession(callType, callSource, SAMPLE_INTERVAL_SECONDS)
         activeSession = session
 
         samplingJob = serviceScope.launch {
             while (isActive) {
                 collectSample(session)
-                delay(SAMPLE_INTERVAL_SECONDS * 1_000L)
+                delay((SAMPLE_INTERVAL_SECONDS * 1_000L).milliseconds)
             }
         }
     }
 
-    private suspend fun stopSampling(endReason: String) {
+    private suspend fun stopSampling(
+        endReason: String, requestedSource: CallSource = CallSource.UNKNOWN
+    ) {
+        if (activeSession == null && samplingJob == null) {
+            stopSelf()
+            return
+        }
+        if (!requestedSource.matchesActiveSource(callSource)) return
+
         val session = activeSession
         samplingJob?.cancelAndJoin()
         samplingJob = null
+        unregisterCallStateListener()
 
         if (session != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -162,29 +190,26 @@ class CallSamplingService : Service() {
             0
         }
         ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            buildNotification(),
-            foregroundType
+            this, NOTIFICATION_ID, buildNotification(), foregroundType
         )
         foregroundStarted = true
     }
 
     private fun buildNotification(): Notification =
-        NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.crowdmeasure)
-            .setContentTitle("Collecting call cell stats")
-            .setContentText("Sampling cellular signal during the active call.")
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+        NotificationCompat.Builder(this, CHANNEL_ID).setSmallIcon(R.drawable.crowdmeasure)
+            .setContentTitle("Collecting call cell stats").setContentText(notificationBody())
+            .setOngoing(true).setPriority(NotificationCompat.PRIORITY_LOW).build()
+
+    private fun notificationBody(): String = if (callSource.isWhatsapp()) {
+        "Sampling cellular signal during the WhatsApp call."
+    } else {
+        "Sampling cellular signal during the active call."
+    }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Call cell sampling",
-            NotificationManager.IMPORTANCE_LOW
+            CHANNEL_ID, "Call cell sampling", NotificationManager.IMPORTANCE_LOW
         )
         getSystemService<NotificationManager>()?.createNotificationChannel(channel)
     }
@@ -196,17 +221,23 @@ class CallSamplingService : Service() {
             telephonyManager.registerTelephonyCallback(mainExecutor, callback)
             telephonyCallback = callback
         } else {
-            @Suppress("DEPRECATION")
-            val listener = object : PhoneStateListener() {
+            @Suppress("DEPRECATION") val listener = object : PhoneStateListener() {
                 @Deprecated("Deprecated by Android framework")
                 override fun onCallStateChanged(state: Int, phoneNumber: String?) {
                     if (state == TelephonyManager.CALL_STATE_IDLE) {
-                        serviceScope.launch { stopSampling(END_REASON_CALL_ENDED) }
+                        serviceScope.launch {
+                            stopSampling(
+                                endReason = END_REASON_CALL_ENDED,
+                                requestedSource = CallSource.CELLULAR
+                            )
+                        }
                     }
                 }
             }
-            @Suppress("DEPRECATION")
-            telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
+            @Suppress("DEPRECATION") telephonyManager.listen(
+                listener,
+                PhoneStateListener.LISTEN_CALL_STATE
+            )
             phoneStateListener = listener
         }
     }
@@ -217,8 +248,10 @@ class CallSamplingService : Service() {
             telephonyCallback?.let(telephonyManager::unregisterTelephonyCallback)
             telephonyCallback = null
         } else {
-            @Suppress("DEPRECATION")
-            telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE)
+            @Suppress("DEPRECATION") telephonyManager.listen(
+                phoneStateListener,
+                PhoneStateListener.LISTEN_NONE
+            )
             phoneStateListener = null
         }
     }
@@ -228,7 +261,11 @@ class CallSamplingService : Service() {
         TelephonyCallback.CallStateListener {
         override fun onCallStateChanged(state: Int) {
             if (state == TelephonyManager.CALL_STATE_IDLE) {
-                serviceScope.launch { stopSampling(END_REASON_CALL_ENDED) }
+                serviceScope.launch {
+                    stopSampling(
+                        endReason = END_REASON_CALL_ENDED, requestedSource = CallSource.CELLULAR
+                    )
+                }
             }
         }
     }
@@ -237,20 +274,40 @@ class CallSamplingService : Service() {
         const val ACTION_START = "com.example.crowdmeasure.callsampling.START"
         const val ACTION_STOP = "com.example.crowdmeasure.callsampling.STOP"
         const val EXTRA_CALL_TYPE = "extra_call_type"
+        const val EXTRA_CALL_SOURCE = "extra_call_source"
         private const val CHANNEL_ID = "call_cell_sampling"
         private const val NOTIFICATION_ID = 40_030
         private const val SAMPLE_INTERVAL_SECONDS = 30
         private const val END_REASON_CALL_ENDED = "call_ended"
         private const val RETENTION_MS = 7L * 24L * 60L * 60L * 1_000L
 
-        fun requestStop(context: Context) {
+        fun requestStop(
+            context: Context, callSource: CallSource = CallSource.UNKNOWN
+        ) {
             runCatching {
                 context.startService(
                     Intent(context, CallSamplingService::class.java).apply {
                         action = ACTION_STOP
-                    }
-                )
+                        putExtra(EXTRA_CALL_SOURCE, callSource.name)
+                    })
             }
+        }
+
+        fun requestStart(
+            context: Context, callType: CallType, callSource: CallSource
+        ) {
+            ContextCompat.startForegroundService(
+                context, Intent(context, CallSamplingService::class.java).apply {
+                    action = ACTION_START
+                    putExtra(EXTRA_CALL_TYPE, callType.name)
+                    putExtra(EXTRA_CALL_SOURCE, callSource.name)
+                })
         }
     }
 }
+
+private fun CallSource.isWhatsapp(): Boolean =
+    this == CallSource.WHATSAPP_VOICE || this == CallSource.WHATSAPP_VIDEO || this == CallSource.WHATSAPP_UNKNOWN
+
+private fun CallSource.matchesActiveSource(activeSource: CallSource): Boolean =
+    this == CallSource.UNKNOWN || this == activeSource || (this.isWhatsapp() && activeSource.isWhatsapp())

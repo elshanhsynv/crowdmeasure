@@ -4,7 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CellInfo(
-    val carrier: CarrierInfo,
+    val simCarriers: List<CarrierInfo> = emptyList(),
+    val collectedSubscriptionId: Int? = null,
+    val collectedSimSlotIndex: Int? = null,
     val rat: String?, // LTE, NR, etc.
     val nrState: NrState,
 
@@ -26,7 +28,20 @@ data class CarrierInfo(
     val simOperatorId: String?,   // MCC+MNC combined
     val simOperatorName: String?,
     val countryIso: String?,
-    val duplexMode: String?
+    val duplexMode: String?,
+    val subscriptionId: Int? = null,
+    val simSlotIndex: Int? = null,
+    val displayName: String? = null,
+    val carrierId: Int? = null,
+    val dataRoaming: Boolean? = null,
+    val isEmbedded: Boolean? = null,
+    val isOpportunistic: Boolean? = null,
+    val cardId: Int? = null,
+    val portIndex: Int? = null,
+    val isDefaultData: Boolean? = null,
+    val isDefaultVoice: Boolean? = null,
+    val isDefaultSms: Boolean? = null,
+    val isActiveData: Boolean? = null,
 )
 
 @Serializable

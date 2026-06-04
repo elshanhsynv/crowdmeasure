@@ -14,6 +14,8 @@ object DataStoreKeys {
     val CONSENT_GATE_DISMISSED = booleanPreferencesKey("consent_gate_dismissed")
     val FIRESTORE_UPLOADS_ENABLED = booleanPreferencesKey("firestore_uploads_enabled")
     val CALL_SAMPLING_ENABLED = booleanPreferencesKey("call_sampling_enabled")
+    val WHATSAPP_CALL_SAMPLING_ENABLED =
+        booleanPreferencesKey("whatsapp_call_sampling_enabled")
     val CALL_SAMPLING_LAST_MISSED_AT_UTC_MS =
         longPreferencesKey("call_sampling_last_missed_at_utc_ms")
     val CALL_SAMPLING_LAST_MISSED_REASON =

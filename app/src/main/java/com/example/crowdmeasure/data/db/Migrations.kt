@@ -19,6 +19,7 @@ object Migrations {
                         sessionId TEXT NOT NULL PRIMARY KEY,
                         startedAtUtcMs INTEGER NOT NULL,
                         endedAtUtcMs INTEGER,
+                        callType TEXT NOT NULL,
                         sampleIntervalSeconds INTEGER NOT NULL,
                         sampleCount INTEGER NOT NULL,
                         endReason TEXT
@@ -50,6 +51,13 @@ object Migrations {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_call_sessions_startedAtUtcMs ON call_sessions(startedAtUtcMs)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_call_cell_samples_sessionId ON call_cell_samples(sessionId)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_call_cell_samples_sampledAtUtcMs ON call_cell_samples(sampledAtUtcMs)")
+            }
+        },
+        object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE call_sessions ADD COLUMN callSource TEXT NOT NULL DEFAULT 'CELLULAR'"
+                )
             }
         }
     )

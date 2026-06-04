@@ -6,6 +6,9 @@ import com.example.crowdmeasure.data.db.CallSessionEntity
 import com.example.crowdmeasure.data.db.Converters
 import com.example.crowdmeasure.domain.model.CallCellSample
 import com.example.crowdmeasure.domain.model.CallSession
+import com.example.crowdmeasure.domain.model.CallSessionExport
+import com.example.crowdmeasure.domain.model.CallSource
+import com.example.crowdmeasure.domain.model.CallType
 import com.example.crowdmeasure.domain.model.CellInfo
 import com.example.crowdmeasure.domain.repo.CallSamplingRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -21,14 +24,29 @@ class CallSamplingRepositoryImpl(
     private val io: CoroutineDispatcher
 ) : CallSamplingRepository {
 
-    override suspend fun startSession(intervalSeconds: Int): CallSession = withContext(io) {
+    override suspend fun startSession(
+        callType: CallType,
+        callSource: CallSource,
+        intervalSeconds: Int
+    ): CallSession = withContext(io) {
         val active = dao.getActiveSession()
-        if (active != null) return@withContext active.toDomain(latestSample = null)
+        if (active != null) {
+            if (active.callSource == callSource.name) {
+                return@withContext active.toDomain(latestSample = null)
+            }
+            dao.finishSession(
+                sessionId = active.sessionId,
+                endedAtUtcMs = System.currentTimeMillis(),
+                endReason = "replaced_by_${callSource.name.lowercase()}"
+            )
+        }
 
         val entity = CallSessionEntity(
             sessionId = UUID.randomUUID().toString(),
             startedAtUtcMs = System.currentTimeMillis(),
             endedAtUtcMs = null,
+            callType = callType.name,
+            callSource = callSource.name,
             sampleIntervalSeconds = intervalSeconds,
             sampleCount = 0,
             endReason = null
@@ -88,6 +106,15 @@ class CallSamplingRepositoryImpl(
             samples.mapNotNull { it.toDomainOrNull() }
         }
 
+    override suspend fun getRecentSessionsForExport(limit: Int): List<CallSessionExport> = withContext(io) {
+        dao.getRecentSessions(limit).map { session ->
+            CallSessionExport(
+                session = session.toDomain(latestSample = null),
+                samples = dao.getSamples(session.sessionId).mapNotNull { it.toDomainOrNull() }
+            )
+        }
+    }
+
     override suspend fun deleteOlderThan(cutoffUtcMs: Long) = withContext(io) {
         dao.deleteSessionsOlderThan(cutoffUtcMs)
     }
@@ -101,6 +128,8 @@ class CallSamplingRepositoryImpl(
             sessionId = sessionId,
             startedAtUtcMs = startedAtUtcMs,
             endedAtUtcMs = endedAtUtcMs,
+            callType = runCatching { CallType.valueOf(callType) }.getOrDefault(CallType.UNKNOWN),
+            callSource = runCatching { CallSource.valueOf(callSource) }.getOrDefault(CallSource.UNKNOWN),
             sampleIntervalSeconds = sampleIntervalSeconds,
             sampleCount = sampleCount,
             endReason = endReason,

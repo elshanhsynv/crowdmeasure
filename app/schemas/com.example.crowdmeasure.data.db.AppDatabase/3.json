@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 2,
-    "identityHash": "174f9e2ee7ad5ad8c077d6d084028cd3",
+    "version": 3,
+    "identityHash": "e505805432596a88b4ddc82dfbe7e7a6",
     "entities": [
       {
         "tableName": "measurements",
@@ -48,7 +48,7 @@
       },
       {
         "tableName": "call_sessions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sessionId` TEXT NOT NULL, `startedAtUtcMs` INTEGER NOT NULL, `endedAtUtcMs` INTEGER, `callType` TEXT NOT NULL, `sampleIntervalSeconds` INTEGER NOT NULL, `sampleCount` INTEGER NOT NULL, `endReason` TEXT, PRIMARY KEY(`sessionId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sessionId` TEXT NOT NULL, `startedAtUtcMs` INTEGER NOT NULL, `endedAtUtcMs` INTEGER, `callType` TEXT NOT NULL, `callSource` TEXT NOT NULL, `sampleIntervalSeconds` INTEGER NOT NULL, `sampleCount` INTEGER NOT NULL, `endReason` TEXT, PRIMARY KEY(`sessionId`))",
         "fields": [
           {
             "fieldPath": "sessionId",
@@ -70,6 +70,12 @@
           {
             "fieldPath": "callType",
             "columnName": "callType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "callSource",
+            "columnName": "callSource",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -232,7 +238,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '174f9e2ee7ad5ad8c077d6d084028cd3')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e505805432596a88b4ddc82dfbe7e7a6')"
     ]
   }
 }

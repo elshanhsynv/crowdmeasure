@@ -4,10 +4,17 @@ data class CallSession(
     val sessionId: String,
     val startedAtUtcMs: Long,
     val endedAtUtcMs: Long?,
+    val callType: CallType,
+    val callSource: CallSource,
     val sampleIntervalSeconds: Int,
     val sampleCount: Int,
     val endReason: String?,
     val latestSample: CallCellSample?
+)
+
+data class CallSessionExport(
+    val session: CallSession,
+    val samples: List<CallCellSample>
 )
 
 data class CallCellSample(

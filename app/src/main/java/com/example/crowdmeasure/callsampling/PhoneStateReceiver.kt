@@ -5,8 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.telephony.TelephonyManager
-import androidx.core.content.ContextCompat
 import com.example.crowdmeasure.data.prefs.CallSamplingStatusStore
+import com.example.crowdmeasure.domain.model.CallSource
 import com.example.crowdmeasure.domain.model.CallType
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import dagger.hilt.android.AndroidEntryPoint
@@ -57,7 +57,10 @@ class PhoneStateReceiver : BroadcastReceiver() {
 
             TelephonyManager.EXTRA_STATE_IDLE -> {
                 wasRinging = false
-                CallSamplingService.requestStop(context.applicationContext)
+                CallSamplingService.requestStop(
+                    context = context.applicationContext,
+                    callSource = CallSource.CELLULAR
+                )
             }
         }
     }
@@ -85,16 +88,10 @@ class PhoneStateReceiver : BroadcastReceiver() {
                 }
 
                 try {
-                    ContextCompat.startForegroundService(
+                    CallSamplingService.requestStart(
                         context,
-                        Intent(context, CallSamplingService::class.java).apply {
-                            action = CallSamplingService.ACTION_START
-
-                            putExtra(
-                                CallSamplingService.EXTRA_CALL_TYPE,
-                                callType.name
-                            )
-                        }
+                        callType = callType,
+                        callSource = CallSource.CELLULAR
                     )
                 } catch (error: Exception) {
 

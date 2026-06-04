@@ -105,7 +105,8 @@ fun ConsentGateScreen(
             settings?.consentGateDismissed == false &&
             fineLocationGranted &&
             phoneStateGranted &&
-            backgroundLocationGranted
+            backgroundLocationGranted &&
+            notificationsGranted
 
     ConsentGateContent(
         visible = visible,

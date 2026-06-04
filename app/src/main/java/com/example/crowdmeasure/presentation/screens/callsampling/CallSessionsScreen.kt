@@ -215,6 +215,12 @@ private fun SessionCard(
             }
 
             Text(
+                text = "${session.callSource.name.lowercase()} • ${session.callType.name.lowercase()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Text(
                 text = buildString {
                     append("${session.sampleCount} sample${if (session.sampleCount != 1) "s" else ""}")
                     latest?.rat?.let { append(" · $it") }

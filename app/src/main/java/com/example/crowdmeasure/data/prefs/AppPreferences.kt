@@ -13,7 +13,7 @@ class AppPreferences(private val context: Context) {
 
     companion object {
         const val CONSENT_VERSION = 1
-        const val DEFAULT_ENDPOINT = "https://google.com"
+        const val DEFAULT_ENDPOINT = "https://www.google.com/"
         const val DEFAULT_RETENTION_DAYS = 7
         const val DEFAULT_AUTORUN_MINUTES = 20
     }
@@ -33,6 +33,8 @@ class AppPreferences(private val context: Context) {
             consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: false,
             firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: true,
             callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: true,
+            whatsappCallSamplingEnabled =
+                prefs[DataStoreKeys.WHATSAPP_CALL_SAMPLING_ENABLED] ?: true,
         )
     }
 
@@ -74,5 +76,9 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setCallSamplingEnabled(enabled: Boolean) {
         context.dataStore.edit { it[DataStoreKeys.CALL_SAMPLING_ENABLED] = enabled }
+    }
+
+    suspend fun setWhatsappCallSamplingEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[DataStoreKeys.WHATSAPP_CALL_SAMPLING_ENABLED] = enabled }
     }
 }

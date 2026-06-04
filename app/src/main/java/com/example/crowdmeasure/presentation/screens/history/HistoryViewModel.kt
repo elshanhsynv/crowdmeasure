@@ -34,6 +34,7 @@ class HistoryViewModel @Inject constructor(
 
     private val dateFormatter = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
     private val queryText = MutableStateFlow("")
+    private val transportFilter = MutableStateFlow(HistoryTransportFilter.All)
     private val manualRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     @OptIn(FlowPreview::class)
@@ -52,13 +53,13 @@ class HistoryViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val itemsState: StateFlow<UiState<List<HistoryItemUi>>> =
-        combine(appliedQuery, refreshes) { query, _ -> query }
-            .flatMapLatest { query ->
+        combine(appliedQuery, transportFilter, refreshes) { query, filter, _ -> query to filter }
+            .flatMapLatest { (query, filter) ->
                 // Fetch recent history WITHOUT tag filter, then filter locally by query.
                 getHistoryUseCase(limit = 100, feedbackTag = null)
                     .map { items ->
                         val uiItems = items.map { it.toHistoryItemUi(dateFormatter) }
-                        val filtered = filterAndRank(uiItems, query)
+                        val filtered = filterAndRank(uiItems, query, filter)
                         UiState.Success(filtered) as UiState<List<HistoryItemUi>>
                     }
                     .onStart { emit(UiState.Loading as UiState<List<HistoryItemUi>>) }
@@ -80,11 +81,13 @@ class HistoryViewModel @Inject constructor(
     val uiState: StateFlow<HistoryUiState> = combine(
         queryText,
         appliedQuery,
+        transportFilter,
         itemsState
-    ) { query, applied, items ->
+    ) { query, applied, filter, items ->
         HistoryUiState(
             queryText = query,
             appliedTag = applied, // keep field name for UI; now it represents applied query
+            transportFilter = filter,
             itemsState = items
         )
     }.stateIn(
@@ -101,6 +104,15 @@ class HistoryViewModel @Inject constructor(
         queryText.value = ""
     }
 
+    fun clearFilters() {
+        queryText.value = ""
+        transportFilter.value = HistoryTransportFilter.All
+    }
+
+    fun setTransportFilter(filter: HistoryTransportFilter) {
+        transportFilter.value = filter
+    }
+
     fun refresh() {
         manualRefreshTrigger.tryEmit(Unit)
     }
@@ -109,15 +121,26 @@ class HistoryViewModel @Inject constructor(
     // Local search across multiple fields + ranking
     // ------------------------------------------------------------
 
-    private fun filterAndRank(items: List<HistoryItemUi>, query: String?): List<HistoryItemUi> {
+    private fun filterAndRank(
+        items: List<HistoryItemUi>,
+        query: String?,
+        transportFilter: HistoryTransportFilter
+    ): List<HistoryItemUi> {
+        val transportFiltered = items.filter { item ->
+            when (transportFilter) {
+                HistoryTransportFilter.All -> true
+                HistoryTransportFilter.Wifi -> item.isWifi
+                HistoryTransportFilter.Cellular -> !item.isWifi
+            }
+        }
         val q = query?.trim().orEmpty()
-        if (q.isBlank()) return items
+        if (q.isBlank()) return transportFiltered
 
         val tokens = q.lowercase()
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }
 
-        return items.mapNotNull { item ->
+        return transportFiltered.mapNotNull { item ->
             val haystack = buildHaystack(item)
             val score = score(item, haystack, tokens)
             if (score <= 0) null else item to score
@@ -137,7 +160,7 @@ class HistoryViewModel @Inject constructor(
             item.dataNetworkType,
             item.protocol,
             item.endpointIdOrHost,
-            item.rttText,
+            item.httpLatText,
             item.ttfbText,
             if (item.hasLocation) "location" else null
         ).joinToString(" ").lowercase()
@@ -168,7 +191,7 @@ class HistoryViewModel @Inject constructor(
         bump(item.dataNetworkType, exact = 25, prefix = 15, contains = 10)
 
         // Small: metrics text matches
-        bump(item.rttText, exact = 10, prefix = 8, contains = 6)
+        bump(item.httpLatText, exact = 10, prefix = 8, contains = 6)
         bump(item.ttfbText, exact = 10, prefix = 8, contains = 6)
 
         // baseline so general matches still show up
@@ -185,10 +208,19 @@ private fun Measurement.toHistoryItemUi(formatter: SimpleDateFormat): HistoryIte
         id = meta.measurementId,
         timeText = formatter.format(Date(meta.timestampUtcMs)),
         transportText = environment.network.transport.toString(),
-        rttText = performance.rttAvgMs?.let { "$it ms" } ?: "—",
-        ttfbText = performance.ttfbMs?.let { "$it ms" } ?: "—",
+        httpLatText = performance.httpLatencyAvgMs?.let { "$it ms" } ?: "—",
+        ttfbText = performance.ttfbAvgMs?.let { "$it ms" } ?: "—",
+        dnsText = performance.dnsMs?.let { "$it ms" } ?: "—",
         hasLocation = environment.location != null,
-        carrierName = environment.network.cell?.carrier?.carrierName,
+        carrierName = environment.network.cell?.let { cell ->
+            cell.simCarriers.firstOrNull { sim ->
+                sim.subscriptionId != null && sim.subscriptionId == cell.collectedSubscriptionId
+            }?.carrierName
+                ?: cell.simCarriers.firstOrNull { sim ->
+                    sim.simSlotIndex != null && sim.simSlotIndex == cell.collectedSimSlotIndex
+                }?.carrierName
+                ?: cell.simCarriers.firstOrNull()?.carrierName
+        },
         registeredRat = environment.network.cell?.rat,
         dataNetworkType = environment.network.cell?.dataNetworkType,
         protocol = performance.protocol.toString(),

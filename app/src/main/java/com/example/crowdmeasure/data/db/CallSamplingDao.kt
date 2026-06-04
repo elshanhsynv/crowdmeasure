@@ -16,8 +16,14 @@ interface CallSamplingDao {
     @Query("SELECT * FROM call_sessions ORDER BY startedAtUtcMs DESC LIMIT :limit")
     fun observeRecentSessions(limit: Int): Flow<List<CallSessionEntity>>
 
+    @Query("SELECT * FROM call_sessions ORDER BY startedAtUtcMs DESC LIMIT :limit")
+    suspend fun getRecentSessions(limit: Int): List<CallSessionEntity>
+
     @Query("SELECT * FROM call_cell_samples WHERE sessionId = :sessionId ORDER BY sampledAtUtcMs ASC")
     fun observeSamples(sessionId: String): Flow<List<CallCellSampleEntity>>
+
+    @Query("SELECT * FROM call_cell_samples WHERE sessionId = :sessionId ORDER BY sampledAtUtcMs ASC")
+    suspend fun getSamples(sessionId: String): List<CallCellSampleEntity>
 
     @Query(
         "SELECT * FROM call_cell_samples WHERE sessionId IN " +

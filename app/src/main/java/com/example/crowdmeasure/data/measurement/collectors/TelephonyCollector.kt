@@ -11,6 +11,8 @@ import android.telephony.CellInfoTdscdma
 import android.telephony.CellInfoWcdma
 import android.telephony.CellSignalStrengthNr
 import android.telephony.ServiceState
+import android.telephony.SubscriptionInfo
+import android.telephony.SubscriptionManager
 import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
 import android.telephony.CellInfo as AndroidCellInfo
@@ -40,23 +42,14 @@ object TelephonyCollector {
     fun collect(context: Context): CellInfo {
         val tm = context.getSystemService<TelephonyManager>()
             ?: return CellInfo(
-                carrier = CarrierInfo(null, null, null, null, null, null, null),
+                simCarriers = emptyList(),
                 rat = null,
                 nrState = NrState.NONE,
                 serving = null,
                 aggregation = null,
             )
 
-//        TelephonyManager::class.java.methods
-//            .filter { it.parameterCount == 0 && it.name.startsWith("get") }
-//            .forEach { method ->
-//                try {
-//                    val value = method.invoke(tm)
-//                    Timber.d("${method.name} = $value")
-//                } catch (e: Exception) {
-//                    Timber.d("${method.name} = <error: ${e.message}>")
-//                }
-//            }
+        val sm = context.getSystemService<SubscriptionManager>()
 
         val op = tm.networkOperator.orEmpty()
         val phoneGranted = AppPermissions.hasPhoneState(context)
@@ -100,9 +93,14 @@ object TelephonyCollector {
             countryIso = safe { tm.simCountryIso },
             duplexMode = duplexModeString
         )
+        val simCarriers = collectSimCarriers(tm, sm, phoneGranted)
+        val collectedCarrier = simCarriers.collectedCarrier() ?: carrier
+        val collectedSimCarriers = simCarriers.ifEmpty { listOf(collectedCarrier) }
 
         val base = CellInfo(
-            carrier = carrier,
+            simCarriers = collectedSimCarriers,
+            collectedSubscriptionId = collectedCarrier.subscriptionId,
+            collectedSimSlotIndex = collectedCarrier.simSlotIndex,
             dataNetworkType = dataType?.let(::networkTypeName),
             voiceNetworkType = voiceType?.let(::networkTypeName),
             roaming = safe { tm.isNetworkRoaming },
@@ -148,11 +146,13 @@ object TelephonyCollector {
         val parsedServing = candidate?.let { parseCell(it) }
         val aggregation = candidate?.let { buildAggregation(infos, it) }
         val neighbors = infos
-            .filter { it !== candidate }
+            .filterNot { it.isRegistered }
             .mapNotNull { parseCell(it).snapshot }
 
         return CellInfo(
-            carrier = carrier,
+            simCarriers = collectedSimCarriers,
+            collectedSubscriptionId = collectedCarrier.subscriptionId,
+            collectedSimSlotIndex = collectedCarrier.simSlotIndex,
             dataNetworkType = dataType?.let(::networkTypeName),
             voiceNetworkType = voiceType?.let(::networkTypeName),
             roaming = safe { tm.isNetworkRoaming },
@@ -171,6 +171,119 @@ object TelephonyCollector {
     } catch (_: Throwable) {
         null
     }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun collectSimCarriers(
+        tm: TelephonyManager,
+        sm: SubscriptionManager?,
+        phoneGranted: Boolean,
+    ): List<CarrierInfo> {
+        if (!phoneGranted || sm == null) return emptyList()
+
+        val defaultDataSubId = safe { SubscriptionManager.getDefaultDataSubscriptionId() }.validSubId()
+        val defaultVoiceSubId = safe { SubscriptionManager.getDefaultVoiceSubscriptionId() }.validSubId()
+        val defaultSmsSubId = safe { SubscriptionManager.getDefaultSmsSubscriptionId() }.validSubId()
+        val activeDataSubId = reflectStaticInt(
+            SubscriptionManager::class.java,
+            "getActiveDataSubscriptionId",
+        ).validSubId()
+
+        return safe { sm.activeSubscriptionInfoList.orEmpty() }
+            .orEmpty()
+            .sortedWith(
+                compareBy<SubscriptionInfo> { it.simSlotIndex.validSlotIndex() ?: Int.MAX_VALUE }
+                    .thenBy { it.subscriptionId }
+            )
+            .map { info ->
+                info.toCarrierInfo(
+                    tm = tm,
+                    defaultDataSubId = defaultDataSubId,
+                    defaultVoiceSubId = defaultVoiceSubId,
+                    defaultSmsSubId = defaultSmsSubId,
+                    activeDataSubId = activeDataSubId,
+                )
+            }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun SubscriptionInfo.toCarrierInfo(
+        tm: TelephonyManager,
+        defaultDataSubId: Int?,
+        defaultVoiceSubId: Int?,
+        defaultSmsSubId: Int?,
+        activeDataSubId: Int?,
+    ): CarrierInfo {
+        val subId = subscriptionId
+        val subTm = safe { tm.createForSubscriptionId(subId) } ?: tm
+        val networkOperator = safe { subTm.networkOperator }.orEmpty()
+        val mcc = networkOperator.takeIf { it.length >= 3 }?.substring(0, 3)
+            ?: safe { mccString }.takeIfNotBlank()
+        val mnc = networkOperator.takeIf { it.length >= 5 }?.substring(3)
+            ?: safe { mncString }.takeIfNotBlank()
+
+        return CarrierInfo(
+            carrierName = safe { subTm.networkOperatorName }.takeIfNotBlank()
+                ?: safe { carrierName?.toString() }.takeIfNotBlank(),
+            mcc = mcc,
+            mnc = mnc,
+            simOperatorId = safe { subTm.simOperator }.takeIfNotBlank()
+                ?: listOfNotNull(mcc, mnc).takeIf { it.size == 2 }?.joinToString(separator = ""),
+            simOperatorName = safe { subTm.simOperatorName }.takeIfNotBlank()
+                ?: safe { carrierName?.toString() }.takeIfNotBlank(),
+            countryIso = safe { subTm.simCountryIso }.takeIfNotBlank()
+                ?: safe { countryIso }.takeIfNotBlank(),
+            duplexMode = serviceStateDuplexMode(subTm, phoneGranted = true),
+            subscriptionId = subId.validSubId(),
+            simSlotIndex = simSlotIndex.validSlotIndex(),
+            displayName = safe { displayName?.toString() }.takeIfNotBlank(),
+            carrierId = carrierId.validId(),
+            dataRoaming = when (dataRoaming) {
+                SubscriptionManager.DATA_ROAMING_ENABLE -> true
+                SubscriptionManager.DATA_ROAMING_DISABLE -> false
+                else -> null
+            },
+            isEmbedded = safe { isEmbedded },
+            isOpportunistic = safe { isOpportunistic },
+            cardId = reflectInt(this, "getCardId")?.validId(),
+            portIndex = reflectInt(this, "getPortIndex")?.validId(),
+            isDefaultData = subId == defaultDataSubId,
+            isDefaultVoice = subId == defaultVoiceSubId,
+            isDefaultSms = subId == defaultSmsSubId,
+            isActiveData = subId == activeDataSubId,
+        )
+    }
+
+    private fun List<CarrierInfo>.collectedCarrier(): CarrierInfo? =
+        firstOrNull { it.isActiveData == true }
+            ?: firstOrNull { it.isDefaultData == true }
+            ?: firstOrNull { it.simSlotIndex != null }
+            ?: firstOrNull()
+
+    private fun serviceStateDuplexMode(tm: TelephonyManager, phoneGranted: Boolean): String {
+        if (!phoneGranted) return ""
+        val serviceState = try {
+            tm.serviceState
+        } catch (_: SecurityException) {
+            null
+        } catch (_: Throwable) {
+            null
+        }
+
+        return when (serviceState?.duplexMode) {
+            ServiceState.DUPLEX_MODE_FDD -> "FDD"
+            ServiceState.DUPLEX_MODE_TDD -> "TDD"
+            else -> ""
+        }
+    }
+
+    private fun String?.takeIfNotBlank(): String? =
+        takeIf { !it.isNullOrBlank() }
+
+    private fun Int?.validSubId(): Int? =
+        this?.takeIf { it != SubscriptionManager.INVALID_SUBSCRIPTION_ID && it >= 0 }
+
+    private fun Int.validSlotIndex(): Int? =
+        takeIf { it != SubscriptionManager.INVALID_SIM_SLOT_INDEX && it >= 0 }
 
     private fun Int.validId(): Int? =
         takeIf { it != Int.MAX_VALUE && it != Int.MIN_VALUE && it >= 0 }
@@ -611,6 +724,10 @@ object TelephonyCollector {
     private fun reflectInt(obj: Any?, methodName: String): Int? = runCatching {
         if (obj == null) return null
         obj.javaClass.getMethod(methodName).invoke(obj) as? Int
+    }.getOrNull()
+
+    private fun reflectStaticInt(clazz: Class<*>, methodName: String): Int? = runCatching {
+        clazz.getMethod(methodName).invoke(null) as? Int
     }.getOrNull()
 
     private fun networkTypeName(type: Int): String? = when (type) {

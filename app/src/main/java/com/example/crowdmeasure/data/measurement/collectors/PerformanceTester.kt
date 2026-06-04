@@ -3,7 +3,9 @@ package com.example.crowdmeasure.data.measurement.collectors
 import androidx.annotation.WorkerThread
 import com.example.crowdmeasure.domain.model.PerformanceInfo
 import com.example.crowdmeasure.domain.model.ProtocolType
+import kotlinx.coroutines.CancellationException
 import okhttp3.Call
+import okhttp3.ConnectionPool
 import okhttp3.EventListener
 import okhttp3.Handshake
 import okhttp3.Headers
@@ -27,11 +29,16 @@ object PerformanceTester {
     private const val STALL_THRESHOLD_MS = 1_500L
 
     /**
-     * Runs [PROBE_ATTEMPTS] sequential HEAD/GET probes against [endpointUrl] and
-     * returns aggregated performance metrics.
+     * Runs [PROBE_ATTEMPTS] sequential lightweight HTTPS probes against [endpointUrl].
      *
-     * DNS, TCP, and TLS timings reflect the *first* (cold) connection only;
-     * subsequent probes reuse the keep-alive connection intentionally.
+     * This collector measures application-level HTTPS responsiveness, not raw ICMP RTT
+     * and not raw IP packet loss.
+     *
+     * A dedicated OkHttp connection pool is used so the first probe is not warmed by
+     * previous app requests made through the parent client. Subsequent probes may reuse
+     * the connection intentionally.
+     *
+     * DNS may still be affected by Android/OS resolver cache.
      */
     @WorkerThread
     fun run(
@@ -40,97 +47,149 @@ object PerformanceTester {
         endpointId: String,
     ): PerformanceInfo {
         val parsedUrl = endpointUrl.toHttpUrl().also { url ->
-            require(url.scheme == "https") { "HTTPS endpoints only. Got: ${url.scheme}" }
-        }
-
-        val timingListener = TimingEventListener()
-
-        // newBuilder() shares the parent's connection pool and thread pool;
-        // only the EventListener is overridden.
-        val client = okHttp.newBuilder()
-            .eventListener(timingListener)
-            .build()
-
-        val samples = mutableListOf<Long>()
-        var failures = 0
-        var firstHttpStatus: Int? = null
-        var firstServerRegion: String? = null
-        var stalls = 0
-        var maxStallMs: Long? = null
-        var negotiatedProtocol = ProtocolType.UNKNOWN
-
-        for (i in 0 until PROBE_ATTEMPTS) {
-            val probe = singleProbe(client, parsedUrl)
-            if (probe == null) {
-                failures++
-            } else {
-                samples += probe.rttMs
-
-                if (firstHttpStatus == null) firstHttpStatus = probe.httpStatus
-                if (firstServerRegion == null) firstServerRegion = probe.serverRegion
-                if (negotiatedProtocol == ProtocolType.UNKNOWN) {
-                    negotiatedProtocol = probe.protocol
-                }
-
-                if (probe.rttMs >= STALL_THRESHOLD_MS) {
-                    stalls++
-                    maxStallMs = maxOf(maxStallMs ?: 0L, probe.rttMs)
-                }
+            require(url.scheme == "https") {
+                "HTTPS endpoints only. Got: ${url.scheme}"
             }
         }
 
-        // Loss is meaningful even when all probes failed (100 %).
-        val lossPct = (failures.toDouble() / PROBE_ATTEMPTS.toDouble()) * 100.0
+        /*
+         * This dedicated pool prevents EnvironmentCollector or other app requests
+         * from warming this measurement run.
+         *
+         * The pool is still shared across this run's 8 probes, so probe #1 is the
+         * connection setup probe and later probes can measure keep-alive behavior.
+         */
+        val measurementClient = okHttp.newBuilder()
+            .connectionPool(ConnectionPool())
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .retryOnConnectionFailure(false)
+            .build()
+
+        val probes = mutableListOf<ProbeResult>()
+        var failures = 0
+
+        repeat(PROBE_ATTEMPTS) {
+            val probe = singleProbe(measurementClient, parsedUrl)
+            if (probe == null) {
+                failures++
+            } else {
+                probes += probe
+            }
+        }
+
+        val latencySamples = probes.map { it.httpLatencyMs }
+        val ttfbSamples = probes.mapNotNull { it.timings.ttfbMs }
+
+        val stalls = latencySamples.count { it >= STALL_THRESHOLD_MS }
+        val maxStallMs = latencySamples
+            .filter { it >= STALL_THRESHOLD_MS }
+            .maxOrNull()
+
+        val firstSuccessfulProbe = probes.firstOrNull()
+
+        val protocol = probes
+            .firstOrNull { it.protocol != ProtocolType.UNKNOWN }
+            ?.protocol
+            ?: ProtocolType.UNKNOWN
+
+        val probeFailurePct = (failures.toDouble() / PROBE_ATTEMPTS.toDouble()) * 100.0
 
         return PerformanceInfo(
             endpointId = endpointId,
-            dnsMs = timingListener.dnsMs,
-            tcpMs = timingListener.tcpMs,
-            tlsMs = timingListener.tlsMs,
-            ttfbMs = timingListener.ttfbMs,
-            rttAvgMs = samples.takeIf { it.isNotEmpty() }?.average()?.roundToLong(),
-            rttP95Ms = percentile(samples, 0.95),
-            jitterMs = jitter(samples),
-            packetLossPct = lossPct,
+
+            dnsMs = probes.firstNotNullOfOrNull { it.timings.dnsMs },
+            connectMs = probes.firstNotNullOfOrNull { it.timings.connectMs },
+            tlsMs = probes.firstNotNullOfOrNull { it.timings.tlsMs },
+
+            ttfbAvgMs = ttfbSamples
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+                ?.roundToLong(),
+
+            ttfbP95Ms = percentile(ttfbSamples, 0.95),
+
+            httpLatencyAvgMs = latencySamples
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+                ?.roundToLong(),
+
+            httpLatencyP95Ms = percentile(latencySamples, 0.95),
+
+            jitterMs = jitter(latencySamples),
+
+            probeFailurePct = probeFailurePct,
+
+            probesAttempted = PROBE_ATTEMPTS,
+            probesSucceeded = probes.size,
+            probesFailed = failures,
+
+            stallsCount = stalls.takeIf { latencySamples.isNotEmpty() },
+            maxStallMs = maxStallMs,
+
+            httpStatus = firstSuccessfulProbe?.httpStatus,
+            serverRegion = firstSuccessfulProbe?.serverRegion,
+            firstResponseBodyStarted = firstSuccessfulProbe?.responseBodyStarted,
+
+            protocol = protocol,
+
+            testPayloadBytes = null,
+
             downMbps = null,
             upMbps = null,
             downP95Mbps = null,
             downStdDevMbps = null,
             upP95Mbps = null,
             upStdDevMbps = null,
-            stallsCount = stalls.takeIf { samples.isNotEmpty() },
-            maxStallMs = maxStallMs,
-            httpStatus = firstHttpStatus,
-            serverRegion = firstServerRegion,
-            testPayloadBytes = null,
-            protocol = negotiatedProtocol,
         )
     }
 
     private data class ProbeResult(
-        val rttMs: Long,
+        val httpLatencyMs: Long,
         val httpStatus: Int?,
         val serverRegion: String?,
         val protocol: ProtocolType,
+        val responseBodyStarted: Boolean,
+        val timings: CallTimings,
     )
 
-    private fun singleProbe(client: OkHttpClient, url: HttpUrl): ProbeResult? {
+    private data class CallTimings(
+        var dnsMs: Long? = null,
+        var connectMs: Long? = null,
+        var tlsMs: Long? = null,
+        var ttfbMs: Long? = null,
+    )
+
+    private fun singleProbe(
+        baseClient: OkHttpClient,
+        url: HttpUrl,
+    ): ProbeResult? {
+        val timings = CallTimings()
+
+        /*
+         * A fresh listener is attached for this one call, so timings cannot be
+         * overwritten by another probe.
+         */
+        val client = baseClient.newBuilder()
+            .eventListener(TimingEventListener(timings))
+            .build()
+
         val request = Request.Builder()
             .url(url)
             .get()
-            .header("Cache-Control", "no-cache")
+            .header("Cache-Control", "no-store")
+            .header("Pragma", "no-cache")
+            .header("Accept-Encoding", "identity")
             .build()
 
-        val start = now()
+        val startNs = System.nanoTime()
+
         return try {
             client.newCall(request).execute().use { response ->
-                // Read at least one byte to ensure the body has started arriving
-                // before we record the end time (prevents measuring header-only latency).
-                response.body.source().request(1)
-                val rttMs = (now() - start).coerceAtLeast(0)
+                val bodyStarted = response.body.source().request(1)
 
-                // Read protocol from Response — more accurate than connectEnd,
-                // which may not reflect ALPN negotiation on the first call.
+                val httpLatencyMs = elapsedMs(startNs) ?: 0L
+
                 val protocol = when (response.protocol) {
                     Protocol.HTTP_2 -> ProtocolType.HTTP2
                     Protocol.HTTP_1_1 -> ProtocolType.HTTP1_1
@@ -138,47 +197,68 @@ object PerformanceTester {
                 }
 
                 ProbeResult(
-                    rttMs = rttMs,
+                    httpLatencyMs = httpLatencyMs,
                     httpStatus = response.code,
                     serverRegion = extractServerRegion(response.headers),
                     protocol = protocol,
+                    responseBodyStarted = bodyStarted,
+                    timings = timings,
                 )
             }
         } catch (_: IOException) {
             null
-        } catch (_: Throwable) {
+        } catch (e: RuntimeException) {
+            if (e is CancellationException) throw e
             null
         }
     }
 
     // -------------------------------------------------------------------------
-    // EventListener — all callbacks arrive on OkHttp's internal thread.
-    // Fields are written exclusively there and read only after execute() returns
-    // (OkHttp guarantees a happens-before edge at call completion).
+    // EventListener
+    //
+    // One TimingEventListener instance is used per HTTP call.
+    //
+    // dnsMs:
+    //   DNS lookup duration, if DNS was performed.
+    //
+    // connectMs:
+    //   OkHttp connection establishment duration. This should not be overclaimed
+    //   as pure TCP time.
+    //
+    // tlsMs:
+    //   TLS handshake duration, if a TLS handshake was performed.
+    //
+    // ttfbMs:
+    //   Time from request headers sent to response headers starting.
     // -------------------------------------------------------------------------
 
-    private class TimingEventListener : EventListener() {
+    private class TimingEventListener(
+        private val timings: CallTimings,
+    ) : EventListener() {
 
-        var dnsMs: Long? = null; private set
-        var tcpMs: Long? = null; private set
-        var tlsMs: Long? = null; private set
-        var ttfbMs: Long? = null; private set
-
-        private var dnsStart = 0L
-        private var connectStart = 0L
-        private var tlsStart = 0L
-        private var reqHeadersEnd = 0L
+        private var dnsStartNs = 0L
+        private var connectStartNs = 0L
+        private var tlsStartNs = 0L
+        private var requestHeadersEndNs = 0L
 
         override fun dnsStart(call: Call, domainName: String) {
-            dnsStart = now()
+            dnsStartNs = System.nanoTime()
         }
 
-        override fun dnsEnd(call: Call, domainName: String, inetAddressList: List<InetAddress>) {
-            dnsMs = delta(dnsStart)
+        override fun dnsEnd(
+            call: Call,
+            domainName: String,
+            inetAddressList: List<InetAddress>,
+        ) {
+            timings.dnsMs = elapsedMs(dnsStartNs)
         }
 
-        override fun connectStart(call: Call, inetSocketAddress: InetSocketAddress, proxy: Proxy) {
-            connectStart = now()
+        override fun connectStart(
+            call: Call,
+            inetSocketAddress: InetSocketAddress,
+            proxy: Proxy,
+        ) {
+            connectStartNs = System.nanoTime()
         }
 
         override fun connectEnd(
@@ -187,58 +267,85 @@ object PerformanceTester {
             proxy: Proxy,
             protocol: Protocol?,
         ) {
-            tcpMs = delta(connectStart)
+            timings.connectMs = elapsedMs(connectStartNs)
         }
 
         override fun secureConnectStart(call: Call) {
-            tlsStart = now()
+            tlsStartNs = System.nanoTime()
         }
 
         override fun secureConnectEnd(call: Call, handshake: Handshake?) {
-            tlsMs = delta(tlsStart)
+            timings.tlsMs = elapsedMs(tlsStartNs)
         }
 
         override fun requestHeadersEnd(call: Call, request: Request) {
-            reqHeadersEnd = now()
+            requestHeadersEndNs = System.nanoTime()
         }
 
         override fun responseHeadersStart(call: Call) {
-            if (reqHeadersEnd > 0L) ttfbMs = (now() - reqHeadersEnd).coerceAtLeast(0L)
+            if (requestHeadersEndNs > 0L) {
+                timings.ttfbMs = elapsedMs(requestHeadersEndNs)
+            }
         }
     }
 
     private fun extractServerRegion(headers: Headers): String? {
-        // Cloudflare: CF-RAY = "<ray_id>-<IATA>" e.g. "7c1abc-AMS"
-        headers["cf-ray"]?.let { v ->
-            val dash = v.lastIndexOf('-')
-            if (dash in 1 until v.lastIndex) return v.substring(dash + 1)
+        // Cloudflare: CF-RAY = "<ray_id>-<IATA>", e.g. "7c1abc-AMS"
+        headers["cf-ray"]?.let { value ->
+            val dash = value.lastIndexOf('-')
+            if (dash in 1 until value.lastIndex) {
+                return value.substring(dash + 1).trim().takeIf { it.isNotEmpty() }
+            }
         }
-        // CloudFront: X-Amz-Cf-Pop e.g. "FRA56-P1"
-        headers["x-amz-cf-pop"]?.let { return it }
-        // Fastly: X-Served-By (maybe a list; take first token)
-        headers["x-served-by"]?.let { return it.split(',', ' ').firstOrNull { t -> t.isNotBlank() } }
-        // Akamai: X-Akamai-Edgescape (format varies per customer config)
-        headers["x-akamai-edgescape"]?.let { return it }
-        // Generic fallback
+
+        // CloudFront: X-Amz-Cf-Pop, e.g. "FRA56-P1"
+        headers["x-amz-cf-pop"]?.let { value ->
+            return value.trim().takeIf { it.isNotEmpty() }
+        }
+
+        // Fastly: X-Served-By can be a list; take the first non-empty token.
+        headers["x-served-by"]?.let { value ->
+            return value
+                .split(',', ' ')
+                .firstOrNull { it.isNotBlank() }
+                ?.trim()
+        }
+
+        // Akamai: customer-configured and format varies.
+        headers["x-akamai-edgescape"]?.let { value ->
+            return value.trim().takeIf { it.isNotEmpty() }
+        }
         return headers["server"]
     }
 
-    private fun now(): Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())
-
-    private fun delta(startMs: Long): Long? =
-        if (startMs <= 0L) null else (now() - startMs).coerceAtLeast(0L)
+    private fun elapsedMs(startNs: Long): Long? {
+        if (startNs <= 0L) return null
+        return TimeUnit.NANOSECONDS
+            .toMillis(System.nanoTime() - startNs)
+            .coerceAtLeast(0L)
+    }
 
     private fun percentile(samples: List<Long>, p: Double): Long? {
         if (samples.isEmpty()) return null
+
         val sorted = samples.sorted()
-        val idx = ceil(p * sorted.size).toInt().coerceIn(1, sorted.size) - 1
+        val idx = ceil(p * sorted.size)
+            .toInt()
+            .coerceIn(1, sorted.size) - 1
+
         return sorted[idx]
     }
 
     private fun jitter(samples: List<Long>): Long? {
         if (samples.size < 2) return null
+
         var sum = 0L
-        for (i in 1 until samples.size) sum += abs(samples[i] - samples[i - 1])
-        return (sum.toDouble() / (samples.size - 1)).roundToLong()
+
+        for (i in 1 until samples.size) {
+            sum += abs(samples[i] - samples[i - 1])
+        }
+
+        return (sum.toDouble() / (samples.size - 1))
+            .roundToLong()
     }
 }

@@ -5,18 +5,12 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import com.example.crowdmeasure.BuildConfig
 import com.example.crowdmeasure.data.measurement.collectors.DeviceCollector
-import com.example.crowdmeasure.data.measurement.collectors.DiagnosticsCollector
 import com.example.crowdmeasure.data.measurement.collectors.EnvironmentCollector
-import com.example.crowdmeasure.data.measurement.collectors.IpCollector
-import com.example.crowdmeasure.data.measurement.collectors.LocationCollector
 import com.example.crowdmeasure.data.measurement.collectors.PerformanceTester
-import com.example.crowdmeasure.data.measurement.collectors.TelephonyCollector
-import com.example.crowdmeasure.data.measurement.collectors.WifiCollector
 import com.example.crowdmeasure.data.measurement.net.OkHttpClientProvider
 import com.example.crowdmeasure.data.prefs.AppPreferences
 import com.example.crowdmeasure.domain.model.Measurement
 import com.example.crowdmeasure.domain.model.Meta
-import com.example.crowdmeasure.domain.model.ProtocolType
 import com.example.crowdmeasure.domain.model.TransportType
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
@@ -53,6 +47,21 @@ class MeasurementRunner(
                 endpointUrl = endpointUrl,
                 endpointId = endpointUrl,
             )
+
+//            val throughput = ThroughputTester.run(
+//                okHttp = http,
+//                config = settings.throughputTestConfig,
+//            )
+//
+//            val performance = perf.copy(
+//                downMbps = throughput.downMbps,
+//                upMbps = throughput.upMbps,
+//                downP95Mbps = throughput.downP95Mbps,
+//                downStdDevMbps = throughput.downStdDevMbps,
+//                upP95Mbps = throughput.upP95Mbps,
+//                upStdDevMbps = throughput.upStdDevMbps,
+//                testPayloadBytes = throughput.testPayloadBytes,
+//            )
 
             val measurementId = UUID.randomUUID().toString()
 

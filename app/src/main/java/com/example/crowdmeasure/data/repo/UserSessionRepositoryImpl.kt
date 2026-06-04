@@ -22,4 +22,8 @@ class UserSessionRepositoryImpl(
     override suspend fun setCallSamplingEnabled(enabled: Boolean) {
         prefs.setCallSamplingEnabled(enabled)
     }
+
+    override suspend fun setWhatsappCallSamplingEnabled(enabled: Boolean) {
+        prefs.setWhatsappCallSamplingEnabled(enabled)
+    }
 }

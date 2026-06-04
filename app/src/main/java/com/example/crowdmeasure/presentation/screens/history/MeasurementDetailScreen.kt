@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
@@ -52,6 +53,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.NearMe
 import androidx.compose.material.icons.outlined.Nightlight
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.OpenInBrowser
@@ -134,7 +136,7 @@ private fun iconForMetric(label: String): ImageVector = when (label) {
     "ISP" -> Icons.Outlined.Business
     "ASN" -> Icons.Outlined.Numbers
     "DNS", "Protocol" -> Icons.Outlined.Hub
-    "TCP" -> Icons.AutoMirrored.Outlined.CompareArrows
+    "Connection" -> Icons.AutoMirrored.Outlined.CompareArrows
     "TLS" -> Icons.Outlined.Lock
 
     // Wi-Fi
@@ -143,12 +145,18 @@ private fun iconForMetric(label: String): ImageVector = when (label) {
 
     // Cellular / Mobile Network
     "Carrier" -> Icons.Outlined.SimCard
-    "MCC", "MNC" -> Icons.Outlined.Numbers
-    "ISO Country Code" -> Icons.Outlined.Flag
+    "SIM Count", "SIM Operator", "SIM Operator ID", "Display Name", "eSIM" -> Icons.Outlined.SimCard
+    "MCC", "MNC", "Slot Index", "Subscription ID", "Carrier ID", "Port Index", "Card ID" -> Icons.Outlined.Numbers
+    "ISO Country Code", "Country" -> Icons.Outlined.Flag
     "RAT", "Data Network Type", "Voice Network Type" -> Icons.Outlined.SettingsCell
     "Roaming" -> Icons.Outlined.Flight
-    "Registered" -> Icons.AutoMirrored.Outlined.FactCheck
+    "Registered", "Collected From", "Collected Here", "Active Data", "Default Data",
+    "Default Voice", "Default SMS" -> Icons.AutoMirrored.Outlined.FactCheck
+    "Data Roaming" -> Icons.Outlined.DataUsage
+    "Opportunistic" -> Icons.Outlined.Tune
+    "Duplex Mode" -> Icons.Outlined.SettingsCell
     "Cell ID", "LAC", "TAC", "PCI" -> Icons.Outlined.CellTower
+    "Neighbor Cells" -> Icons.Outlined.NearMe
     "Band", "ARFCN" -> Icons.Outlined.Sensors
     "RSRP", "RSRQ", "RSSNR" -> Icons.Outlined.SignalCellularAlt
 
@@ -156,13 +164,13 @@ private fun iconForMetric(label: String): ImageVector = when (label) {
     "Link Speed (legacy)", "Link Speed" -> Icons.Outlined.Speed
     "TX Link Speed", "Up", "Up P95", "Up StdDev" -> Icons.Outlined.Upload
     "RX Link Speed", "Down", "Down P95", "Down StdDev" -> Icons.Outlined.Download
-    "TTFB" -> Icons.Outlined.Schedule
+    "TTFB Average" -> Icons.Outlined.Schedule
     "HTTP Status" -> Icons.Outlined.BarChart
     "Server Region" -> Icons.Outlined.Language
-    "RTT Average" -> Icons.Outlined.Timeline
-    "RTT P95" -> Icons.Outlined.BarChart
+    "HTTP Latency Average" -> Icons.Outlined.Timeline
+    "HTTP Latency P95" -> Icons.Outlined.BarChart
     "Jitter" -> Icons.AutoMirrored.Outlined.ShowChart
-    "Packet Loss" -> Icons.Outlined.WifiOff
+    "Probe Failure %" -> Icons.Outlined.WifiOff
     "Stalls" -> Icons.Outlined.PauseCircle
     "Max Stall" -> Icons.Outlined.HourglassEmpty
 
@@ -235,6 +243,8 @@ private fun MeasurementDetailContent(
                     item(key = "cell") {
                         CellularSection(
                             pairs = cellPairs,
+                            sims = m.sims,
+                            collectedSimText = m.collectedSimText,
                             cellIdsText = m.cellIdsText,
                             cellIdsRevealed = state.revealed.contains(RevealKey.CellIds),
                             onToggleCellIds = { onToggleReveal(RevealKey.CellIds) }
@@ -417,6 +427,8 @@ private fun IpSection(pairs: List<Pair<String, String>>) {
 @Composable
 private fun CellularSection(
     pairs: List<Pair<String, String>>,
+    sims: List<SimCarrierUi>,
+    collectedSimText: String?,
     cellIdsText: String?,
     cellIdsRevealed: Boolean,
     onToggleCellIds: () -> Unit
@@ -427,6 +439,18 @@ private fun CellularSection(
         icon = Icons.Outlined.CellTower
     ) {
         MetricChipGrid(pairs = pairs)
+        if (collectedSimText != null || sims.isNotEmpty()) {
+            SectionDivider(modifier = Modifier.padding(vertical = 4.dp))
+            collectedSimText?.let {
+                MetricChipGrid(
+                    pairs = listOf("Collected From" to it),
+                    columns = 1
+                )
+            }
+            if (sims.isNotEmpty()) {
+                SimCarrierGroups(sims = sims)
+            }
+        }
         SectionDivider(modifier = Modifier.padding(vertical = 4.dp))
         SensitiveValueRow(
             label = "Cell Identifiers",
@@ -434,6 +458,53 @@ private fun CellularSection(
             revealed = cellIdsRevealed,
             onToggleReveal = onToggleCellIds
         )
+    }
+}
+
+@Composable
+private fun SimCarrierGroups(sims: List<SimCarrierUi>) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        sims.forEachIndexed { index, sim ->
+            if (index > 0 && sims.size > 1) {
+                SectionDivider()
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (sim.isCollected) {
+                            Icons.AutoMirrored.Outlined.FactCheck
+                        } else {
+                            Icons.Outlined.SimCard
+                        },
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = sim.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        sim.subtitle?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                MetricChipGrid(pairs = sim.pairs)
+            }
+        }
     }
 }
 
@@ -473,19 +544,19 @@ private fun PerformanceSection(
                 title = "Connection",
                 chips = listOf(
                     "DNS" to performance.dns,
-                    "TCP" to performance.tcp,
+                    "Connection" to performance.connect,
                     "TLS" to performance.tls,
-                    "TTFB" to performance.ttfb
+                    "TTFB Average" to performance.ttfbAvg
                 )
             )
 
             PerformanceGroup(
                 title = "Latency",
                 chips = listOf(
-                    "RTT Average" to performance.rttAvg,
-                    "RTT P95" to performance.rttP95,
+                    "HTTP Latency Average" to performance.httpLatencyAvg,
+                    "HTTP Latency P95" to performance.httpLatencyP95,
                     "Jitter" to performance.jitter,
-                    "Packet Loss" to performance.loss
+                    "Probe Failure %" to performance.probeFailure
                 )
             )
 
