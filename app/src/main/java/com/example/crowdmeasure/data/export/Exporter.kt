@@ -41,9 +41,7 @@ class Exporter(
             file.writeText(root.toString(2))
 
             FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
+                context, "${context.packageName}.fileprovider", file
             )
         }
     }
@@ -69,9 +67,7 @@ class Exporter(
             file.writeText(root.toString(2))
 
             FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
+                context, "${context.packageName}.fileprovider", file
             )
         }
     }
@@ -113,6 +109,12 @@ class Exporter(
                     putOpt("captive_portal", net.captivePortal)
                     putOpt("vpn", net.vpn)
                     putOpt("metered", net.metered)
+                    putOpt("data_usage", net.dataUsage?.let { usage ->
+                        JSONObject().apply {
+                            put("dl_kbps", usage.dlKbps)
+                            put("ul_kbps", usage.ulKbps)
+                        }
+                    })
                     putOpt("wifi", net.wifi?.let { w ->
                         JSONObject().apply {
                             putOpt("bssid_hash", w.bssidHash)
@@ -315,97 +317,119 @@ class Exporter(
     }
 
     private fun callSessionToJson(
-        session: CallSession,
-        samples: List<CallCellSample>
-    ): JSONObject =
-        JSONObject().apply {
-            put("session_id", session.sessionId)
-            put("started_at_utc_ms", session.startedAtUtcMs)
-            putOpt("ended_at_utc_ms", session.endedAtUtcMs)
-            put("call_type", session.callType.name)
-            put("call_source", session.callSource.name)
-            put("sample_interval_seconds", session.sampleIntervalSeconds)
-            put("sample_count", session.sampleCount)
-            putOpt("end_reason", session.endReason)
-            put("samples", JSONArray().apply {
-                samples.forEach { put(callSampleToJson(it)) }
-            })
-        }
+        session: CallSession, samples: List<CallCellSample>
+    ): JSONObject = JSONObject().apply {
+        put("session_id", session.sessionId)
+        put("started_at_utc_ms", session.startedAtUtcMs)
+        putOpt("ended_at_utc_ms", session.endedAtUtcMs)
+        put("call_type", session.callType.name)
+        put("call_source", session.callSource.name)
+        put("sample_interval_seconds", session.sampleIntervalSeconds)
+        put("sample_count", session.sampleCount)
+        putOpt("end_reason", session.endReason)
+        put("samples", JSONArray().apply {
+            samples.forEach { put(callSampleToJson(it)) }
+        })
+    }
 
-    private fun callSampleToJson(sample: CallCellSample): JSONObject =
-        JSONObject().apply {
-            put("id", sample.id)
-            put("session_id", sample.sessionId)
-            put("sampled_at_utc_ms", sample.sampledAtUtcMs)
-            put("elapsed_ms", sample.elapsedMs)
-            putOpt("rat", sample.rat)
-            putOpt("nr_state", sample.nrState)
-            putOpt("dbm", sample.dbm)
-            putOpt("rsrp_dbm", sample.rsrpDbm)
-            putOpt("rsrq_db", sample.rsrqDb)
-            putOpt("sinr_db", sample.sinrDb)
-            putOpt("pci", sample.pci)
-            putOpt("tac", sample.tac)
-            putOpt("band", sample.band)
-            putOpt("collected_subscription_id", sample.cell.collectedSubscriptionId)
-            putOpt("collected_sim_slot_index", sample.cell.collectedSimSlotIndex)
-            put("sim_carriers", JSONArray().apply {
-                sample.cell.simCarriers.forEach {
-                    put(carrierToJson(it))
-                }
-            })
-            putOpt("data_network_type", sample.cell.dataNetworkType)
-            putOpt("voice_network_type", sample.cell.voiceNetworkType)
-            putOpt("roaming", sample.cell.roaming)
-            putOpt("serving", sample.cell.serving?.let { serving ->
-                JSONObject().apply {
-                    putOpt("cell_id", serving.cellId)
-                    putOpt("cid", serving.cid)
-                    putOpt("nci", serving.nci)
-                    putOpt("lac", serving.lac)
-                    putOpt("tac", serving.tac)
-                    putOpt("pci", serving.pci)
-                    putOpt("band", serving.band)
-                    putOpt("arfcn", serving.arfcn)
-                    putOpt("uarfcn", serving.uarfcn)
-                    putOpt("nrarfcn", serving.nrarfcn)
-                    putOpt("rssi_dbm", serving.rssiDbm)
-                    putOpt("rsrp_dbm", serving.rsrpDbm)
-                    putOpt("rsrq_db", serving.rsrqDb)
-                    putOpt("sinr_db", serving.sinrDb)
-                    putOpt("asu_level", serving.asuLevel)
-                    putOpt("dbm", serving.dbm)
-                    putOpt("timing_advance", serving.timingAdvance)
-                    putOpt("ss_rsrp_dbm", serving.ssRsrpDbm)
-                    putOpt("ss_rsrq_db", serving.ssRsrqDb)
-                    putOpt("ss_sinr_db", serving.ssSinrDb)
-                    putOpt("bandwidth_mhz", serving.bandwidthMhz)
-                }
-            })
-            put("neighbor_count", sample.cell.neighbors.size)
-        }
+    private fun callSampleToJson(sample: CallCellSample): JSONObject = JSONObject().apply {
+        put("id", sample.id)
+        put("session_id", sample.sessionId)
+        put("sampled_at_utc_ms", sample.sampledAtUtcMs)
+        put("elapsed_ms", sample.elapsedMs)
+        putOpt("rat", sample.rat)
+        putOpt("nr_state", sample.nrState)
+        putOpt("dbm", sample.dbm)
+        putOpt("rsrp_dbm", sample.rsrpDbm)
+        putOpt("rsrq_db", sample.rsrqDb)
+        putOpt("sinr_db", sample.sinrDb)
+        putOpt("pci", sample.pci)
+        putOpt("tac", sample.tac)
+        putOpt("band", sample.band)
+        putOpt("collected_subscription_id", sample.cell.collectedSubscriptionId)
+        putOpt("collected_sim_slot_index", sample.cell.collectedSimSlotIndex)
+        put("sim_carriers", JSONArray().apply {
+            sample.cell.simCarriers.forEach {
+                put(carrierToJson(it))
+            }
+        })
+        putOpt("data_network_type", sample.cell.dataNetworkType)
+        putOpt("voice_network_type", sample.cell.voiceNetworkType)
+        putOpt("roaming", sample.cell.roaming)
+        putOpt("serving", sample.cell.serving?.let { serving ->
+            JSONObject().apply {
+                putOpt("cell_id", serving.cellId)
+                putOpt("cid", serving.cid)
+                putOpt("nci", serving.nci)
+                putOpt("lac", serving.lac)
+                putOpt("tac", serving.tac)
+                putOpt("pci", serving.pci)
+                putOpt("band", serving.band)
+                putOpt("arfcn", serving.arfcn)
+                putOpt("uarfcn", serving.uarfcn)
+                putOpt("nrarfcn", serving.nrarfcn)
+                putOpt("rssi_dbm", serving.rssiDbm)
+                putOpt("rsrp_dbm", serving.rsrpDbm)
+                putOpt("rsrq_db", serving.rsrqDb)
+                putOpt("sinr_db", serving.sinrDb)
+                putOpt("asu_level", serving.asuLevel)
+                putOpt("dbm", serving.dbm)
+                putOpt("timing_advance", serving.timingAdvance)
+                putOpt("ss_rsrp_dbm", serving.ssRsrpDbm)
+                putOpt("ss_rsrq_db", serving.ssRsrqDb)
+                putOpt("ss_sinr_db", serving.ssSinrDb)
+                putOpt("bandwidth_mhz", serving.bandwidthMhz)
+            }
+        })
+        put("neighbors", JSONArray().apply {
+            sample.cell.neighbors.forEach { nbr ->
+                put(JSONObject().apply {
+                    putOpt("cell_id", nbr.cellId)
+                    putOpt("cid", nbr.cid)
+                    putOpt("nci", nbr.nci)
+                    putOpt("lac", nbr.lac)
+                    putOpt("tac", nbr.tac)
+                    putOpt("pci", nbr.pci)
+                    putOpt("band", nbr.band)
+                    putOpt("arfcn", nbr.arfcn)
+                    putOpt("uarfcn", nbr.uarfcn)
+                    putOpt("nrarfcn", nbr.nrarfcn)
+                    putOpt("rssi_dbm", nbr.rssiDbm)
+                    putOpt("rsrp_dbm", nbr.rsrpDbm)
+                    putOpt("rsrq_db", nbr.rsrqDb)
+                    putOpt("sinr_db", nbr.sinrDb)
+                    putOpt("asu_level", nbr.asuLevel)
+                    putOpt("dbm", nbr.dbm)
+                    putOpt("timing_advance", nbr.timingAdvance)
+                    putOpt("ss_rsrp_dbm", nbr.ssRsrpDbm)
+                    putOpt("ss_rsrq_db", nbr.ssRsrqDb)
+                    putOpt("ss_sinr_db", nbr.ssSinrDb)
+                    putOpt("bandwidth_mhz", nbr.bandwidthMhz)
+                })
+            }
+        })
+    }
 
-    private fun carrierToJson(carrier: CarrierInfo): JSONObject =
-        JSONObject().apply {
-            putOpt("carrier_name", carrier.carrierName)
-            putOpt("mcc", carrier.mcc)
-            putOpt("mnc", carrier.mnc)
-            putOpt("sim_operator_id", carrier.simOperatorId)
-            putOpt("sim_operator_name", carrier.simOperatorName)
-            putOpt("country_iso", carrier.countryIso)
-            putOpt("duplex_mode", carrier.duplexMode)
-            putOpt("subscription_id", carrier.subscriptionId)
-            putOpt("sim_slot_index", carrier.simSlotIndex)
-            putOpt("display_name", carrier.displayName)
-            putOpt("carrier_id", carrier.carrierId)
-            putOpt("data_roaming", carrier.dataRoaming)
-            putOpt("is_embedded", carrier.isEmbedded)
-            putOpt("is_opportunistic", carrier.isOpportunistic)
-            putOpt("card_id", carrier.cardId)
-            putOpt("port_index", carrier.portIndex)
-            putOpt("is_default_data", carrier.isDefaultData)
-            putOpt("is_default_voice", carrier.isDefaultVoice)
-            putOpt("is_default_sms", carrier.isDefaultSms)
-            putOpt("is_active_data", carrier.isActiveData)
-        }
+    private fun carrierToJson(carrier: CarrierInfo): JSONObject = JSONObject().apply {
+        putOpt("carrier_name", carrier.carrierName)
+        putOpt("mcc", carrier.mcc)
+        putOpt("mnc", carrier.mnc)
+        putOpt("sim_operator_id", carrier.simOperatorId)
+        putOpt("sim_operator_name", carrier.simOperatorName)
+        putOpt("country_iso", carrier.countryIso)
+        putOpt("duplex_mode", carrier.duplexMode)
+        putOpt("subscription_id", carrier.subscriptionId)
+        putOpt("sim_slot_index", carrier.simSlotIndex)
+        putOpt("display_name", carrier.displayName)
+        putOpt("carrier_id", carrier.carrierId)
+        putOpt("data_roaming", carrier.dataRoaming)
+        putOpt("is_embedded", carrier.isEmbedded)
+        putOpt("is_opportunistic", carrier.isOpportunistic)
+        putOpt("card_id", carrier.cardId)
+        putOpt("port_index", carrier.portIndex)
+        putOpt("is_default_data", carrier.isDefaultData)
+        putOpt("is_default_voice", carrier.isDefaultVoice)
+        putOpt("is_default_sms", carrier.isDefaultSms)
+        putOpt("is_active_data", carrier.isActiveData)
+    }
 }

@@ -6,6 +6,7 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
+import com.example.crowdmeasure.data.measurement.collectors.DataUsageCollector
 import com.example.crowdmeasure.data.measurement.collectors.IpCollector
 import com.example.crowdmeasure.data.measurement.collectors.TelephonyCollector
 import com.example.crowdmeasure.data.measurement.collectors.WifiCollector
@@ -27,6 +28,7 @@ object NetworkCollector {
             TelephonyCollector.collect(context)
         } else null
 
+        val dataUsage = DataUsageCollector.collect(context)
 
         val validatedInternet: Boolean?
         val captivePortal: Boolean?
@@ -53,7 +55,8 @@ object NetworkCollector {
             vpn = vpnPresent,
             metered = metered,
             wifi = wifi,
-            cell = cell
+            cell = cell,
+            dataUsage = dataUsage,
         )
 
         return networkInfo

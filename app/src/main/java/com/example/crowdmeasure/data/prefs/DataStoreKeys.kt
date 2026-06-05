@@ -41,4 +41,9 @@ object DataStoreKeys {
     val UPLOAD_FAILED_COUNT = intPreferencesKey("upload_failed_count")
     val UPLOAD_LAST_ERROR = stringPreferencesKey("upload_last_error")
     val UPLOAD_LAST_SUCCESS_UTC_MS = longPreferencesKey("upload_last_success_utc_ms")
+
+    // Data Usage Stats
+    val DATA_USAGE_LAST_RX_BYTES = longPreferencesKey("data_usage_last_rx_bytes")
+    val DATA_USAGE_LAST_TX_BYTES = longPreferencesKey("data_usage_last_tx_bytes")
+    val DATA_USAGE_LAST_TIME_MS = longPreferencesKey("data_usage_last_time_ms")
 }

@@ -4,9 +4,9 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.example.crowdmeasure.BuildConfig
-import com.example.crowdmeasure.data.measurement.collectors.DeviceCollector
+import com.example.crowdmeasure.data.measurement.collectors.DeviceInfoCollector
 import com.example.crowdmeasure.data.measurement.collectors.EnvironmentCollector
-import com.example.crowdmeasure.data.measurement.collectors.PerformanceTester
+import com.example.crowdmeasure.data.measurement.collectors.PerformanceCollector
 import com.example.crowdmeasure.data.measurement.net.OkHttpClientProvider
 import com.example.crowdmeasure.data.prefs.AppPreferences
 import com.example.crowdmeasure.domain.model.Measurement
@@ -31,7 +31,7 @@ class MeasurementRunner(
             val settings = prefs.settings.first()
             val http = okHttpClientProvider.create()
 
-            val device = DeviceCollector.collect(versionName = BuildConfig.VERSION_NAME)
+            val device = DeviceInfoCollector.collect(versionName = BuildConfig.VERSION_NAME)
             val env = EnvironmentCollector.collect(context, http)
 
             // "Collect only on Wi-Fi"
@@ -42,7 +42,7 @@ class MeasurementRunner(
             // Performance test (light probe)
             val endpointUrl = settings.endpointUrl
 
-            val perf = PerformanceTester.run(
+            val perf = PerformanceCollector.run(
                 okHttp = http,
                 endpointUrl = endpointUrl,
                 endpointId = endpointUrl,

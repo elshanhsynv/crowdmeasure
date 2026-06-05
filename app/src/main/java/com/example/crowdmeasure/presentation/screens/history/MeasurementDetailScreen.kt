@@ -162,8 +162,8 @@ private fun iconForMetric(label: String): ImageVector = when (label) {
 
     // Speed & Performance
     "Link Speed (legacy)", "Link Speed" -> Icons.Outlined.Speed
-    "TX Link Speed", "Up", "Up P95", "Up StdDev" -> Icons.Outlined.Upload
-    "RX Link Speed", "Down", "Down P95", "Down StdDev" -> Icons.Outlined.Download
+    "TX Link Speed", "Up", "Up P95", "Up StdDev", "UL Rate" -> Icons.Outlined.Upload
+    "RX Link Speed", "Down", "Down P95", "Down StdDev", "DL Rate" -> Icons.Outlined.Download
     "TTFB Average" -> Icons.Outlined.Schedule
     "HTTP Status" -> Icons.Outlined.BarChart
     "Server Region" -> Icons.Outlined.Language

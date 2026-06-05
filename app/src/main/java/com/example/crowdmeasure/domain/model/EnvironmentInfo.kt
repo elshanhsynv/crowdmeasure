@@ -32,6 +32,15 @@ data class NetworkEnvironment(
     // WiFi / Cellular
     val wifi: WifiInfo?,
     val cell: CellInfo?,
+
+    // Data Usage
+    val dataUsage: DataUsageInfo?,
+)
+
+@Serializable
+data class DataUsageInfo(
+    val dlKbps: Double,
+    val ulKbps: Double,
 )
 
 @Serializable

@@ -149,6 +149,13 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         "Memory Usage" to "%.2f".format(environment.device.memoryUsagePct) + "%",
     )
 
+    val usagePairs = environment.network.dataUsage?.let { usage ->
+        listOf(
+            "DL Rate" to "%.2f Kbps".format(usage.dlKbps),
+            "UL Rate" to "%.2f Kbps".format(usage.ulKbps)
+        )
+    }.orEmpty()
+
     val locationText = environment.location?.let { loc ->
         "${loc.lat}, ${loc.lon} (±${loc.accuracyMeters}m)"
     }
@@ -251,7 +258,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         id = meta.measurementId,
         timeText = timeText,
         meta = metaPairs,
-        env = envPairs,
+        env = envPairs + usagePairs,
         wifi = wifiPairs,
         cell = cellPairs,
         sims = simUi,
