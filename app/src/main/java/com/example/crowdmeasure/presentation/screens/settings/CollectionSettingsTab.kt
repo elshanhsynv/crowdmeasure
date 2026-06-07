@@ -72,9 +72,7 @@ internal fun CollectionSettingsTab(
         mutableStateOf(AppPermissions.ignoresBatteryOptimizations(context))
     }
     var locationServicesOn by remember { mutableStateOf(isLocationServicesEnabled(context)) }
-    var whatsappNotificationAccess by remember {
-        mutableStateOf(AppPermissions.hasWhatsappNotificationAccess(context))
-    }
+    var whatsappNotificationAccess by remember { mutableStateOf(false) }
 
     fun refreshCallSamplingPrerequisites() {
         phoneGranted = AppPermissions.hasPhoneState(context)
@@ -83,7 +81,7 @@ internal fun CollectionSettingsTab(
         notificationsGranted = AppPermissions.hasPostNotifications(context)
         batteryIgnored = AppPermissions.ignoresBatteryOptimizations(context)
         locationServicesOn = isLocationServicesEnabled(context)
-        whatsappNotificationAccess = AppPermissions.hasWhatsappNotificationAccess(context)
+        whatsappNotificationAccess = false
     }
 
     LaunchedEffect(Unit) { refreshCallSamplingPrerequisites() }
@@ -112,7 +110,7 @@ internal fun CollectionSettingsTab(
 
         CallSamplingSettingsCard(
             enabled = settings?.callSamplingEnabled == true,
-            whatsappEnabled = settings?.whatsappCallSamplingEnabled == true,
+            whatsappEnabled = false,
             phoneGranted = phoneGranted,
             fineGranted = fineGranted,
             backgroundGranted = backgroundGranted,
@@ -122,16 +120,14 @@ internal fun CollectionSettingsTab(
             whatsappNotificationAccess = whatsappNotificationAccess,
             lastMissedLabel = callSamplingStatus.lastMissedLabel,
             onEnableChanged = onSetCallSamplingEnabled,
-            onWhatsappEnableChanged = onSetWhatsappCallSamplingEnabled,
+            onWhatsappEnableChanged = {},
             onOpenLocationSettings = {
                 context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
             },
             onOpenBatterySettings = {
                 SystemSettingsIntents.openBatteryOptimizationSettings(context)
             },
-            onOpenNotificationAccessSettings = {
-                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-            },
+            onOpenNotificationAccessSettings = {},
             onRefresh = ::refreshCallSamplingPrerequisites
         )
 

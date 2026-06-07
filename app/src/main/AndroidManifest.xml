@@ -49,6 +49,10 @@
             android:exported="false"
             android:foregroundServiceType="location" />
 
+        <!--
+        WhatsApp call sampling is disabled for now because notification-listener access
+        can trigger Play Protect blocks for sideloaded release builds. Keep the service
+        implementation in source so it can be restored later.
         <service
             android:name=".callsampling.WhatsappCallNotificationListener"
             android:exported="true"
@@ -58,6 +62,7 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+        -->
 
         <provider
             android:name="androidx.core.content.FileProvider"

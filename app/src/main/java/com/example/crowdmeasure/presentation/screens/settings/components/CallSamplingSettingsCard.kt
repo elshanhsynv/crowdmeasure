@@ -46,6 +46,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.components.cards.SettingsSectionCard
 
+private const val WHATSAPP_CALL_SAMPLING_AVAILABLE = false
+
 @Composable
 fun CallSamplingSettingsCard(
     enabled: Boolean,
@@ -79,7 +81,7 @@ fun CallSamplingSettingsCard(
     ) {
         CallSamplingUiState(
             cellularEnabled = enabled,
-            whatsappEnabled = whatsappEnabled,
+            whatsappEnabled = whatsappEnabled && WHATSAPP_CALL_SAMPLING_AVAILABLE,
             phoneGranted = phoneGranted,
             fineGranted = fineGranted,
             backgroundGranted = backgroundGranted,
@@ -103,7 +105,8 @@ fun CallSamplingSettingsCard(
                 cellularEnabled = state.cellularEnabled,
                 whatsappEnabled = state.whatsappEnabled,
                 cellularReady = state.cellularReady,
-                whatsappReady = state.whatsappReady
+                whatsappReady = state.whatsappReady,
+                whatsappAvailable = WHATSAPP_CALL_SAMPLING_AVAILABLE
             )
 
             SectionDivider()
@@ -127,7 +130,8 @@ fun CallSamplingSettingsCard(
                 cellularEnabled = state.cellularEnabled,
                 whatsappEnabled = state.whatsappEnabled,
                 onEnableChanged = onEnableChanged,
-                onWhatsappEnableChanged = onWhatsappEnableChanged
+                onWhatsappEnableChanged = onWhatsappEnableChanged,
+                whatsappAvailable = WHATSAPP_CALL_SAMPLING_AVAILABLE
             )
 
             LastMissedStartRow(
@@ -143,7 +147,8 @@ private fun CallSamplingStatusHeader(
     cellularEnabled: Boolean,
     whatsappEnabled: Boolean,
     cellularReady: Boolean,
-    whatsappReady: Boolean
+    whatsappReady: Boolean,
+    whatsappAvailable: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -155,17 +160,19 @@ private fun CallSamplingStatusHeader(
                 enabled = cellularEnabled,
                 ready = cellularReady
             ),
-            modifier = Modifier.weight(1f)
+            modifier = if (whatsappAvailable) Modifier.weight(1f) else Modifier.fillMaxWidth()
         )
 
-        SamplingStatusCard(
-            title = "WhatsApp",
-            status = samplingStatus(
-                enabled = whatsappEnabled,
-                ready = whatsappReady
-            ),
-            modifier = Modifier.weight(1f)
-        )
+        if (whatsappAvailable) {
+            SamplingStatusCard(
+                title = "WhatsApp",
+                status = samplingStatus(
+                    enabled = whatsappEnabled,
+                    ready = whatsappReady
+                ),
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
@@ -391,7 +398,8 @@ private fun SamplingToggleSection(
     cellularEnabled: Boolean,
     whatsappEnabled: Boolean,
     onEnableChanged: (Boolean) -> Unit,
-    onWhatsappEnableChanged: (Boolean) -> Unit
+    onWhatsappEnableChanged: (Boolean) -> Unit,
+    whatsappAvailable: Boolean
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -408,17 +416,19 @@ private fun SamplingToggleSection(
             onCheckedChange = onEnableChanged
         )
 
-        SamplingToggleRow(
-            title = "WhatsApp calls",
-            subtitle = if (whatsappReady) {
-                "Ready when WhatsApp call notifications are detected"
-            } else {
-                "Requires cellular readiness and notification access"
-            },
-            checked = whatsappEnabled,
-            enabled = whatsappReady || whatsappEnabled,
-            onCheckedChange = onWhatsappEnableChanged
-        )
+        if (whatsappAvailable) {
+            SamplingToggleRow(
+                title = "WhatsApp calls",
+                subtitle = if (whatsappReady) {
+                    "Ready when WhatsApp call notifications are detected"
+                } else {
+                    "Requires cellular readiness and notification access"
+                },
+                checked = whatsappEnabled,
+                enabled = whatsappReady || whatsappEnabled,
+                onCheckedChange = onWhatsappEnableChanged
+            )
+        }
     }
 }
 
@@ -568,18 +578,20 @@ private data class CallSamplingUiState(
                 locationServicesOn
 
     val whatsappReady: Boolean
-        get() = cellularReady && whatsappNotificationAccess
+        get() = WHATSAPP_CALL_SAMPLING_AVAILABLE && cellularReady && whatsappNotificationAccess
 
     val requirements: List<SamplingRequirement>
-        get() = listOf(
-            SamplingRequirement("Phone", phoneGranted),
-            SamplingRequirement("Fine location", fineGranted),
-            SamplingRequirement("Background location", backgroundGranted),
-            SamplingRequirement("Notifications", notificationsGranted),
-            SamplingRequirement("Battery exemption", batteryIgnored),
-            SamplingRequirement("Location services", locationServicesOn),
-            SamplingRequirement("WhatsApp notification access", whatsappNotificationAccess)
-        )
+        get() = buildList {
+            add(SamplingRequirement("Phone", phoneGranted))
+            add(SamplingRequirement("Fine location", fineGranted))
+            add(SamplingRequirement("Background location", backgroundGranted))
+            add(SamplingRequirement("Notifications", notificationsGranted))
+            add(SamplingRequirement("Battery exemption", batteryIgnored))
+            add(SamplingRequirement("Location services", locationServicesOn))
+            if (WHATSAPP_CALL_SAMPLING_AVAILABLE) {
+                add(SamplingRequirement("WhatsApp notification access", whatsappNotificationAccess))
+            }
+        }
 
     val fixActions: Set<SamplingFixAction>
         get() = buildSet {
@@ -591,7 +603,7 @@ private data class CallSamplingUiState(
                 add(SamplingFixAction.AllowBatteryExemption)
             }
 
-            if (!whatsappNotificationAccess) {
+            if (WHATSAPP_CALL_SAMPLING_AVAILABLE && !whatsappNotificationAccess) {
                 add(SamplingFixAction.AllowWhatsappNotificationAccess)
             }
         }

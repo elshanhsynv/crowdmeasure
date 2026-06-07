@@ -33,8 +33,8 @@ class AppPreferences(private val context: Context) {
             consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: false,
             firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: true,
             callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: true,
-            whatsappCallSamplingEnabled =
-                prefs[DataStoreKeys.WHATSAPP_CALL_SAMPLING_ENABLED] ?: true,
+            // Disabled while WhatsappCallNotificationListener is not registered in the manifest.
+            whatsappCallSamplingEnabled = false,
         )
     }
 
