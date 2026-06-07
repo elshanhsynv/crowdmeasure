@@ -535,8 +535,8 @@ private fun LastMissedStartRow(
                     text = lastMissedLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+//                    maxLines = 2,
+//                    overflow = TextOverflow.Ellipsis
                 )
             }
 

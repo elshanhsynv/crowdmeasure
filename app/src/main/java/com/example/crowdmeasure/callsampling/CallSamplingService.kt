@@ -201,9 +201,15 @@ class CallSamplingService : Service() {
     }
 
     private fun buildNotification(): Notification =
-        NotificationCompat.Builder(this, CHANNEL_ID).setSmallIcon(R.drawable.crowdmeasure)
-            .setContentTitle("Collecting call cell stats").setContentText(notificationBody())
-            .setOngoing(true).setPriority(NotificationCompat.PRIORITY_LOW).build()
+        NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.crowdmeasure)
+            .setContentTitle("Measuring signal quality")
+            .setContentText("Collecting network stats during this call.")
+            .setOngoing(true)
+            .setSilent(true)
+            .setShowWhen(false)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
 
     private fun notificationBody(): String = if (callSource.isWhatsapp()) {
         "Sampling cellular signal during the WhatsApp call."
@@ -215,7 +221,11 @@ class CallSamplingService : Service() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             CHANNEL_ID, "Call cell sampling", NotificationManager.IMPORTANCE_LOW
-        )
+        ).apply {
+            setSound(null, null)
+            enableVibration(false)
+            setShowBadge(false)
+        }
         getSystemService<NotificationManager>()?.createNotificationChannel(channel)
     }
 

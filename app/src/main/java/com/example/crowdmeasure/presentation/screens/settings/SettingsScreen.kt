@@ -125,20 +125,20 @@ private fun SettingsScreen(
         AnimatedContent(
             targetState = selectedTab,
             label = "SettingsTabContentAnimation",
-            transitionSpec = {
-                fadeIn(
-                    animationSpec = tween(
-                        durationMillis = 140,
-                        delayMillis = 40,
-                        easing = LinearOutSlowInEasing
-                    )
-                ) togetherWith fadeOut(
-                    animationSpec = tween(
-                        durationMillis = 90,
-                        easing = FastOutSlowInEasing
-                    )
-                ) using SizeTransform(clip = false)
-            },
+//            transitionSpec = {
+//                fadeIn(
+//                    animationSpec = tween(
+//                        durationMillis = 140,
+//                        delayMillis = 40,
+//                        easing = LinearOutSlowInEasing
+//                    )
+//                ) togetherWith fadeOut(
+//                    animationSpec = tween(
+//                        durationMillis = 90,
+//                        easing = FastOutSlowInEasing
+//                    )
+//                ) using SizeTransform(clip = false)
+//            },
             modifier = Modifier.fillMaxSize()
         ) { tab ->
             when (tab) {
