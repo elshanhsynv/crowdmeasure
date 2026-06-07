@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.PinDrop
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -46,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,6 +84,7 @@ fun ConsentGateScreen(
     var phoneStateGranted by remember { mutableStateOf(false) }
     var backgroundLocationGranted by remember { mutableStateOf(false) }
     var notificationsGranted by remember { mutableStateOf(false) }
+    var showBackgroundLocationDisclosure by remember { mutableStateOf(false) }
 
     fun refreshPermissions() {
         fineLocationGranted = AppPermissions.hasFineLocation(context)
@@ -117,12 +120,76 @@ fun ConsentGateScreen(
         notificationsGranted = notificationsGranted,
         canComplete = canCollect,
         onRequestFineLocation = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
-        onRequestBackgroundLocation = { requestBackground.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION) },
+        onRequestBackgroundLocation = { showBackgroundLocationDisclosure = true },
         onRequestPhoneState = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) },
         onRequestNotifications = { requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS) }
     )
+
+    if (showBackgroundLocationDisclosure) {
+        BackgroundLocationDisclosureDialog(
+            onDismiss = { showBackgroundLocationDisclosure = false },
+            onContinue = {
+                showBackgroundLocationDisclosure = false
+                requestBackground.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            }
+        )
+    }
 }
 
+@Composable
+private fun BackgroundLocationDisclosureDialog(
+    onDismiss: () -> Unit,
+    onContinue: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Outlined.PinDrop,
+                contentDescription = null
+            )
+        },
+        title = {
+            Text(text = "Allow background location?")
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "CrowdMeasure uses your location to map cellular network coverage, " +
+                            "signal quality, and call-sampling measurements."
+                )
+
+                Text(
+                    text = "When enabled, CrowdMeasure may collect location in the background, " +
+                            "including when the app is closed or not in use, so measurements can be " +
+                            "matched to the place where they were observed."
+                )
+
+                Text(
+                    text = "Your location may be uploaded with anonymized telecom measurements. " +
+                            "It is not used for advertising."
+                )
+
+//                Text(
+//                    text = "You can continue without background location, but background network " +
+//                            "measurement features will be limited."
+//                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = onContinue) {
+                Text("Allow background location")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Not now")
+            }
+        }
+    )
+}
 
 @Composable
 private fun ConsentGateContent(
@@ -431,7 +498,7 @@ private fun PermissionsCard(
             PermissionItem(
                 icon = Icons.Outlined.Wifi,
                 title = "Background Location",
-                subtitle = "Improves accuracy using approximate location",
+                subtitle = "Adds location context while collection runs in the background",
                 granted = backgroundLocationGranted,
                 onRequest = onRequestBackgroundLocation
             )

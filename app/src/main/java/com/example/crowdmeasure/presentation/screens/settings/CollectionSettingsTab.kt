@@ -39,11 +39,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.domain.repo.AppSettings
-import com.example.crowdmeasure.presentation.ui.components.BackgroundReliabilityCard
-import com.example.crowdmeasure.presentation.ui.components.BackgroundWorkStatusCard
-import com.example.crowdmeasure.presentation.ui.components.SettingsSectionCard
+import com.example.crowdmeasure.presentation.screens.settings.components.BackgroundReliabilityCard
+import com.example.crowdmeasure.presentation.screens.settings.components.BackgroundWorkStatusCard
+import com.example.crowdmeasure.presentation.screens.settings.components.CallSamplingSettingsCard
+import com.example.crowdmeasure.presentation.ui.components.cards.SettingsSectionCard
+import com.example.crowdmeasure.presentation.ui.theme.CrowdMeasureTheme
 import com.example.crowdmeasure.presentation.util.AppPermissions
 import com.example.crowdmeasure.presentation.util.AppPermissions.isLocationServicesEnabled
 import com.example.crowdmeasure.presentation.util.SystemSettingsIntents
@@ -136,343 +139,41 @@ internal fun CollectionSettingsTab(
     }
 }
 
+@Preview(showBackground = true)
 @Composable
-private fun CallSamplingSettingsCard(
-    enabled: Boolean,
-    whatsappEnabled: Boolean,
-    phoneGranted: Boolean,
-    fineGranted: Boolean,
-    backgroundGranted: Boolean,
-    notificationsGranted: Boolean,
-    batteryIgnored: Boolean,
-    locationServicesOn: Boolean,
-    whatsappNotificationAccess: Boolean,
-    lastMissedLabel: String,
-    onEnableChanged: (Boolean) -> Unit,
-    onWhatsappEnableChanged: (Boolean) -> Unit,
-    onOpenLocationSettings: () -> Unit,
-    onOpenBatterySettings: () -> Unit,
-    onOpenNotificationAccessSettings: () -> Unit,
-    onRefresh: () -> Unit
-) {
-    val ready = phoneGranted &&
-            fineGranted &&
-            backgroundGranted &&
-            notificationsGranted
-            // && batteryIgnored && locationServicesOn
-    val whatsappReady = ready && whatsappNotificationAccess
-
-    SettingsSectionCard(
-        title = "Call Cell Sampling",
-        description = "Local-only cell stats during active calls",
-        icon = Icons.Outlined.PhoneAndroid
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            SamplingStatusHeader(
-                cellularEnabled = enabled,
-                whatsappEnabled = whatsappEnabled,
-                cellularReady = ready,
-                whatsappReady = whatsappReady
-            )
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PermissionStatusRow(label = "Phone", granted = phoneGranted)
-                PermissionStatusRow(label = "Fine location", granted = fineGranted)
-                PermissionStatusRow(label = "Background location", granted = backgroundGranted)
-                PermissionStatusRow(label = "Notifications", granted = notificationsGranted)
-                PermissionStatusRow(label = "Battery exemption", granted = batteryIgnored)
-                PermissionStatusRow(label = "Location services", granted = locationServicesOn)
-                PermissionStatusRow(
-                    label = "WhatsApp notification access",
-                    granted = whatsappNotificationAccess
-                )
-            }
-
-            CallSamplingFixActions(
-                locationServicesOn = locationServicesOn,
-                batteryIgnored = batteryIgnored,
-                whatsappNotificationAccess = whatsappNotificationAccess,
-                onOpenLocationSettings = onOpenLocationSettings,
-                onOpenBatterySettings = onOpenBatterySettings,
-                onOpenNotificationAccessSettings = onOpenNotificationAccessSettings
-            )
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SamplingToggleRow(
-                    title = "Cellular calls",
-                    subtitle = if (ready) {
-                        "Ready to sample during active calls"
-                    } else {
-                        "Complete required access first"
-                    },
-                    checked = enabled,
-                    enabled = ready || enabled,
-                    onCheckedChange = onEnableChanged
-                )
-
-                SamplingToggleRow(
-                    title = "WhatsApp calls",
-                    subtitle = if (whatsappReady) {
-                        "Ready when WhatsApp call notifications are detected"
-                    } else {
-                        "Requires cellular readiness and notification access"
-                    },
-                    checked = whatsappEnabled,
-                    enabled = whatsappReady || whatsappEnabled,
-                    onCheckedChange = onWhatsappEnableChanged
-                )
-            }
-
-            LastMissedStartRow(
-                lastMissedLabel = lastMissedLabel,
-                onRefresh = onRefresh
-            )
-        }
-    }
-}
-
-@Composable
-private fun CallSamplingFixActions(
-    locationServicesOn: Boolean,
-    batteryIgnored: Boolean,
-    whatsappNotificationAccess: Boolean,
-    onOpenLocationSettings: () -> Unit,
-    onOpenBatterySettings: () -> Unit,
-    onOpenNotificationAccessSettings: () -> Unit
-) {
-    if (locationServicesOn && batteryIgnored && whatsappNotificationAccess) return
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (!locationServicesOn) {
-            OutlinedButton(
-                onClick = onOpenLocationSettings,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(imageVector = Icons.Outlined.LocationOn, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Turn on location services")
-            }
-        }
-
-        if (!batteryIgnored) {
-            OutlinedButton(
-                onClick = onOpenBatterySettings,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(imageVector = Icons.Outlined.BatterySaver, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Allow battery exemption")
-            }
-        }
-
-        if (!whatsappNotificationAccess) {
-            OutlinedButton(
-                onClick = onOpenNotificationAccessSettings,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(imageVector = Icons.Outlined.Notifications, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Allow WhatsApp notification access")
-            }
-        }
-    }
-}
-
-@Composable
-private fun SamplingStatusHeader(
-    cellularEnabled: Boolean,
-    whatsappEnabled: Boolean,
-    cellularReady: Boolean,
-    whatsappReady: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        SamplingStatusPill(
-            title = "Cellular",
-            state = when {
-                cellularEnabled -> "Enabled"
-                cellularReady -> "Ready"
-                else -> "Needs setup"
-            },
-            success = cellularEnabled || cellularReady,
-            modifier = Modifier.weight(1f)
+private fun CollectionSettingsTabPreview() {
+    CrowdMeasureTheme {
+        CollectionSettingsTab(
+            settings = null,
+            backgroundWorkState = BackgroundWorkUiState(
+                workManagerStateLabel = "ENQUEUED",
+                nextScheduledWorkStateLabel = "In 12 minutes",
+                intervalMinutesLabel = "Every 15 minutes",
+                lastStartLabel = "Today, 12:00 PM",
+                lastEndLabel = "Today, 12:01 PM",
+                lastResultLabel = "SUCCESS",
+                autoRunLastCodeLabel = "200 OK",
+                autoRunLastSuccessfulCollectionLabel = "Today, 12:01 PM",
+                autoRunLastMeasurementLabel = "42 metrics collected",
+                uploadLastSuccessfulUploadLabel = "Today, 12:01 PM",
+                uploadLastStartLabel = "Today, 12:01 PM",
+                uploadLastEndLabel = "Today, 12:01 PM",
+                uploadLastResultLabel = "SUCCESS",
+                uploadLastCodeLabel = "201 Created",
+                lastUploadedLabel = "14 records uploaded",
+                pendingRecordsLabel = "0 pending",
+                failedRecordsLabel = "0 failed",
+                lastErrorLabel = "None",
+                canRunNow = true,
+                canReschedule = true
+            ),
+            onRunNow = {},
+            onReschedule = {},
+            callSamplingStatus = CallSamplingStatusUiState(
+                lastMissedLabel = "2 missed calls since last run"
+            ),
+            onSetCallSamplingEnabled = {},
+            onSetWhatsappCallSamplingEnabled = {}
         )
-
-        SamplingStatusPill(
-            title = "WhatsApp",
-            state = when {
-                whatsappEnabled -> "Enabled"
-                whatsappReady -> "Ready"
-                else -> "Needs setup"
-            },
-            success = whatsappEnabled || whatsappReady,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun SamplingStatusPill(
-    title: String,
-    state: String,
-    success: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val containerColor = if (success) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.errorContainer
-    }
-    val contentColor = if (success) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onErrorContainer
-    }
-
-    Surface(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        color = containerColor
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = contentColor.copy(alpha = 0.8f)
-            )
-            Text(
-                text = state,
-                style = MaterialTheme.typography.titleSmall,
-                color = contentColor
-            )
-        }
-    }
-}
-
-@Composable
-private fun PermissionStatusRow(
-    label: String,
-    granted: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = if (granted) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
-            contentDescription = null,
-            tint = if (granted) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.error
-            }
-        )
-
-        Spacer(Modifier.width(12.dp))
-
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Text(
-            text = if (granted) "Granted" else "Required",
-            style = MaterialTheme.typography.labelMedium,
-            color = if (granted) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.error
-            }
-        )
-    }
-}
-
-@Composable
-private fun SamplingToggleRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                enabled = enabled
-            )
-        }
-    }
-}
-
-@Composable
-private fun LastMissedStartRow(
-    lastMissedLabel: String,
-    onRefresh: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Last missed start",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = lastMissedLabel,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            TextButton(onClick = onRefresh) {
-                Text("Refresh")
-            }
-        }
     }
 }

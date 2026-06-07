@@ -32,7 +32,6 @@ object ChromeResolver {
                 topBarElevated = false
             )
 
-            // Detail screen (pattern match, not specific instance)
             route == Routes.DETAIL_PATTERN -> ChromeConfig(
                 title = "Measurement Details",
                 showTopBar = true,

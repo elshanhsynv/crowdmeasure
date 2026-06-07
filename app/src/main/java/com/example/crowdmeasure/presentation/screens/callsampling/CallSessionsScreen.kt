@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +39,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.domain.model.CallCellSample
 import com.example.crowdmeasure.domain.model.CallSession
+import com.example.crowdmeasure.presentation.ui.components.states.AppEmptyState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -72,7 +74,12 @@ fun CallSessionsScreen(
     ) {
         if (sessions.isEmpty()) {
             item(key = "empty") {
-                EmptyCallState(Modifier.fillParentMaxHeight())
+                AppEmptyState(
+                    modifier = Modifier.fillParentMaxHeight(),
+                    title = "No call sessions",
+                    description = "Sessions appear here once a call is sampled.",
+                    icon = Icons.Outlined.PhoneAndroid
+                )
             }
         } else {
             item(key = "sessions_header") {
@@ -143,27 +150,6 @@ fun CallSessionsScreen(
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
             }
-        )
-    }
-}
-
-@Composable
-private fun EmptyCallState(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "No call sessions",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "Sessions appear here once a call is sampled",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline
         )
     }
 }

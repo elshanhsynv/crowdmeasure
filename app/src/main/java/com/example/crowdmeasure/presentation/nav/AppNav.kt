@@ -8,7 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -25,7 +24,7 @@ import com.example.crowdmeasure.presentation.screens.history.MeasurementDetailSc
 import com.example.crowdmeasure.presentation.screens.history.MeasurementDetailViewModel
 import com.example.crowdmeasure.presentation.screens.home.HomeScreen
 import com.example.crowdmeasure.presentation.screens.home.HomeViewModel
-import com.example.crowdmeasure.presentation.screens.settings.SettingsScreen
+import com.example.crowdmeasure.presentation.screens.settings.SettingsRoute
 import com.example.crowdmeasure.presentation.screens.settings.SettingsViewModel
 
 /**
@@ -142,7 +141,7 @@ fun AppNav() {
                 popEnterTransition = tabPopEnterTransition,
                 popExitTransition = tabPopExitTransition
             ) {
-                SettingsScreen(
+                SettingsRoute(
                     viewModel = settingsViewModel,
                     contentPadding = paddingValues
                 )
@@ -196,10 +195,7 @@ fun AppNav() {
                 MeasurementDetailScreen(
                     id = measurementId,
                     viewModel = measurementDetailViewModel,
-                    contentPadding = paddingValues,
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
+                    contentPadding = paddingValues
                 )
             }
         }

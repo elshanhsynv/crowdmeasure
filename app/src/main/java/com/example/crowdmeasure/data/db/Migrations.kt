@@ -59,6 +59,13 @@ object Migrations {
                     "ALTER TABLE call_sessions ADD COLUMN callSource TEXT NOT NULL DEFAULT 'CELLULAR'"
                 )
             }
+        },
+        object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE call_sessions ADD COLUMN uploadState TEXT NOT NULL DEFAULT 'PENDING'"
+                )
+            }
         }
     )
 }

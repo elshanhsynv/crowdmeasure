@@ -29,6 +29,8 @@ class WorkScheduler @Inject constructor(
         const val AUTO_RUN_KICKOFF_NAME = "auto_run_measurement_kickoff"
         const val AUTO_RUN_DEBUG_ONCE_NAME = "auto_run_measurement_debug_once"
         const val UPLOAD_NAME = "upload_pending_measurements"
+        const val CALL_UPLOAD_NAME = "upload_pending_calls"
+        const val CALL_UPLOAD_KICKOFF_NAME = "upload_pending_calls_kickoff"
         const val MAINTENANCE_NAME = "maintenance_cleanup"
         const val RESCHEDULE_NAME = "reschedule_background_work"
         private const val MIN_PERIODIC_MINUTES = 20L
@@ -38,6 +40,7 @@ class WorkScheduler @Inject constructor(
         const val TAG_RESCHEDULE = "reschedule"
         const val TAG_AUTORUN = "autorun"
         const val TAG_UPLOAD = "upload"
+        const val TAG_CALL_UPLOAD = "call_upload"
         const val TAG_MAINTENANCE = "maintenance"
         private val ACTIVE_STATES = setOf(
             WorkInfo.State.ENQUEUED,
@@ -89,8 +92,10 @@ class WorkScheduler @Inject constructor(
 
         if (settings.firestoreUploadsEnabled) {
             scheduleUploadPeriodic()
+            scheduleCallUploadPeriodic()
         } else {
             cancelUpload()
+            cancelCallUpload()
         }
 
         val allowed = settings.autoRunEnabled
@@ -182,6 +187,52 @@ class WorkScheduler @Inject constructor(
 
     fun cancelUpload() {
         workManager.cancelUniqueWork(UPLOAD_NAME)
+    }
+
+    fun scheduleCallUploadPeriodic() {
+        val req = PeriodicWorkRequestBuilder<CallUploadWorker>(
+            UPLOAD_PERIODIC_MINUTES,
+            TimeUnit.MINUTES,
+            UPLOAD_FLEX_MINUTES,
+            TimeUnit.MINUTES
+        )
+            .setConstraints(uploadConstraints())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
+            .setInputData(
+                workDataOf(CallUploadWorker.KEY_TRIGGER_SOURCE to CallUploadWorker.TRIGGER_PERIODIC)
+            )
+            .addTag(TAG_CALL_UPLOAD)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            CALL_UPLOAD_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            req
+        )
+    }
+
+    fun kickoffCallUploadOnce() {
+        val req = OneTimeWorkRequestBuilder<CallUploadWorker>()
+            .setConstraints(uploadConstraints())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .setInputData(
+                workDataOf(
+                    CallUploadWorker.KEY_TRIGGER_SOURCE to CallUploadWorker.TRIGGER_CALL_ENDED
+                )
+            )
+            .addTag("${TAG_CALL_UPLOAD}_kickoff")
+            .build()
+
+        workManager.enqueueUniqueWork(
+            CALL_UPLOAD_KICKOFF_NAME,
+            ExistingWorkPolicy.KEEP,
+            req
+        )
+    }
+
+    fun cancelCallUpload() {
+        workManager.cancelUniqueWork(CALL_UPLOAD_NAME)
+        workManager.cancelUniqueWork(CALL_UPLOAD_KICKOFF_NAME)
     }
 
     fun enqueueRescheduleWorker() {

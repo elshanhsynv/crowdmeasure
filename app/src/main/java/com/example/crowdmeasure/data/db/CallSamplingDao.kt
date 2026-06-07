@@ -19,6 +19,16 @@ interface CallSamplingDao {
     @Query("SELECT * FROM call_sessions ORDER BY startedAtUtcMs DESC LIMIT :limit")
     suspend fun getRecentSessions(limit: Int): List<CallSessionEntity>
 
+    @Query(
+        "SELECT * FROM call_sessions " +
+            "WHERE endedAtUtcMs IS NOT NULL AND uploadState = :pendingState " +
+            "ORDER BY startedAtUtcMs ASC LIMIT :limit"
+    )
+    suspend fun getUploadCandidates(
+        limit: Int,
+        pendingState: String = "PENDING"
+    ): List<CallSessionEntity>
+
     @Query("SELECT * FROM call_cell_samples WHERE sessionId = :sessionId ORDER BY sampledAtUtcMs ASC")
     fun observeSamples(sessionId: String): Flow<List<CallCellSampleEntity>>
 
@@ -50,7 +60,10 @@ interface CallSamplingDao {
     )
     suspend fun finishSession(sessionId: String, endedAtUtcMs: Long, endReason: String)
 
-    @Query("DELETE FROM call_sessions WHERE startedAtUtcMs < :cutoffUtcMs")
+    @Query("UPDATE call_sessions SET uploadState = :state WHERE sessionId = :sessionId")
+    suspend fun updateUploadState(sessionId: String, state: String)
+
+    @Query("DELETE FROM call_sessions WHERE startedAtUtcMs < :cutoffUtcMs AND uploadState = 'UPLOADED'")
     suspend fun deleteSessionsOlderThan(cutoffUtcMs: Long)
 
     @Query("DELETE FROM call_sessions")

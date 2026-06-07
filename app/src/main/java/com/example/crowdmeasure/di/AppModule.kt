@@ -10,6 +10,8 @@ import com.example.crowdmeasure.data.repo.MeasurementRepositoryImpl
 import com.example.crowdmeasure.domain.repo.UploadRepositoryFirestore
 import com.example.crowdmeasure.data.repo.UserSessionRepositoryImpl
 import com.example.crowdmeasure.domain.repo.CallSamplingRepository
+import com.example.crowdmeasure.domain.repo.CallUploadRepository
+import com.example.crowdmeasure.domain.repo.CallUploadRepositoryFirestore
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UploadRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
@@ -67,6 +69,13 @@ object AppModule {
         prefs: AppPreferences,
         firestore: FirebaseFirestore
     ): UploadRepository = UploadRepositoryFirestore(dao, prefs, firestore)
+
+    @Provides @Singleton
+    fun provideCallUploadRepo(
+        dao: com.example.crowdmeasure.data.db.CallSamplingDao,
+        prefs: AppPreferences,
+        firestore: FirebaseFirestore
+    ): CallUploadRepository = CallUploadRepositoryFirestore(dao, prefs, firestore)
 
     @Provides @Singleton
     fun provideExporter(@ApplicationContext context: Context): Exporter =

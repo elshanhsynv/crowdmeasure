@@ -5,7 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,9 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
@@ -28,10 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Speed
@@ -53,8 +48,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -63,13 +56,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.crowdmeasure.presentation.ui.components.AppCard
-import com.example.crowdmeasure.presentation.ui.components.BannerTone
-import com.example.crowdmeasure.presentation.ui.components.InfoBanner
+import com.example.crowdmeasure.presentation.ui.components.cards.AppCard
+import com.example.crowdmeasure.presentation.ui.components.feedback.AppBanner
+import com.example.crowdmeasure.presentation.ui.components.feedback.BannerTone
 import com.example.crowdmeasure.presentation.ui.components.states.AppEmptyState
 import com.example.crowdmeasure.presentation.ui.components.states.InlineStatusText
 import com.example.crowdmeasure.presentation.ui.theme.LocalSpacing
-import com.example.crowdmeasure.presentation.util.LocationServicesBanner
+import com.example.crowdmeasure.presentation.ui.components.feedback.LocationServicesBanner
 import com.example.crowdmeasure.presentation.util.SystemSettingsIntents
 import com.example.crowdmeasure.presentation.util.UiState
 import java.text.SimpleDateFormat
@@ -138,7 +131,7 @@ private fun PermissionWarnings(state: HomeUiState) {
         )
 
         if (!state.canCollect) {
-            InfoBanner(
+            AppBanner(
                 title = "Collection disabled",
                 body = "Enable consent and data collection in Settings to run measurements.",
                 tone = BannerTone.Warning
@@ -151,7 +144,7 @@ private fun PermissionWarnings(state: HomeUiState) {
                 }
             }
         } else if (!state.uploadsEnabled) {
-            InfoBanner(
+            AppBanner(
                 title = "Uploads paused",
                 body = "Measurements will stay on this device until uploads are enabled.",
                 tone = BannerTone.Info

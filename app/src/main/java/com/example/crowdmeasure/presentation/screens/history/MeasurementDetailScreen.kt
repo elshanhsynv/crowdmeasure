@@ -24,60 +24,16 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.CompareArrows
 import androidx.compose.material.icons.automirrored.outlined.FactCheck
-import androidx.compose.material.icons.automirrored.outlined.Label
-import androidx.compose.material.icons.automirrored.outlined.ShowChart
-import androidx.compose.material.icons.outlined.Adb
-import androidx.compose.material.icons.outlined.Android
-import androidx.compose.material.icons.outlined.Apps
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Battery6Bar
-import androidx.compose.material.icons.outlined.BatteryAlert
-import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.CellTower
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.DataUsage
-import androidx.compose.material.icons.outlined.DeveloperBoard
-import androidx.compose.material.icons.outlined.Domain
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Fingerprint
-import androidx.compose.material.icons.outlined.Flag
-import androidx.compose.material.icons.outlined.Flight
-import androidx.compose.material.icons.outlined.HourglassEmpty
-import androidx.compose.material.icons.outlined.Hub
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Label
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.NearMe
-import androidx.compose.material.icons.outlined.Nightlight
-import androidx.compose.material.icons.outlined.Numbers
-import androidx.compose.material.icons.outlined.OpenInBrowser
-import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PhoneAndroid
-import androidx.compose.material.icons.outlined.PhonelinkSetup
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Sensors
-import androidx.compose.material.icons.outlined.SettingsCell
-import androidx.compose.material.icons.outlined.SignalCellularAlt
 import androidx.compose.material.icons.outlined.SimCard
 import androidx.compose.material.icons.outlined.Speed
-import androidx.compose.material.icons.outlined.Timeline
-import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material.icons.outlined.Upload
-import androidx.compose.material.icons.outlined.VpnKey
 import androidx.compose.material.icons.outlined.Wifi
-import androidx.compose.material.icons.outlined.WifiOff
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -89,99 +45,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.crowdmeasure.presentation.ui.components.DetailSectionCard
-import com.example.crowdmeasure.presentation.ui.components.MetricChip
-import com.example.crowdmeasure.presentation.ui.components.MetricRow
-import com.example.crowdmeasure.presentation.ui.components.SectionDivider
+import com.example.crowdmeasure.presentation.ui.components.cards.DetailSectionCard
+import com.example.crowdmeasure.presentation.ui.components.cards.SectionDivider
+import com.example.crowdmeasure.presentation.ui.components.metrics.MetricChip
+import com.example.crowdmeasure.presentation.ui.components.metrics.MetricRow
 import com.example.crowdmeasure.presentation.ui.components.privacy.SensitiveValueRow
+import com.example.crowdmeasure.presentation.ui.components.states.AppEmptyState
+import com.example.crowdmeasure.presentation.ui.components.states.AppErrorState
+import com.example.crowdmeasure.presentation.ui.components.states.AppLoadingState
+import com.example.crowdmeasure.presentation.ui.theme.CrowdMeasureTheme
 import com.example.crowdmeasure.presentation.util.UiState
 
-private fun iconForMetric(label: String): ImageVector = when (label) {
-    // Device & OS
-    "Device Model" -> Icons.Outlined.PhoneAndroid
-    "OS Version" -> Icons.Outlined.Android
-    "Android SDK" -> Icons.Outlined.Code
-    "App Version" -> Icons.Outlined.Apps
-    "Brand" -> Icons.AutoMirrored.Outlined.Label
-    "Device Manufacturer" -> Icons.Outlined.Business
-    "Device OS" -> Icons.Outlined.Adb
-    "Build ID" -> Icons.Outlined.Fingerprint
-    "Hardware" -> Icons.Outlined.DeveloperBoard
-    "Chipset" -> Icons.Outlined.Memory
-    "Chipset Manufacturer" -> Icons.Outlined.Domain
-    "Memory Usage" -> Icons.Outlined.Memory
-    "Thermal State" -> Icons.Outlined.Tune
-
-    // Battery & Power
-    "Battery" -> Icons.Outlined.Battery6Bar
-    "Charging" -> Icons.Outlined.Bolt
-    "Battery Saver" -> Icons.Outlined.BatteryAlert
-    "Screen On" -> Icons.Outlined.LightMode
-    "Doze Mode" -> Icons.Outlined.Nightlight
-
-    // Network General
-    "Transport" -> Icons.AutoMirrored.Outlined.CompareArrows
-    "Internet" -> Icons.Outlined.Language
-    "Captive Portal" -> Icons.Outlined.OpenInBrowser
-    "VPN" -> Icons.Outlined.VpnKey
-    "Metered", "Data Saver" -> Icons.Outlined.DataUsage
-    "Public IP" -> Icons.Outlined.Public
-    "ISP" -> Icons.Outlined.Business
-    "ASN" -> Icons.Outlined.Numbers
-    "DNS", "Protocol" -> Icons.Outlined.Hub
-    "Connection" -> Icons.AutoMirrored.Outlined.CompareArrows
-    "TLS" -> Icons.Outlined.Lock
-
-    // Wi-Fi
-    "Signal Strength (RSSI)", "Wi-Fi Standard" -> Icons.Outlined.Wifi
-    "Frequency" -> Icons.Outlined.Tune
-
-    // Cellular / Mobile Network
-    "Carrier" -> Icons.Outlined.SimCard
-    "SIM Count", "SIM Operator", "SIM Operator ID", "Display Name", "eSIM" -> Icons.Outlined.SimCard
-    "MCC", "MNC", "Slot Index", "Subscription ID", "Carrier ID", "Port Index", "Card ID" -> Icons.Outlined.Numbers
-    "ISO Country Code", "Country" -> Icons.Outlined.Flag
-    "RAT", "Data Network Type", "Voice Network Type" -> Icons.Outlined.SettingsCell
-    "Roaming" -> Icons.Outlined.Flight
-    "Registered", "Collected From", "Collected Here", "Active Data", "Default Data",
-    "Default Voice", "Default SMS" -> Icons.AutoMirrored.Outlined.FactCheck
-    "Data Roaming" -> Icons.Outlined.DataUsage
-    "Opportunistic" -> Icons.Outlined.Tune
-    "Duplex Mode" -> Icons.Outlined.SettingsCell
-    "Cell ID", "LAC", "TAC", "PCI" -> Icons.Outlined.CellTower
-    "Neighbor Cells" -> Icons.Outlined.NearMe
-    "Band", "ARFCN" -> Icons.Outlined.Sensors
-    "RSRP", "RSRQ", "RSSNR" -> Icons.Outlined.SignalCellularAlt
-
-    // Speed & Performance
-    "Link Speed (legacy)", "Link Speed" -> Icons.Outlined.Speed
-    "TX Link Speed", "Up", "Up P95", "Up StdDev", "UL Rate" -> Icons.Outlined.Upload
-    "RX Link Speed", "Down", "Down P95", "Down StdDev", "DL Rate" -> Icons.Outlined.Download
-    "TTFB Average" -> Icons.Outlined.Schedule
-    "HTTP Status" -> Icons.Outlined.BarChart
-    "Server Region" -> Icons.Outlined.Language
-    "HTTP Latency Average" -> Icons.Outlined.Timeline
-    "HTTP Latency P95" -> Icons.Outlined.BarChart
-    "Jitter" -> Icons.AutoMirrored.Outlined.ShowChart
-    "Probe Failure %" -> Icons.Outlined.WifiOff
-    "Stalls" -> Icons.Outlined.PauseCircle
-    "Max Stall" -> Icons.Outlined.HourglassEmpty
-
-    else -> Icons.Outlined.Info
-}
 
 @Composable
 fun MeasurementDetailScreen(
     id: String,
     contentPadding: PaddingValues,
-    onNavigateBack: () -> Unit,
     viewModel: MeasurementDetailViewModel = hiltViewModel<MeasurementDetailViewModel>()
 ) {
     LaunchedEffect(id) { viewModel.load(id) }
@@ -211,10 +96,12 @@ private fun MeasurementDetailContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         when (val loadState = state.loadState) {
-            UiState.Loading -> item(key = "loading") { LoadingState() }
+            UiState.Loading -> item(key = "loading") {
+                AppLoadingState(message = "Loading measurement...")
+            }
 
             is UiState.Error -> item(key = "error") {
-                ErrorState(message = loadState.message, onRetry = onRetry)
+                AppErrorState(message = loadState.message, onRetry = onRetry)
             }
 
             is UiState.Success -> {
@@ -266,7 +153,12 @@ private fun MeasurementDetailContent(
                 }
             }
 
-            UiState.Idle -> Unit
+            UiState.Idle -> item(key = "empty") {
+                AppEmptyState(
+                    title = "Measurement unavailable",
+                    description = "This measurement has not been loaded yet."
+                )
+            }
         }
 
         item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
@@ -599,47 +491,6 @@ private fun PerformanceGroup(
 }
 
 @Composable
-private fun LoadingState() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(36.dp),
-                strokeWidth = 3.dp
-            )
-            Text(
-                text = "Loading measurement…",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun ErrorState(message: String, onRetry: () -> Unit) {
-    DetailSectionCard(title = "Something went wrong") {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error
-            )
-            Button(onClick = onRetry) {
-                Text("Retry")
-            }
-        }
-    }
-}
-
-@Composable
 private fun MetricChipGrid(
     modifier: Modifier = Modifier,
     pairs: List<Pair<String, String>>,
@@ -655,20 +506,22 @@ private fun MetricChipGrid(
             MetricChip(
                 label = label,
                 value = value.ifBlank { "—" },
-                icon = iconForMetric(label),
+                icon = MetricIconMapper.iconFor(label),
                 modifier = if (columns > 1) Modifier.weight(1f) else Modifier.fillMaxWidth()
             )
         }
     }
 }
 
-@Preview
+@Preview(showBackground = true)
 @Composable
 fun MeasurementDetailScreenPreview() {
-    MeasurementDetailContent(
-        contentPadding = PaddingValues(0.dp),
-        state = MeasurementDetailUiState(loadState = UiState.Loading),
-        onToggleReveal = {},
-        onRetry = {}
-    )
+    CrowdMeasureTheme {
+        MeasurementDetailContent(
+            contentPadding = PaddingValues(0.dp),
+            state = MeasurementDetailUiState(loadState = UiState.Loading),
+            onToggleReveal = {},
+            onRetry = {}
+        )
+    }
 }

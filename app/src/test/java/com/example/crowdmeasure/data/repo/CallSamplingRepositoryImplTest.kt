@@ -109,12 +109,14 @@ class CallSamplingRepositoryImplTest {
     }
 
     @Test
-    fun deleteOlderThan_removesOldSessions() = runBlocking {
-        repository.startSession(
+    fun deleteOlderThan_removesOnlyUploadedOldSessions() = runBlocking {
+        val session = repository.startSession(
             callType = CallType.INCOMING,
             callSource = CallSource.CELLULAR,
             intervalSeconds = 30
         )
+        dao.finishSession(session.sessionId, endedAtUtcMs = 2_000L, endReason = "call_ended")
+        dao.updateUploadState(session.sessionId, state = "UPLOADED")
 
         repository.deleteOlderThan(Long.MAX_VALUE)
 
@@ -199,6 +201,14 @@ private class FakeCallSamplingDao : CallSamplingDao {
             all.filter { it.sessionId == sessionId }.sortedBy(CallCellSampleEntity::sampledAtUtcMs)
         }
 
+    override suspend fun getUploadCandidates(
+        limit: Int,
+        pendingState: String
+    ): List<CallSessionEntity> =
+        sessions.filter { it.endedAtUtcMs != null && it.uploadState == pendingState }
+            .sortedBy(CallSessionEntity::startedAtUtcMs)
+            .take(limit)
+
     override suspend fun getRecentSessions(limit: Int): List<CallSessionEntity> =
         sessions.sortedByDescending(CallSessionEntity::startedAtUtcMs).take(limit)
 
@@ -244,8 +254,19 @@ private class FakeCallSamplingDao : CallSamplingDao {
         emit()
     }
 
+    override suspend fun updateUploadState(sessionId: String, state: String) {
+        val index = sessions.indexOfFirst { it.sessionId == sessionId }
+        if (index >= 0) {
+            sessions[index] = sessions[index].copy(uploadState = state)
+        }
+        emit()
+    }
+
     override suspend fun deleteSessionsOlderThan(cutoffUtcMs: Long) {
-        val removed = sessions.filter { it.startedAtUtcMs < cutoffUtcMs }.map { it.sessionId }.toSet()
+        val removed = sessions
+            .filter { it.startedAtUtcMs < cutoffUtcMs && it.uploadState == "UPLOADED" }
+            .map { it.sessionId }
+            .toSet()
         sessions.removeAll { it.sessionId in removed }
         samples.removeAll { it.sessionId in removed }
         emit()

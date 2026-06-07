@@ -49,7 +49,8 @@ class CallSamplingRepositoryImpl(
             callSource = callSource.name,
             sampleIntervalSeconds = intervalSeconds,
             sampleCount = 0,
-            endReason = null
+            endReason = null,
+            uploadState = "PENDING"
         )
         dao.insertSession(entity)
         entity.toDomain(latestSample = null)

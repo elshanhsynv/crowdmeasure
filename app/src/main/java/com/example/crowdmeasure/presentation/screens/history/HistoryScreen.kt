@@ -1,8 +1,12 @@
 package com.example.crowdmeasure.presentation.screens.history
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,7 +24,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,18 +31,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -60,9 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -70,6 +68,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.presentation.ui.components.input.AppSearchBar
+import com.example.crowdmeasure.presentation.ui.components.states.AppErrorState
+import com.example.crowdmeasure.presentation.ui.components.states.AppLoadingState
 import com.example.crowdmeasure.presentation.util.UiState
 
 @Composable
@@ -188,7 +188,10 @@ fun HistoryTopBarActions(
                             ) {
                                 Text(
                                     text = "Active",
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(
+                                        horizontal = 10.dp,
+                                        vertical = 4.dp
+                                    ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -228,6 +231,7 @@ fun HistoryTopBarActions(
         }
     }
 }
+
 @Composable
 private fun TopBarActionButton(
     selected: Boolean,
@@ -296,13 +300,29 @@ private fun HistoryContent(
             item(key = "search") {
                 AnimatedVisibility(
                     visible = searchVisible,
-                    enter = fadeIn(),
-                    exit = fadeOut()
+                    enter = fadeIn(
+                        animationSpec = tween(durationMillis = 160)
+                    ) + expandVertically(
+                        animationSpec = tween(
+                            durationMillis = 220,
+                            easing = FastOutSlowInEasing
+                        )
+                    ),
+                    exit = fadeOut(
+                        animationSpec = tween(durationMillis = 100)
+                    ) + shrinkVertically(
+                        animationSpec = tween(
+                            durationMillis = 180,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
                 ) {
-                    SearchPanel(
+                    AppSearchBar(
                         query = state.queryText,
                         onQueryChange = onQueryChange,
-                        onClear = onClearSearch
+                        onClear = onClearSearch,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.extraLarge
                     )
                 }
             }
@@ -316,15 +336,19 @@ private fun HistoryContent(
 
             item(key = "call_sessions") {
                 CallSessionsHistoryCard(onClick = onCallSessions)
+                HorizontalDivider(
+                    modifier = Modifier.padding(top = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                )
             }
 
             when (val s = state.itemsState) {
                 UiState.Loading -> item(key = "loading") {
-                    LoadingState()
+                    AppLoadingState(message = "Loading measurements...")
                 }
 
                 is UiState.Error -> item(key = "error") {
-                    ErrorCard(message = s.message, onRetry = onRefresh)
+                    AppErrorState(message = s.message, onRetry = onRefresh)
                 }
 
                 is UiState.Success -> {
@@ -366,21 +390,6 @@ private fun HistoryContent(
             )
         }
     }
-}
-
-@Composable
-private fun SearchPanel(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClear: () -> Unit
-) {
-    AppSearchBar(
-        query = query,
-        onQueryChange = onQueryChange,
-        onClear = onClear,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge
-    )
 }
 
 @Composable
@@ -430,52 +439,6 @@ private fun HistoryHeader(
     }
 }
 
-@Composable
-private fun CallSessionsHistoryCard(onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            GradientIconBox(
-                icon = Icons.Filled.Call,
-                contentDescription = null
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "Call Sessions",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Access detailed signal logs",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Icon(
-                imageVector = Icons.Filled.ChevronRight,
-                contentDescription = "View call sessions",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
 
 @Composable
 private fun MeasurementHistoryCard(
@@ -602,76 +565,6 @@ private fun MetricChip(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary
             )
-        }
-    }
-}
-
-@Composable
-private fun GradientIconBox(
-    icon: ImageVector,
-    contentDescription: String?
-) {
-    Box(
-        modifier = Modifier
-            .size(64.dp)
-            .clip(MaterialTheme.shapes.large)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.secondaryContainer
-                    )
-                )
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.size(34.dp)
-        )
-    }
-}
-
-@Composable
-private fun LoadingState() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun ErrorCard(
-    message: String,
-    onRetry: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                textAlign = TextAlign.Center
-            )
-            TextButton(onClick = onRetry) { Text("Retry") }
         }
     }
 }

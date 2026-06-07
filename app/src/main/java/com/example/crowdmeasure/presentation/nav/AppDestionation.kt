@@ -26,15 +26,12 @@ sealed interface TopLevelDestination : AppDestination {
 
 /**
  * Centralized route definitions.
- * Use object properties for clarity and autocomplete.
  */
 object Routes {
     const val HOME = "home"
     const val HISTORY = "history"
     const val SETTINGS = "settings"
     const val CALL_SESSIONS = "call_sessions"
-
-    // Detail screen uses path parameter
     const val DETAIL_PATTERN = "detail/{id}"
     const val DETAIL_ARG_ID = "id"
 
@@ -43,7 +40,6 @@ object Routes {
 
 /**
  * Chrome configuration for a given screen.
- * Immutable to enable safe caching and comparison.
  */
 @Immutable
 data class ChromeConfig(

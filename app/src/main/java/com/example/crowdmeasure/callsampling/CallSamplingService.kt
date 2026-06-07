@@ -25,6 +25,7 @@ import com.example.crowdmeasure.domain.model.CallSession
 import com.example.crowdmeasure.domain.model.CallSource
 import com.example.crowdmeasure.domain.model.CallType
 import com.example.crowdmeasure.domain.repo.CallSamplingRepository
+import com.example.crowdmeasure.workers.WorkScheduler
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -53,6 +54,9 @@ class CallSamplingService : Service() {
     @Inject
     @IoDispatcher
     lateinit var io: CoroutineDispatcher
+
+    @Inject
+    lateinit var workScheduler: WorkScheduler
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var samplingJob: Job? = null
     private var activeSession: CallSession? = null
@@ -155,6 +159,7 @@ class CallSamplingService : Service() {
             val now = System.currentTimeMillis()
             repository.finishSession(session.sessionId, now, endReason)
             repository.deleteOlderThan(now - RETENTION_MS)
+            workScheduler.kickoffCallUploadOnce()
             activeSession = null
         }
 
@@ -277,7 +282,7 @@ class CallSamplingService : Service() {
         const val EXTRA_CALL_SOURCE = "extra_call_source"
         private const val CHANNEL_ID = "call_cell_sampling"
         private const val NOTIFICATION_ID = 40_030
-        private const val SAMPLE_INTERVAL_SECONDS = 30
+        private const val SAMPLE_INTERVAL_SECONDS = 5
         private const val END_REASON_CALL_ENDED = "call_ended"
         private const val RETENTION_MS = 7L * 24L * 60L * 60L * 1_000L
 

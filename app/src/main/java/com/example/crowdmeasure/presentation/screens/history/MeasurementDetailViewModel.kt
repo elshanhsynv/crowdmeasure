@@ -218,10 +218,8 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             sc.cqi?.let { add("CQI" to "$it") }
             sc.rssiDbm?.let { add("RSSI" to "$it dBm") }
             sc.bandwidthMhz?.let { add("Bandwidth" to "$it MHz") }
-            sc.mimoLayers?.let { add("Mimo Layers" to "$it") }
-        }.joinToString(" • ").takeIf {
-            it.isNotEmpty() || it.isNotBlank()
-        }
+            sc.mimoLayers?.let { add("MIMO Layers" to "$it") }
+        }.joinToString(" • ") { (name, value) -> "$name: $value" }.takeIf { it.isNotBlank() }
     }
 
     // IP info
@@ -278,8 +276,8 @@ private fun CarrierInfo.toSimCarrierUi(
 ): SimCarrierUi {
     val slotNumber = simSlotIndex?.plus(1)
     val title = slotNumber?.let { "SIM $it" } ?: "SIM ${fallbackIndex + 1}"
-    val isCollected = (subscriptionId != null && subscriptionId == collectedSubscriptionId) ||
-        (simSlotIndex != null && simSlotIndex == collectedSimSlotIndex)
+    val isCollected =
+        (subscriptionId != null && subscriptionId == collectedSubscriptionId) || (simSlotIndex != null && simSlotIndex == collectedSimSlotIndex)
 
     val pairs = buildList {
         carrierName?.let { add("Carrier" to it) }
@@ -307,9 +305,6 @@ private fun CarrierInfo.toSimCarrierUi(
 
     val subtitle = carrierName ?: simOperatorName ?: displayName
     return SimCarrierUi(
-        title = title,
-        subtitle = subtitle,
-        isCollected = isCollected,
-        pairs = pairs
+        title = title, subtitle = subtitle, isCollected = isCollected, pairs = pairs
     )
 }

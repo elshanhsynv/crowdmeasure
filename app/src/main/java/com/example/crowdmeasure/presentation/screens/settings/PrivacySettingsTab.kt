@@ -3,26 +3,30 @@ package com.example.crowdmeasure.presentation.screens.settings
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CellTower
 import androidx.compose.material.icons.outlined.LightbulbCircle
@@ -34,7 +38,6 @@ import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.PinDrop
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,53 +45,101 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.NonRestartableComposable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.neverEqualPolicy
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import com.example.crowdmeasure.presentation.ui.components.PermissionRow
-import com.example.crowdmeasure.presentation.ui.components.SettingsSectionCard
+import com.example.crowdmeasure.presentation.ui.components.cards.SettingsSectionCard
+import com.example.crowdmeasure.presentation.ui.components.feedback.LocationServicesBanner
+import com.example.crowdmeasure.presentation.ui.components.settings.PermissionRow
+import com.example.crowdmeasure.presentation.ui.components.settings.PermissionStatus
 import com.example.crowdmeasure.presentation.util.AppPermissions
+import com.example.crowdmeasure.presentation.util.AppPermissions.hasFineLocation
 import com.example.crowdmeasure.presentation.util.AppPermissions.isLocationServicesEnabled
 
 @Composable
 internal fun PrivacySettingsTab() {
     val context = LocalContext.current
 
-    var coarseGranted by remember { mutableStateOf(AppPermissions.hasCoarseLocation(context)) }
-    var fineGranted by remember { mutableStateOf(hasFineLocation(context)) }
-    var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(context)) }
-    var locationServicesOn by remember { mutableStateOf(isLocationServicesEnabled(context)) }
-    var notificationsGranted by remember {
-        mutableStateOf(AppPermissions.hasPostNotifications(context))
+    var permissionSnapshot by remember {
+        mutableStateOf(
+            value = PermissionSnapshot.from(context),
+            policy = neverEqualPolicy()
+        )
     }
 
-    fun refresh() {
-        coarseGranted = AppPermissions.hasCoarseLocation(context)
-        fineGranted = hasFineLocation(context)
-        phoneGranted = AppPermissions.hasPhoneState(context)
-        locationServicesOn = isLocationServicesEnabled(context)
-        notificationsGranted = AppPermissions.hasPostNotifications(context)
+    fun refreshPermissions() {
+        permissionSnapshot = PermissionSnapshot.from(context)
     }
 
-    val requestCoarse =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
-    val requestFine =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
-    val requestPhone =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
-    val requestNotifications =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
+    val requestCoarse = rememberPermissionLauncher(
+        onResult = { refreshPermissions() }
+    )
 
-    LaunchedEffect(Unit) { refresh() }
+    val requestFine = rememberPermissionLauncher(
+        onResult = { refreshPermissions() }
+    )
 
+    val requestPhoneState = rememberPermissionLauncher(
+        onResult = { refreshPermissions() }
+    )
+
+    val requestNotifications = rememberPermissionLauncher(
+        onResult = { refreshPermissions() }
+    )
+
+    PrivacySettingsContent(
+        snapshot = permissionSnapshot,
+        onRefresh = ::refreshPermissions,
+        onOpenLocationSettings = {
+            context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+        },
+        onRequestCoarseLocation = {
+            requestCoarse.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+        },
+        onRequestFineLocation = {
+            requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        },
+        onRequestPhoneState = {
+            requestPhoneState.launch(Manifest.permission.READ_PHONE_STATE)
+        },
+        onRequestNotifications = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    )
+}
+
+@Composable
+private fun rememberPermissionLauncher(
+    onResult: () -> Unit
+) = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestPermission(),
+    onResult = { onResult() }
+)
+
+@Composable
+private fun PrivacySettingsContent(
+    snapshot: PermissionSnapshot,
+    onRefresh: () -> Unit,
+    onOpenLocationSettings: () -> Unit,
+    onRequestCoarseLocation: () -> Unit,
+    onRequestFineLocation: () -> Unit,
+    onRequestPhoneState: () -> Unit,
+    onRequestNotifications: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -96,115 +147,170 @@ internal fun PrivacySettingsTab() {
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.size(4.dp))
 
-        SettingsSectionCard(
-            title = "Permissions",
-            description = "Improve measurement quality",
-            icon = Icons.Outlined.Lock
-        ) {
-            if (!locationServicesOn) {
-                LocationServicesWarningBanner(
-                    onClick = {
-                        context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                    }
-                )
-            }
-
-            PermissionRow(
-                title = "Coarse Location",
-                subtitle = "Adds approximate coordinates to measurements",
-                granted = coarseGranted,
-                enabled = true,
-                onRequest = { requestCoarse.launch(Manifest.permission.ACCESS_COARSE_LOCATION) },
-                icon = Icons.Outlined.MyLocation
-            )
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-            PermissionRow(
-                title = "Fine Location",
-                subtitle = "Required for detailed cell signal on some devices (e.g., Samsung)",
-                granted = fineGranted,
-                enabled = true,
-                onRequest = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
-                icon = Icons.Outlined.PinDrop
-            )
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-            PermissionRow(
-                title = "Phone State",
-                subtitle = "Enables additional cell metrics on some devices",
-                granted = phoneGranted,
-                enabled = true,
-                onRequest = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) },
-                icon = Icons.Outlined.PhoneAndroid
-            )
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-            PermissionRow(
-                title = "Notifications",
-                subtitle = "Enables post notifications",
-                granted = notificationsGranted,
-                enabled = true,
-                onRequest = { requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS) },
-                icon = Icons.Outlined.Notifications
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = { refresh() }) {
-                    Text("Refresh Status")
-                }
-            }
-        }
+        PermissionsSection(
+            snapshot = snapshot,
+            onRefresh = onRefresh,
+            onOpenLocationSettings = onOpenLocationSettings,
+            onRequestCoarseLocation = onRequestCoarseLocation,
+            onRequestFineLocation = onRequestFineLocation,
+            onRequestPhoneState = onRequestPhoneState,
+            onRequestNotifications = onRequestNotifications
+        )
 
         PermissionUsageSection()
+
         TipsSection()
+
         Spacer(Modifier.safeContentPadding())
     }
 }
 
 @Composable
-private fun LocationServicesWarningBanner(onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.errorContainer
+private fun PermissionsSection(
+    snapshot: PermissionSnapshot,
+    onRefresh: () -> Unit,
+    onOpenLocationSettings: () -> Unit,
+    onRequestCoarseLocation: () -> Unit,
+    onRequestFineLocation: () -> Unit,
+    onRequestPhoneState: () -> Unit,
+    onRequestNotifications: () -> Unit
+) {
+    SettingsSectionCard(
+        title = "Permissions",
+        description = "Improve measurement quality",
+        icon = Icons.Outlined.Lock
     ) {
+        LocationServicesBanner(
+            modifier = Modifier.fillMaxWidth(),
+            locationServicesOn = snapshot.locationServicesOn,
+            onClick = onOpenLocationSettings
+        )
+
+        val permissionItems = remember(snapshot) {
+            buildPermissionItems(
+                snapshot = snapshot,
+                onRequestCoarseLocation = onRequestCoarseLocation,
+                onRequestFineLocation = onRequestFineLocation,
+                onRequestPhoneState = onRequestPhoneState,
+                onRequestNotifications = onRequestNotifications
+            )
+        }
+
+        PermissionList(
+            items = permissionItems
+        )
+
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.size(18.dp)
-            )
-            Text(
-                text = "Location services are OFF - cell metrics may be empty",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                contentDescription = "Open location settings",
-                tint = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.size(14.dp)
-            )
+            TextButton(
+                onClick = onRefresh
+            ) {
+                Text("Refresh Status")
+            }
         }
     }
 }
 
+@Composable
+private fun PermissionList(
+    items: List<PermissionItem>
+) {
+    Column {
+        items.forEachIndexed { index, item ->
+            PermissionRow(
+                title = item.title,
+                subtitle = item.subtitle,
+                status = item.status,
+                onRequest = item.onRequest,
+                icon = item.icon,
+                buttonText = item.buttonText
+            )
+
+            if (index != items.lastIndex) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            }
+        }
+    }
+}
+
+private fun buildPermissionItems(
+    snapshot: PermissionSnapshot,
+    onRequestCoarseLocation: () -> Unit,
+    onRequestFineLocation: () -> Unit,
+    onRequestPhoneState: () -> Unit,
+    onRequestNotifications: () -> Unit
+): List<PermissionItem> {
+    return buildList {
+        add(
+            PermissionItem(
+                title = "Coarse Location",
+                subtitle = "Adds approximate coordinates to measurements",
+                status = if (snapshot.coarseLocationGranted) {
+                    PermissionStatus.Granted
+                } else {
+                    PermissionStatus.NotGranted
+                },
+                icon = Icons.Outlined.MyLocation,
+                onRequest = onRequestCoarseLocation
+            )
+        )
+
+        add(
+            PermissionItem(
+                title = "Fine Location",
+                subtitle = "Required for detailed cell signal",
+                status = if (snapshot.fineLocationGranted) {
+                    PermissionStatus.Granted
+                } else {
+                    PermissionStatus.NotGranted
+                },
+                icon = Icons.Outlined.PinDrop,
+                onRequest = onRequestFineLocation
+            )
+        )
+
+        add(
+            PermissionItem(
+                title = "Phone State",
+                subtitle = "Enables additional cell metrics",
+                status = if (snapshot.phoneStateGranted) {
+                    PermissionStatus.Granted
+                } else {
+                    PermissionStatus.NotGranted
+                },
+                icon = Icons.Outlined.PhoneAndroid,
+                onRequest = onRequestPhoneState
+            )
+        )
+
+        add(
+            PermissionItem(
+                title = "Notifications",
+                subtitle = if (snapshot.notificationsRuntimePermissionRequired) {
+                    "Allows measurement and status notifications"
+                } else {
+                    "Enabled automatically on this Android version"
+                },
+                status = when {
+                    snapshot.notificationsGranted -> PermissionStatus.Granted
+                    snapshot.notificationsRuntimePermissionRequired -> PermissionStatus.NotGranted
+                    else -> PermissionStatus.Disabled
+                },
+                icon = Icons.Outlined.Notifications,
+                onRequest = onRequestNotifications,
+                buttonText = "Allow"
+            )
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PermissionUsageSection() {
     SettingsSectionCard(
@@ -212,27 +318,18 @@ private fun PermissionUsageSection() {
         description = "We use these permissions to improve measurement accuracy",
         icon = Icons.Outlined.Shield
     ) {
-        val items = listOf(
-            Icons.Outlined.CellTower to "Cell signal\naccuracy",
-            Icons.Outlined.Map to "Location\ncontext",
-            Icons.Outlined.BarChart to "Network\nanalytics",
-            Icons.Outlined.Security to "Data\nquality"
-        )
-
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            maxItemsInEachRow = 2
         ) {
-            items.take(2).forEach { (icon, label) ->
-                UsageFeatureChip(icon = icon, label = label, modifier = Modifier.weight(1f))
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items.drop(2).forEach { (icon, label) ->
-                UsageFeatureChip(icon = icon, label = label, modifier = Modifier.weight(1f))
+            PermissionUsageItems.forEach { item ->
+                UsageFeatureChip(
+                    icon = item.icon,
+                    label = item.label,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
@@ -245,8 +342,8 @@ private fun UsageFeatureChip(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
+        modifier = modifier.defaultMinSize(minHeight = 52.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
@@ -254,24 +351,14 @@ private fun UsageFeatureChip(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.size(28.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
+            MiniIconBox(icon = icon)
+
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -280,66 +367,151 @@ private fun UsageFeatureChip(
 @Composable
 private fun TipsSection() {
     Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            MiniIconBox(
+                icon = Icons.Outlined.LightbulbCircle,
+                size = 44.dp,
+                iconSize = 22.dp
+            )
+
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.LightbulbCircle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    Text(
-                        text = "Tips",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
                 Text(
-                    text = "To get the best results, grant all permissions and keep Location Services ON.",
+                    text = "Tips",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Text(
+                    text = "Grant all permissions and keep Location Services on for the most accurate measurements.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
 
+@Composable
+@NonRestartableComposable
+private fun MiniIconBox(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 30.dp,
+    iconSize: androidx.compose.ui.unit.Dp = 15.dp
+) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = modifier.size(size)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center
+        ) {
             Icon(
-                imageVector = Icons.Outlined.PinDrop,
+                imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                modifier = Modifier.size(64.dp)
+                modifier = Modifier.size(iconSize)
             )
         }
     }
 }
 
-private fun hasFineLocation(context: Context): Boolean = ContextCompat.checkSelfPermission(
-    context,
-    Manifest.permission.ACCESS_FINE_LOCATION
-) == PackageManager.PERMISSION_GRANTED
+@Immutable
+private data class PermissionSnapshot(
+    val coarseLocationGranted: Boolean,
+    val fineLocationGranted: Boolean,
+    val phoneStateGranted: Boolean,
+    val notificationsGranted: Boolean,
+    val notificationsRuntimePermissionRequired: Boolean,
+    val locationServicesOn: Boolean
+) {
+    companion object {
+        fun from(context: Context): PermissionSnapshot {
+            val notificationsRuntimePermissionRequired =
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+
+            return PermissionSnapshot(
+                coarseLocationGranted = AppPermissions.hasCoarseLocation(context),
+                fineLocationGranted = hasFineLocation(context),
+                phoneStateGranted = AppPermissions.hasPhoneState(context),
+                notificationsGranted = !notificationsRuntimePermissionRequired ||
+                        AppPermissions.hasPostNotifications(context),
+                notificationsRuntimePermissionRequired = notificationsRuntimePermissionRequired,
+                locationServicesOn = isLocationServicesEnabled(context)
+            )
+        }
+    }
+}
+
+@Immutable
+private data class PermissionItem(
+    val title: String,
+    val subtitle: String,
+    val status: PermissionStatus,
+    val icon: ImageVector,
+    val onRequest: () -> Unit,
+    val buttonText: String = "Grant"
+)
+
+@Immutable
+private data class UsageItem(
+    val icon: ImageVector,
+    val label: String
+)
+
+@Stable
+private val PermissionUsageItems = listOf(
+    UsageItem(
+        icon = Icons.Outlined.CellTower,
+        label = "Cell signal\naccuracy"
+    ),
+    UsageItem(
+        icon = Icons.Outlined.Map,
+        label = "Location\ncontext"
+    ),
+    UsageItem(
+        icon = Icons.Outlined.BarChart,
+        label = "Network\nanalytics"
+    ),
+    UsageItem(
+        icon = Icons.Outlined.Security,
+        label = "Data\nquality"
+    )
+)
+
+@Preview(showBackground = true)
+@Composable
+private fun PrivacySettingsContentPreview() {
+    MaterialTheme {
+        PrivacySettingsContent(
+            snapshot = PermissionSnapshot(
+                coarseLocationGranted = true,
+                fineLocationGranted = false,
+                phoneStateGranted = true,
+                notificationsGranted = false,
+                notificationsRuntimePermissionRequired = true,
+                locationServicesOn = false
+            ),
+            onRefresh = {},
+            onOpenLocationSettings = {},
+            onRequestCoarseLocation = {},
+            onRequestFineLocation = {},
+            onRequestPhoneState = {},
+            onRequestNotifications = {}
+        )
+    }
+}
