@@ -33,8 +33,10 @@ enum class WifiStandard {
 enum class NrState {
     @SerialName("none")
     NONE,
+
     @SerialName("nsa")
     NSA,
+
     @SerialName("sa")
     SA,
 }
@@ -50,18 +52,25 @@ enum class NrState {
 enum class ThermalStatus {
     @SerialName("none")
     NONE,        // THERMAL_STATUS_NONE     = 0
+
     @SerialName("light")
     LIGHT,       // THERMAL_STATUS_LIGHT    = 1
+
     @SerialName("moderate")
     MODERATE,    // THERMAL_STATUS_MODERATE = 2
+
     @SerialName("severe")
     SEVERE,      // THERMAL_STATUS_SEVERE   = 3
+
     @SerialName("critical")
     CRITICAL,    // THERMAL_STATUS_CRITICAL = 4
+
     @SerialName("emergency")
     EMERGENCY,  // THERMAL_STATUS_EMERGENCY= 5
+
     @SerialName("shutdown")
     SHUTDOWN,    // THERMAL_STATUS_SHUTDOWN = 6
+
     @SerialName("unknown")
     UNKNOWN,     // < API 29 or unrecognized value
 }
@@ -77,5 +86,6 @@ enum class CallSource {
     WHATSAPP_VOICE,
     WHATSAPP_VIDEO,
     WHATSAPP_UNKNOWN,
+    VOIP_GENERIC,
     UNKNOWN
 }

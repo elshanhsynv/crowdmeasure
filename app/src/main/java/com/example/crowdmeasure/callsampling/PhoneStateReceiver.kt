@@ -19,7 +19,6 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class PhoneStateReceiver : BroadcastReceiver() {
-
     @Inject
     lateinit var sessionRepository: UserSessionRepository
 
