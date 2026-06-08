@@ -22,6 +22,8 @@ interface CallSamplingRepository {
     )
 
     suspend fun finishSession(sessionId: String, endedAtUtcMs: Long, endReason: String)
+    suspend fun finishActiveSession(endedAtUtcMs: Long, endReason: String)
+    suspend fun reclassifySession(sessionId: String, callType: CallType, callSource: CallSource)
     fun observeRecentSessions(limit: Int = 50): Flow<List<CallSession>>
     fun observeSamples(sessionId: String): Flow<List<CallCellSample>>
     suspend fun getRecentSessionsForExport(limit: Int): List<CallSessionExport>

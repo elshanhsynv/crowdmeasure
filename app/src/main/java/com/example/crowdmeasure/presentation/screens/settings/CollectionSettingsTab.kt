@@ -59,7 +59,7 @@ internal fun CollectionSettingsTab(
     onReschedule: () -> Unit,
     callSamplingStatus: CallSamplingStatusUiState,
     onSetCallSamplingEnabled: (Boolean) -> Unit,
-    onSetWhatsappCallSamplingEnabled: (Boolean) -> Unit
+    onSetVoipCallSamplingEnabled: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(context)) }
@@ -72,7 +72,6 @@ internal fun CollectionSettingsTab(
         mutableStateOf(AppPermissions.ignoresBatteryOptimizations(context))
     }
     var locationServicesOn by remember { mutableStateOf(isLocationServicesEnabled(context)) }
-    var whatsappNotificationAccess by remember { mutableStateOf(false) }
 
     fun refreshCallSamplingPrerequisites() {
         phoneGranted = AppPermissions.hasPhoneState(context)
@@ -81,7 +80,6 @@ internal fun CollectionSettingsTab(
         notificationsGranted = AppPermissions.hasPostNotifications(context)
         batteryIgnored = AppPermissions.ignoresBatteryOptimizations(context)
         locationServicesOn = isLocationServicesEnabled(context)
-        whatsappNotificationAccess = false
     }
 
     LaunchedEffect(Unit) { refreshCallSamplingPrerequisites() }
@@ -95,10 +93,26 @@ internal fun CollectionSettingsTab(
     ) {
         Spacer(Modifier.height(4.dp))
 
-        BackgroundWorkStatusCard(
-            state = backgroundWorkState,
-            onRunNow = onRunNow,
-            onReschedule = onReschedule
+        CallSamplingSettingsCard(
+            enabled = settings?.callSamplingEnabled == true,
+            voipEnabled = settings?.voipCallSamplingEnabled == true,
+            voipMonitorActive = callSamplingStatus.voipMonitorActive,
+            phoneGranted = phoneGranted,
+            fineGranted = fineGranted,
+            backgroundGranted = backgroundGranted,
+            notificationsGranted = notificationsGranted,
+            batteryIgnored = batteryIgnored,
+            locationServicesOn = locationServicesOn,
+            lastMissedLabel = callSamplingStatus.lastMissedLabel,
+            onEnableChanged = onSetCallSamplingEnabled,
+            onVoipEnableChanged = onSetVoipCallSamplingEnabled,
+            onOpenLocationSettings = {
+                context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            },
+            onOpenBatterySettings = {
+                SystemSettingsIntents.openBatteryOptimizationSettings(context)
+            },
+            onRefresh = ::refreshCallSamplingPrerequisites
         )
 
         BackgroundReliabilityCard(
@@ -108,27 +122,10 @@ internal fun CollectionSettingsTab(
             }
         )
 
-        CallSamplingSettingsCard(
-            enabled = settings?.callSamplingEnabled == true,
-            whatsappEnabled = false,
-            phoneGranted = phoneGranted,
-            fineGranted = fineGranted,
-            backgroundGranted = backgroundGranted,
-            notificationsGranted = notificationsGranted,
-            batteryIgnored = batteryIgnored,
-            locationServicesOn = locationServicesOn,
-            whatsappNotificationAccess = whatsappNotificationAccess,
-            lastMissedLabel = callSamplingStatus.lastMissedLabel,
-            onEnableChanged = onSetCallSamplingEnabled,
-            onWhatsappEnableChanged = {},
-            onOpenLocationSettings = {
-                context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-            },
-            onOpenBatterySettings = {
-                SystemSettingsIntents.openBatteryOptimizationSettings(context)
-            },
-            onOpenNotificationAccessSettings = {},
-            onRefresh = ::refreshCallSamplingPrerequisites
+        BackgroundWorkStatusCard(
+            state = backgroundWorkState,
+            onRunNow = onRunNow,
+            onReschedule = onReschedule
         )
 
         Spacer(Modifier.safeContentPadding())
@@ -166,10 +163,11 @@ private fun CollectionSettingsTabPreview() {
             onRunNow = {},
             onReschedule = {},
             callSamplingStatus = CallSamplingStatusUiState(
-                lastMissedLabel = "2 missed calls since last run"
+                lastMissedLabel = "2 missed calls since last run",
+                voipMonitorActive = false
             ),
             onSetCallSamplingEnabled = {},
-            onSetWhatsappCallSamplingEnabled = {}
+            onSetVoipCallSamplingEnabled = {}
         )
     }
 }

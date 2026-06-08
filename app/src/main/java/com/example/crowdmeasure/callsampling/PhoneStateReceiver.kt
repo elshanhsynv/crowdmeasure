@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.media.AudioManager
+import androidx.core.content.getSystemService
 import android.telephony.TelephonyManager
 import com.example.crowdmeasure.data.prefs.CallSamplingStatusStore
 import com.example.crowdmeasure.domain.model.CallSource
@@ -15,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -73,16 +76,27 @@ class PhoneStateReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
                 val settings = sessionRepository.settings.first()
-
-                if (!settings.callSamplingEnabled) {
-                    statusStore.recordMissedStart("call_sampling_disabled")
-                    return@launch
-                }
-
+                delay(CELLULAR_START_CONFIRM_MS)
                 val state = prerequisites.evaluate()
 
                 if (!state.canStart) {
                     statusStore.recordMissedStart(state.missingReason)
+                    return@launch
+                }
+
+                if (settings.voipCallSamplingEnabled &&
+                    context.getSystemService<AudioManager>()?.mode.isVoipCommunicationMode()
+                ) {
+                    CallSamplingService.requestStart(
+                        context,
+                        callType = CallType.UNKNOWN,
+                        callSource = CallSource.VOIP_GENERIC
+                    )
+                    return@launch
+                }
+
+                if (!settings.callSamplingEnabled) {
+                    statusStore.recordMissedStart("call_sampling_disabled")
                     return@launch
                 }
 
@@ -114,6 +128,7 @@ class PhoneStateReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        private const val CELLULAR_START_CONFIRM_MS = 2_000L
         private var wasRinging = false
     }
 }

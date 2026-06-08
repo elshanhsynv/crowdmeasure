@@ -1,13 +1,19 @@
 package com.example.crowdmeasure.presentation.screens.history
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.crowdmeasure.data.prefs.AppPreferences
 import com.example.crowdmeasure.domain.model.Measurement
+import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.GetHistoryUseCase
+import com.example.crowdmeasure.presentation.util.AppPermissions
 import com.example.crowdmeasure.presentation.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +27,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -29,13 +36,20 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    private val getHistoryUseCase: GetHistoryUseCase
+    private val getHistoryUseCase: GetHistoryUseCase,
+    private val appPreferences: AppPreferences,
+    userSessionRepository: UserSessionRepository,
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val dateFormatter = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
     private val queryText = MutableStateFlow("")
     private val transportFilter = MutableStateFlow(HistoryTransportFilter.All)
     private val manualRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val batteryOptimizationIgnored = MutableStateFlow(
+        AppPermissions.ignoresBatteryOptimizations(context)
+    )
+    private val batteryOptimizationRefreshTime = MutableStateFlow(System.currentTimeMillis())
 
     @OptIn(FlowPreview::class)
     private val appliedQuery: StateFlow<String?> = queryText
@@ -82,13 +96,29 @@ class HistoryViewModel @Inject constructor(
         queryText,
         appliedQuery,
         transportFilter,
-        itemsState
-    ) { query, applied, filter, items ->
+        itemsState,
+        combine(
+            userSessionRepository.settings,
+            appPreferences.batteryOptimizationRecommendationDismissedUntil,
+            batteryOptimizationIgnored,
+            batteryOptimizationRefreshTime
+        ) { settings, dismissedUntil, ignored, refreshTime ->
+            val backgroundFeatureEnabled = settings.autoRunEnabled ||
+                settings.callSamplingEnabled ||
+                settings.voipCallSamplingEnabled
+            backgroundFeatureEnabled &&
+                !ignored &&
+                refreshTime >= dismissedUntil
+        }
+    ) { query, applied, filter, items, batteryRecommendationEligible ->
         HistoryUiState(
             queryText = query,
             appliedTag = applied, // keep field name for UI; now it represents applied query
             transportFilter = filter,
-            itemsState = items
+            itemsState = items,
+            showBatteryOptimizationRecommendation =
+                batteryRecommendationEligible &&
+                    (items as? UiState.Success)?.data?.isNotEmpty() == true
         )
     }.stateIn(
         scope = viewModelScope,
@@ -115,6 +145,19 @@ class HistoryViewModel @Inject constructor(
 
     fun refresh() {
         manualRefreshTrigger.tryEmit(Unit)
+    }
+
+    fun refreshBatteryOptimizationStatus() {
+        batteryOptimizationIgnored.value = AppPermissions.ignoresBatteryOptimizations(context)
+        batteryOptimizationRefreshTime.value = System.currentTimeMillis()
+    }
+
+    fun dismissBatteryOptimizationRecommendation() {
+        viewModelScope.launch {
+            appPreferences.setBatteryOptimizationRecommendationDismissedUntil(
+                System.currentTimeMillis() + BATTERY_RECOMMENDATION_COOLDOWN_MS
+            )
+        }
     }
 
     // ------------------------------------------------------------
@@ -198,6 +241,10 @@ class HistoryViewModel @Inject constructor(
         score += 5 * tokens.size
 
         return score
+    }
+
+    private companion object {
+        const val BATTERY_RECOMMENDATION_COOLDOWN_MS = 1L * 24 * 60 * 60 * 1_000
     }
 }
 

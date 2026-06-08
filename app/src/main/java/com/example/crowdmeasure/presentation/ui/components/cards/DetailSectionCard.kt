@@ -20,7 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.crowdmeasure.presentation.ui.theme.CrowdMeasureTheme
 
 /**
  * Section card for detail screens.
@@ -107,4 +109,18 @@ fun SectionDivider(modifier: Modifier = Modifier) {
         modifier = modifier,
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun DetailSectionCardPreview() {
+    CrowdMeasureTheme {
+        DetailSectionCard(
+            title = "Section Title",
+            description = "This is a description for the section.",
+            content = {
+                Text("This is the content of the section.")
+            }
+        )
+    }
 }

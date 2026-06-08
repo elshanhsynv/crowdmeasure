@@ -41,7 +41,7 @@ class SettingsViewModel @Inject constructor(
     private val exportCallSessionsUseCase: ExportCallSessionsUseCase,
     private val workScheduler: WorkScheduler,
     measurementRepository: MeasurementRepository,
-    callSamplingStatusStore: CallSamplingStatusStore,
+    private val callSamplingStatusStore: CallSamplingStatusStore,
     workerStatusStore: WorkerStatusStore,
 ) : ViewModel() {
     private val timeFormatter = DateTimeFormatter
@@ -184,7 +184,8 @@ class SettingsViewModel @Inject constructor(
             val reason = status.lastMissedReason?.takeIf { it.isNotBlank() }
             val timestamp = formatTimestamp(status.lastMissedAtUtcMs)
             CallSamplingStatusUiState(
-                lastMissedLabel = if (reason == null) "None" else "$timestamp • $reason"
+                lastMissedLabel = if (reason == null) "None" else "$timestamp • $reason",
+                voipMonitorActive = status.voipMonitorActive
             )
         }.stateIn(
             scope = viewModelScope,
@@ -206,9 +207,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setWhatsappCallSamplingEnabled(enabled: Boolean) {
+    fun setVoipCallSamplingEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            userSessionRepository.setWhatsappCallSamplingEnabled(enabled)
+            userSessionRepository.setVoipCallSamplingEnabled(enabled)
         }
     }
 

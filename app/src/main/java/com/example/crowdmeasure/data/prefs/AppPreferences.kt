@@ -35,8 +35,14 @@ class AppPreferences(private val context: Context) {
             callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: true,
             // Disabled while WhatsappCallNotificationListener is not registered in the manifest.
             whatsappCallSamplingEnabled = false,
+            voipCallSamplingEnabled = prefs[DataStoreKeys.VOIP_CALL_SAMPLING_ENABLED] ?: true,
         )
     }
+
+    val batteryOptimizationRecommendationDismissedUntil: Flow<Long> =
+        context.dataStore.data.map { prefs ->
+            prefs[DataStoreKeys.BATTERY_OPTIMIZATION_RECOMMENDATION_DISMISSED_UNTIL] ?: 0L
+        }
 
     suspend fun ensureInstallId() {
         context.dataStore.edit { prefs ->
@@ -80,5 +86,16 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setWhatsappCallSamplingEnabled(enabled: Boolean) {
         context.dataStore.edit { it[DataStoreKeys.WHATSAPP_CALL_SAMPLING_ENABLED] = enabled }
+    }
+
+    suspend fun setVoipCallSamplingEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[DataStoreKeys.VOIP_CALL_SAMPLING_ENABLED] = enabled }
+    }
+
+    suspend fun setBatteryOptimizationRecommendationDismissedUntil(timestampUtcMs: Long) {
+        context.dataStore.edit {
+            it[DataStoreKeys.BATTERY_OPTIMIZATION_RECOMMENDATION_DISMISSED_UNTIL] =
+                timestampUtcMs.coerceAtLeast(0L)
+        }
     }
 }

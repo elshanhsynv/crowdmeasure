@@ -16,7 +16,6 @@ import androidx.compose.material.icons.outlined.BatterySaver
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -46,56 +45,53 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.crowdmeasure.presentation.ui.components.cards.SettingsSectionCard
 
-private const val WHATSAPP_CALL_SAMPLING_AVAILABLE = false
-
 @Composable
 fun CallSamplingSettingsCard(
     enabled: Boolean,
-    whatsappEnabled: Boolean,
+    voipEnabled: Boolean,
+    voipMonitorActive: Boolean,
     phoneGranted: Boolean,
     fineGranted: Boolean,
     backgroundGranted: Boolean,
     notificationsGranted: Boolean,
     batteryIgnored: Boolean,
     locationServicesOn: Boolean,
-    whatsappNotificationAccess: Boolean,
     lastMissedLabel: String,
     onEnableChanged: (Boolean) -> Unit,
-    onWhatsappEnableChanged: (Boolean) -> Unit,
+    onVoipEnableChanged: (Boolean) -> Unit,
     onOpenLocationSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
-    onOpenNotificationAccessSettings: () -> Unit,
     onRefresh: () -> Unit
 ) {
     val state = remember(
         enabled,
-        whatsappEnabled,
+        voipEnabled,
+        voipMonitorActive,
         phoneGranted,
         fineGranted,
         backgroundGranted,
         notificationsGranted,
         batteryIgnored,
         locationServicesOn,
-        whatsappNotificationAccess,
         lastMissedLabel
     ) {
         CallSamplingUiState(
             cellularEnabled = enabled,
-            whatsappEnabled = whatsappEnabled && WHATSAPP_CALL_SAMPLING_AVAILABLE,
+            voipEnabled = voipEnabled,
+            voipMonitorActive = voipMonitorActive,
             phoneGranted = phoneGranted,
             fineGranted = fineGranted,
             backgroundGranted = backgroundGranted,
             notificationsGranted = notificationsGranted,
             batteryIgnored = batteryIgnored,
             locationServicesOn = locationServicesOn,
-            whatsappNotificationAccess = whatsappNotificationAccess,
             lastMissedLabel = lastMissedLabel
         )
     }
 
     SettingsSectionCard(
         title = "Call Sampling",
-        description = "Local-only cell stats during active calls",
+        description = "Cell stats during cellular and VoIP calls",
         icon = Icons.Outlined.PhoneAndroid
     ) {
         Column(
@@ -103,10 +99,10 @@ fun CallSamplingSettingsCard(
         ) {
             CallSamplingStatusHeader(
                 cellularEnabled = state.cellularEnabled,
-                whatsappEnabled = state.whatsappEnabled,
+                voipEnabled = state.voipEnabled,
+                voipMonitorActive = state.voipMonitorActive,
                 cellularReady = state.cellularReady,
-                whatsappReady = state.whatsappReady,
-                whatsappAvailable = WHATSAPP_CALL_SAMPLING_AVAILABLE
+                voipReady = state.voipReady
             )
 
             SectionDivider()
@@ -118,20 +114,18 @@ fun CallSamplingSettingsCard(
             SamplingFixActions(
                 actions = state.fixActions,
                 onOpenLocationSettings = onOpenLocationSettings,
-                onOpenBatterySettings = onOpenBatterySettings,
-                onOpenNotificationAccessSettings = onOpenNotificationAccessSettings
+                onOpenBatterySettings = onOpenBatterySettings
             )
 
             SectionDivider()
 
             SamplingToggleSection(
                 cellularReady = state.cellularReady,
-                whatsappReady = state.whatsappReady,
+                voipReady = state.voipReady,
                 cellularEnabled = state.cellularEnabled,
-                whatsappEnabled = state.whatsappEnabled,
+                voipEnabled = state.voipEnabled,
                 onEnableChanged = onEnableChanged,
-                onWhatsappEnableChanged = onWhatsappEnableChanged,
-                whatsappAvailable = WHATSAPP_CALL_SAMPLING_AVAILABLE
+                onVoipEnableChanged = onVoipEnableChanged
             )
 
             LastMissedStartRow(
@@ -145,10 +139,10 @@ fun CallSamplingSettingsCard(
 @Composable
 private fun CallSamplingStatusHeader(
     cellularEnabled: Boolean,
-    whatsappEnabled: Boolean,
+    voipEnabled: Boolean,
+    voipMonitorActive: Boolean,
     cellularReady: Boolean,
-    whatsappReady: Boolean,
-    whatsappAvailable: Boolean
+    voipReady: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -160,19 +154,19 @@ private fun CallSamplingStatusHeader(
                 enabled = cellularEnabled,
                 ready = cellularReady
             ),
-            modifier = if (whatsappAvailable) Modifier.weight(1f) else Modifier.fillMaxWidth()
+            modifier = Modifier.weight(1f)
         )
 
-        if (whatsappAvailable) {
-            SamplingStatusCard(
-                title = "WhatsApp",
-                status = samplingStatus(
-                    enabled = whatsappEnabled,
-                    ready = whatsappReady
-                ),
-                modifier = Modifier.weight(1f)
-            )
-        }
+        SamplingStatusCard(
+            title = "VoIP",
+            status = when {
+                voipMonitorActive -> SamplingStatus.BestEffort
+                voipEnabled -> SamplingStatus.NeedsSetup
+                voipReady -> SamplingStatus.Ready
+                else -> SamplingStatus.NeedsSetup
+            },
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -330,8 +324,7 @@ private fun RequirementStatusChip(
 private fun SamplingFixActions(
     actions: Set<SamplingFixAction>,
     onOpenLocationSettings: () -> Unit,
-    onOpenBatterySettings: () -> Unit,
-    onOpenNotificationAccessSettings: () -> Unit
+    onOpenBatterySettings: () -> Unit
 ) {
     if (actions.isEmpty()) return
 
@@ -354,13 +347,6 @@ private fun SamplingFixActions(
             )
         }
 
-        if (SamplingFixAction.AllowWhatsappNotificationAccess in actions) {
-            FixActionButton(
-                text = "Allow WhatsApp notification access",
-                icon = Icons.Outlined.Notifications,
-                onClick = onOpenNotificationAccessSettings
-            )
-        }
     }
 }
 
@@ -394,12 +380,11 @@ private fun FixActionButton(
 @Composable
 private fun SamplingToggleSection(
     cellularReady: Boolean,
-    whatsappReady: Boolean,
+    voipReady: Boolean,
     cellularEnabled: Boolean,
-    whatsappEnabled: Boolean,
+    voipEnabled: Boolean,
     onEnableChanged: (Boolean) -> Unit,
-    onWhatsappEnableChanged: (Boolean) -> Unit,
-    whatsappAvailable: Boolean
+    onVoipEnableChanged: (Boolean) -> Unit
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -416,19 +401,17 @@ private fun SamplingToggleSection(
             onCheckedChange = onEnableChanged
         )
 
-        if (whatsappAvailable) {
-            SamplingToggleRow(
-                title = "WhatsApp calls",
-                subtitle = if (whatsappReady) {
-                    "Ready when WhatsApp call notifications are detected"
-                } else {
-                    "Requires cellular readiness and notification access"
-                },
-                checked = whatsappEnabled,
-                enabled = whatsappReady || whatsappEnabled,
-                onCheckedChange = onWhatsappEnableChanged
-            )
-        }
+        SamplingToggleRow(
+            title = "VoIP calls",
+            subtitle = if (voipReady) {
+                "Best effort while the app process is running"
+            } else {
+                "Complete required access before enabling detection"
+            },
+            checked = voipEnabled,
+            enabled = voipReady || voipEnabled,
+            onCheckedChange = onVoipEnableChanged
+        )
     }
 }
 
@@ -560,14 +543,14 @@ private fun SectionDivider() {
 @Immutable
 private data class CallSamplingUiState(
     val cellularEnabled: Boolean,
-    val whatsappEnabled: Boolean,
+    val voipEnabled: Boolean,
+    val voipMonitorActive: Boolean,
     val phoneGranted: Boolean,
     val fineGranted: Boolean,
     val backgroundGranted: Boolean,
     val notificationsGranted: Boolean,
     val batteryIgnored: Boolean,
     val locationServicesOn: Boolean,
-    val whatsappNotificationAccess: Boolean,
     val lastMissedLabel: String
 ) {
     val cellularReady: Boolean
@@ -575,10 +558,11 @@ private data class CallSamplingUiState(
                 fineGranted &&
                 backgroundGranted &&
                 notificationsGranted &&
+                batteryIgnored &&
                 locationServicesOn
 
-    val whatsappReady: Boolean
-        get() = WHATSAPP_CALL_SAMPLING_AVAILABLE && cellularReady && whatsappNotificationAccess
+    val voipReady: Boolean
+        get() = cellularReady
 
     val requirements: List<SamplingRequirement>
         get() = buildList {
@@ -588,9 +572,6 @@ private data class CallSamplingUiState(
             add(SamplingRequirement("Notifications", notificationsGranted))
             add(SamplingRequirement("Battery exemption", batteryIgnored))
             add(SamplingRequirement("Location services", locationServicesOn))
-            if (WHATSAPP_CALL_SAMPLING_AVAILABLE) {
-                add(SamplingRequirement("WhatsApp notification access", whatsappNotificationAccess))
-            }
         }
 
     val fixActions: Set<SamplingFixAction>
@@ -603,9 +584,6 @@ private data class CallSamplingUiState(
                 add(SamplingFixAction.AllowBatteryExemption)
             }
 
-            if (WHATSAPP_CALL_SAMPLING_AVAILABLE && !whatsappNotificationAccess) {
-                add(SamplingFixAction.AllowWhatsappNotificationAccess)
-            }
         }
 }
 
@@ -620,6 +598,7 @@ private enum class SamplingStatus(
     val label: String
 ) {
     Enabled("Enabled"),
+    BestEffort("Best effort"),
     Ready("Ready"),
     NeedsSetup("Needs setup")
 }
@@ -627,8 +606,7 @@ private enum class SamplingStatus(
 @Immutable
 private enum class SamplingFixAction {
     EnableLocationServices,
-    AllowBatteryExemption,
-    AllowWhatsappNotificationAccess
+    AllowBatteryExemption
 }
 
 @Stable
@@ -643,7 +621,7 @@ private fun samplingStatusColors(
     status: SamplingStatus
 ): SamplingStatusColors {
     return when (status) {
-        SamplingStatus.Enabled -> SamplingStatusColors(
+        SamplingStatus.Enabled, SamplingStatus.BestEffort -> SamplingStatusColors(
             container = MaterialTheme.colorScheme.primaryContainer,
             content = MaterialTheme.colorScheme.onPrimaryContainer,
             border = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
@@ -669,20 +647,19 @@ private fun CallSamplingSettingsCardPreview() {
     MaterialTheme {
         CallSamplingSettingsCard(
             enabled = true,
-            whatsappEnabled = false,
+            voipEnabled = false,
+            voipMonitorActive = false,
             phoneGranted = true,
             fineGranted = true,
             backgroundGranted = true,
             notificationsGranted = true,
             batteryIgnored = false,
             locationServicesOn = true,
-            whatsappNotificationAccess = false,
             lastMissedLabel = "5 minutes ago",
             onEnableChanged = {},
-            onWhatsappEnableChanged = {},
+            onVoipEnableChanged = {},
             onOpenLocationSettings = {},
             onOpenBatterySettings = {},
-            onOpenNotificationAccessSettings = {},
             onRefresh = {}
         )
     }

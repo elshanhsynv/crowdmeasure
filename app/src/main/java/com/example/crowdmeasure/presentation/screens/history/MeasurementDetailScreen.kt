@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FactCheck
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.CellTower
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PhoneAndroid
@@ -35,15 +36,20 @@ import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -87,6 +93,8 @@ private fun MeasurementDetailContent(
     onToggleReveal: (RevealKey) -> Unit,
     onRetry: () -> Unit
 ) {
+    var selectedInfo by remember { mutableStateOf<MeasurementSection?>(null) }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -107,10 +115,18 @@ private fun MeasurementDetailContent(
             is UiState.Success -> {
                 val m = loadState.data
 
-                item(key = "summary") { SummaryHeroCard(m) }
+                item(key = "summary") {
+                    SummaryHeroCard(
+                        measurement = m,
+                        onInfo = { selectedInfo = MeasurementSection.Summary }
+                    )
+                }
 
                 item(key = "device") {
-                    DeviceSection(pairs = m.meta)
+                    DeviceSection(
+                        pairs = m.meta,
+                        onInfo = { selectedInfo = MeasurementSection.Device }
+                    )
                 }
 
                 item(key = "environment") {
@@ -118,12 +134,18 @@ private fun MeasurementDetailContent(
                         pairs = m.env,
                         locationText = m.locationText,
                         locationRevealed = state.revealed.contains(RevealKey.Location),
-                        onToggleLocation = { onToggleReveal(RevealKey.Location) }
+                        onToggleLocation = { onToggleReveal(RevealKey.Location) },
+                        onInfo = { selectedInfo = MeasurementSection.NetworkContext }
                     )
                 }
 
                 m.wifi?.let { wifiPairs ->
-                    item(key = "wifi") { WifiSection(pairs = wifiPairs) }
+                    item(key = "wifi") {
+                        WifiSection(
+                            pairs = wifiPairs,
+                            onInfo = { selectedInfo = MeasurementSection.Wifi }
+                        )
+                    }
                 }
 
                 m.cell?.let { cellPairs ->
@@ -134,13 +156,19 @@ private fun MeasurementDetailContent(
                             collectedSimText = m.collectedSimText,
                             cellIdsText = m.cellIdsText,
                             cellIdsRevealed = state.revealed.contains(RevealKey.CellIds),
-                            onToggleCellIds = { onToggleReveal(RevealKey.CellIds) }
+                            onToggleCellIds = { onToggleReveal(RevealKey.CellIds) },
+                            onInfo = { selectedInfo = MeasurementSection.Cellular }
                         )
                     }
                 }
 
                 m.ip?.let { ipPairs ->
-                    item(key = "ip") { IpSection(pairs = ipPairs) }
+                    item(key = "ip") {
+                        IpSection(
+                            pairs = ipPairs,
+                            onInfo = { selectedInfo = MeasurementSection.Ip }
+                        )
+                    }
                 }
 
                 item(key = "performance") {
@@ -148,7 +176,8 @@ private fun MeasurementDetailContent(
                         performance = m.performance,
                         endpointId = m.endpointId,
                         endpointRevealed = state.revealed.contains(RevealKey.Endpoint),
-                        onToggleEndpoint = { onToggleReveal(RevealKey.Endpoint) }
+                        onToggleEndpoint = { onToggleReveal(RevealKey.Endpoint) },
+                        onInfo = { selectedInfo = MeasurementSection.Performance }
                     )
                 }
             }
@@ -163,10 +192,20 @@ private fun MeasurementDetailContent(
 
         item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
     }
+
+    selectedInfo?.let { section ->
+        MeasurementSectionInfoSheet(
+            section = section,
+            onDismiss = { selectedInfo = null }
+        )
+    }
 }
 
 @Composable
-private fun SummaryHeroCard(measurement: MeasurementDetailUi) {
+private fun SummaryHeroCard(
+    measurement: MeasurementDetailUi,
+    onInfo: () -> Unit
+) {
     val containerColor = MaterialTheme.colorScheme.primaryContainer
     val onContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
     val summaryIcon = if (measurement.wifi != null) {
@@ -253,19 +292,32 @@ private fun SummaryHeroCard(measurement: MeasurementDetailUi) {
                     )
                 }
             }
+
+            SectionInfoButton(
+                sectionTitle = "Measurement Summary",
+                onClick = onInfo,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp),
+                tint = onContainerColor
+            )
         }
     }
 }
 
 @Composable
-private fun DeviceSection(pairs: List<Pair<String, String?>>) {
+private fun DeviceSection(
+    pairs: List<Pair<String, String?>>,
+    onInfo: () -> Unit
+) {
     val chips = pairs.mapNotNull { (k, v) -> v?.let { k to it } }
     if (chips.isEmpty()) return
 
     DetailSectionCard(
         title = "Device & App",
         description = "Environment information",
-        icon = Icons.Outlined.PhoneAndroid
+        icon = Icons.Outlined.PhoneAndroid,
+        headerAction = { SectionInfoButton("Device & App", onInfo) }
     ) {
         MetricChipGrid(pairs = chips)
     }
@@ -276,12 +328,14 @@ private fun EnvironmentSection(
     pairs: List<Pair<String, String>>,
     locationText: String?,
     locationRevealed: Boolean,
-    onToggleLocation: () -> Unit
+    onToggleLocation: () -> Unit,
+    onInfo: () -> Unit
 ) {
     DetailSectionCard(
         title = "Network Context",
         description = "Connection and device state",
-        icon = Icons.Outlined.Language
+        icon = Icons.Outlined.Language,
+        headerAction = { SectionInfoButton("Network Context", onInfo) }
     ) {
         MetricChipGrid(pairs = pairs, columns = 3)
         SectionDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -295,22 +349,30 @@ private fun EnvironmentSection(
 }
 
 @Composable
-private fun WifiSection(pairs: List<Pair<String, String>>) {
+private fun WifiSection(
+    pairs: List<Pair<String, String>>,
+    onInfo: () -> Unit
+) {
     DetailSectionCard(
         title = "Wi-Fi",
         description = "Wireless network details",
-        icon = Icons.Outlined.Wifi
+        icon = Icons.Outlined.Wifi,
+        headerAction = { SectionInfoButton("Wi-Fi", onInfo) }
     ) {
         MetricChipGrid(pairs = pairs)
     }
 }
 
 @Composable
-private fun IpSection(pairs: List<Pair<String, String>>) {
+private fun IpSection(
+    pairs: List<Pair<String, String>>,
+    onInfo: () -> Unit
+) {
     DetailSectionCard(
         title = "IP Information",
         description = "Network identity and provider",
-        icon = Icons.Outlined.Security
+        icon = Icons.Outlined.Security,
+        headerAction = { SectionInfoButton("IP Information", onInfo) }
     ) {
         MetricChipGrid(pairs = pairs, columns = 3)
     }
@@ -323,12 +385,14 @@ private fun CellularSection(
     collectedSimText: String?,
     cellIdsText: String?,
     cellIdsRevealed: Boolean,
-    onToggleCellIds: () -> Unit
+    onToggleCellIds: () -> Unit,
+    onInfo: () -> Unit
 ) {
     DetailSectionCard(
         title = "Cellular Network",
         description = "Mobile carrier and signal",
-        icon = Icons.Outlined.CellTower
+        icon = Icons.Outlined.CellTower,
+        headerAction = { SectionInfoButton("Cellular Network", onInfo) }
     ) {
         MetricChipGrid(pairs = pairs)
         if (collectedSimText != null || sims.isNotEmpty()) {
@@ -405,12 +469,14 @@ private fun PerformanceSection(
     performance: PerformanceUi,
     endpointId: String?,
     endpointRevealed: Boolean,
-    onToggleEndpoint: () -> Unit
+    onToggleEndpoint: () -> Unit,
+    onInfo: () -> Unit
 ) {
     DetailSectionCard(
         title = "Performance",
-        description = "Latency and throughput metrics",
-        icon = Icons.Outlined.Speed
+        description = "Measures speed, latency, reliability, and etc.",
+        icon = Icons.Outlined.Speed,
+        headerAction = { SectionInfoButton("Performance", onInfo) }
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (endpointId != null) {
@@ -472,6 +538,25 @@ private fun PerformanceSection(
                 )
             )
         }
+    }
+}
+
+@Composable
+private fun SectionInfoButton(
+    sectionTitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
+            contentDescription = "About $sectionTitle",
+            tint = tint
+        )
     }
 }
 

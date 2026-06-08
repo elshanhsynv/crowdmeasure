@@ -109,6 +109,39 @@ class CallSamplingRepositoryImplTest {
     }
 
     @Test
+    fun finishActiveSession_closesStaleSession() = runBlocking {
+        repository.startSession(
+            callType = CallType.UNKNOWN,
+            callSource = CallSource.VOIP_GENERIC,
+            intervalSeconds = 30
+        )
+
+        repository.finishActiveSession(endedAtUtcMs = 3_000L, endReason = "service_restarted")
+
+        assertNull(dao.getActiveSession())
+        assertEquals("service_restarted", dao.sessions.single().endReason)
+    }
+
+    @Test
+    fun reclassifySession_updatesActiveSessionWithoutSplittingIt() = runBlocking {
+        val session = repository.startSession(
+            callType = CallType.OUTGOING,
+            callSource = CallSource.CELLULAR,
+            intervalSeconds = 30
+        )
+
+        repository.reclassifySession(
+            sessionId = session.sessionId,
+            callType = CallType.UNKNOWN,
+            callSource = CallSource.VOIP_GENERIC
+        )
+
+        assertEquals(1, dao.sessions.size)
+        assertEquals(CallType.UNKNOWN.name, dao.sessions.single().callType)
+        assertEquals(CallSource.VOIP_GENERIC.name, dao.sessions.single().callSource)
+    }
+
+    @Test
     fun deleteOlderThan_removesOnlyUploadedOldSessions() = runBlocking {
         val session = repository.startSession(
             callType = CallType.INCOMING,
@@ -249,6 +282,33 @@ private class FakeCallSamplingDao : CallSamplingDao {
             sessions[index] = sessions[index].copy(
                 endedAtUtcMs = endedAtUtcMs,
                 endReason = endReason
+            )
+        }
+        emit()
+    }
+
+    override suspend fun finishActiveSession(endedAtUtcMs: Long, endReason: String) {
+        sessions.indices.forEach { index ->
+            if (sessions[index].endedAtUtcMs == null) {
+                sessions[index] = sessions[index].copy(
+                    endedAtUtcMs = endedAtUtcMs,
+                    endReason = endReason
+                )
+            }
+        }
+        emit()
+    }
+
+    override suspend fun reclassifySession(
+        sessionId: String,
+        callType: String,
+        callSource: String
+    ) {
+        val index = sessions.indexOfFirst { it.sessionId == sessionId && it.endedAtUtcMs == null }
+        if (index >= 0) {
+            sessions[index] = sessions[index].copy(
+                callType = callType,
+                callSource = callSource
             )
         }
         emit()

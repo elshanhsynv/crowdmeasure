@@ -90,6 +90,21 @@ class CallSamplingRepositoryImpl(
         dao.finishSession(sessionId, endedAtUtcMs, endReason)
     }
 
+    override suspend fun finishActiveSession(
+        endedAtUtcMs: Long,
+        endReason: String
+    ) = withContext(io) {
+        dao.finishActiveSession(endedAtUtcMs, endReason)
+    }
+
+    override suspend fun reclassifySession(
+        sessionId: String,
+        callType: CallType,
+        callSource: CallSource
+    ) = withContext(io) {
+        dao.reclassifySession(sessionId, callType.name, callSource.name)
+    }
+
     override fun observeRecentSessions(limit: Int): Flow<List<CallSession>> =
         dao.observeRecentSessions(limit).combine(dao.observeRecentSamples(limit)) { sessions, samples ->
             val latestBySession = samples

@@ -14,13 +14,15 @@ class CallSamplingStatusStore @Inject constructor(
 ) {
     data class Status(
         val lastMissedAtUtcMs: Long = 0L,
-        val lastMissedReason: String? = null
+        val lastMissedReason: String? = null,
+        val voipMonitorActive: Boolean = false
     )
 
     val status: Flow<Status> = context.dataStore.data.map { prefs ->
         Status(
             lastMissedAtUtcMs = prefs[DataStoreKeys.CALL_SAMPLING_LAST_MISSED_AT_UTC_MS] ?: 0L,
-            lastMissedReason = prefs[DataStoreKeys.CALL_SAMPLING_LAST_MISSED_REASON]
+            lastMissedReason = prefs[DataStoreKeys.CALL_SAMPLING_LAST_MISSED_REASON],
+            voipMonitorActive = prefs[DataStoreKeys.VOIP_MONITOR_ACTIVE] ?: false
         )
     }
 
@@ -28,6 +30,12 @@ class CallSamplingStatusStore @Inject constructor(
         context.dataStore.edit { prefs ->
             prefs[DataStoreKeys.CALL_SAMPLING_LAST_MISSED_AT_UTC_MS] = System.currentTimeMillis()
             prefs[DataStoreKeys.CALL_SAMPLING_LAST_MISSED_REASON] = reason
+        }
+    }
+
+    suspend fun setVoipMonitorActive(active: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[DataStoreKeys.VOIP_MONITOR_ACTIVE] = active
         }
     }
 }

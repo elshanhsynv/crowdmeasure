@@ -15,7 +15,8 @@ data class HistoryUiState(
     val queryText: String = "",
     val appliedTag: String? = null,
     val transportFilter: HistoryTransportFilter = HistoryTransportFilter.All,
-    val itemsState: UiState<List<HistoryItemUi>> = UiState.Loading
+    val itemsState: UiState<List<HistoryItemUi>> = UiState.Loading,
+    val showBatteryOptimizationRecommendation: Boolean = false
 ) {
     /**
      * Whether the list is currently loading.

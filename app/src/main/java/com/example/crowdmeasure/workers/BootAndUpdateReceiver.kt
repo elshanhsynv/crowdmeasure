@@ -12,7 +12,6 @@ import androidx.work.workDataOf
 import java.util.concurrent.TimeUnit
 
 class BootAndUpdateReceiver : BroadcastReceiver() {
-
     override fun onReceive(context: Context, intent: Intent?) {
         val action = intent?.action ?: return
         if (action != Intent.ACTION_BOOT_COMPLETED &&
@@ -39,5 +38,6 @@ class BootAndUpdateReceiver : BroadcastReceiver() {
             ExistingWorkPolicy.KEEP,
             req
         )
+
     }
 }

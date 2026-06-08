@@ -89,7 +89,7 @@ fun SettingsRoute(
             onRunNow = viewModel::runAutoRunNow,
             onReschedule = viewModel::rescheduleBackgroundWork,
             onSetCallSamplingEnabled = viewModel::setCallSamplingEnabled,
-            onSetWhatsappCallSamplingEnabled = viewModel::setWhatsappCallSamplingEnabled,
+            onSetVoipCallSamplingEnabled = viewModel::setVoipCallSamplingEnabled,
             onExport = viewModel::exportData,
             onClearExportState = viewModel::clearExportState,
             onExportCalls = viewModel::exportCallData,
@@ -109,7 +109,7 @@ private fun SettingsScreen(
     var selectedTab by rememberSaveable(
         stateSaver = SettingsTabSaver
     ) {
-        mutableStateOf(SettingsTab.Privacy)
+        mutableStateOf(SettingsTab.Collection)
     }
 
     Column(
@@ -154,7 +154,7 @@ private fun SettingsScreen(
                         onReschedule = actions.onReschedule,
                         callSamplingStatus = state.callSamplingStatus,
                         onSetCallSamplingEnabled = actions.onSetCallSamplingEnabled,
-                        onSetWhatsappCallSamplingEnabled = actions.onSetWhatsappCallSamplingEnabled
+                        onSetVoipCallSamplingEnabled = actions.onSetVoipCallSamplingEnabled
                     )
                 }
 
@@ -287,7 +287,7 @@ private data class SettingsScreenActions(
     val onRunNow: () -> Unit,
     val onReschedule: () -> Unit,
     val onSetCallSamplingEnabled: (Boolean) -> Unit,
-    val onSetWhatsappCallSamplingEnabled: (Boolean) -> Unit,
+    val onSetVoipCallSamplingEnabled: (Boolean) -> Unit,
     val onExport: (Context, Int) -> Unit,
     val onClearExportState: () -> Unit,
     val onExportCalls: (Context, Int) -> Unit,
@@ -340,7 +340,7 @@ private fun SettingsScreenPreview() {
                 onRunNow = {},
                 onReschedule = {},
                 onSetCallSamplingEnabled = {},
-                onSetWhatsappCallSamplingEnabled = {},
+                onSetVoipCallSamplingEnabled = {},
                 onExport = { _, _ -> },
                 onClearExportState = {},
                 onExportCalls = { _, _ -> },

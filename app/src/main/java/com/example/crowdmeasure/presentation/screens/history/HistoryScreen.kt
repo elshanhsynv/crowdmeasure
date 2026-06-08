@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -53,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,15 +63,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.crowdmeasure.presentation.ui.components.input.AppSearchBar
 import com.example.crowdmeasure.presentation.ui.components.states.AppErrorState
 import com.example.crowdmeasure.presentation.ui.components.states.AppLoadingState
+import com.example.crowdmeasure.presentation.util.SystemSettingsIntents
 import com.example.crowdmeasure.presentation.util.UiState
 
 @Composable
@@ -82,6 +89,19 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = hiltViewModel<HistoryViewModel>()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, viewModel) {
+        viewModel.refreshBatteryOptimizationStatus()
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshBatteryOptimizationStatus()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     HistoryContent(
         contentPadding = contentPadding,
@@ -93,7 +113,12 @@ fun HistoryScreen(
         onRefresh = viewModel::refresh,
         onNavigateToDetail = onNavigateToDetail,
         onNewMeasurement = onNavigateToNewMeasurement,
-        onCallSessions = onNavigateToCallSessions
+        onCallSessions = onNavigateToCallSessions,
+        onAllowBatteryOptimization = {
+            viewModel.dismissBatteryOptimizationRecommendation()
+            SystemSettingsIntents.openBatteryOptimizationSettings(context)
+        },
+        onDismissBatteryOptimization = viewModel::dismissBatteryOptimizationRecommendation
     )
 }
 
@@ -282,7 +307,9 @@ private fun HistoryContent(
     onRefresh: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
     onNewMeasurement: () -> Unit,
-    onCallSessions: () -> Unit
+    onCallSessions: () -> Unit,
+    onAllowBatteryOptimization: () -> Unit,
+    onDismissBatteryOptimization: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -374,6 +401,13 @@ private fun HistoryContent(
             }
         }
 
+        if (state.showBatteryOptimizationRecommendation) {
+            BatteryOptimizationRecommendationDialog(
+                onConfirm = onAllowBatteryOptimization,
+                onDismiss = onDismissBatteryOptimization
+            )
+        }
+
         FloatingActionButton(
             onClick = onNewMeasurement,
             modifier = Modifier
@@ -390,6 +424,36 @@ private fun HistoryContent(
             )
         }
     }
+}
+
+@Composable
+private fun BatteryOptimizationRecommendationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Stop battery optimization")
+        },
+        text = {
+            Text(
+                "Restrict battery usage while this app is running in the background. " +
+                    "The app may not work as expected and notifications may be delayed. " +
+                    "To prevent this, you can turn off battery optimization for CrowdMeasure."
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -644,6 +708,8 @@ private fun HistoryContentPreview() {
         onRefresh = {},
         onNavigateToDetail = {},
         onNewMeasurement = {},
-        onCallSessions = {}
+        onCallSessions = {},
+        onAllowBatteryOptimization = {},
+        onDismissBatteryOptimization = {}
     )
 }

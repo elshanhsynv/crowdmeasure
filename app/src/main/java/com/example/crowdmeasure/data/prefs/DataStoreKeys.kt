@@ -16,10 +16,15 @@ object DataStoreKeys {
     val CALL_SAMPLING_ENABLED = booleanPreferencesKey("call_sampling_enabled")
     val WHATSAPP_CALL_SAMPLING_ENABLED =
         booleanPreferencesKey("whatsapp_call_sampling_enabled")
+    val VOIP_CALL_SAMPLING_ENABLED =
+        booleanPreferencesKey("voip_call_sampling_enabled")
     val CALL_SAMPLING_LAST_MISSED_AT_UTC_MS =
         longPreferencesKey("call_sampling_last_missed_at_utc_ms")
     val CALL_SAMPLING_LAST_MISSED_REASON =
         stringPreferencesKey("call_sampling_last_missed_reason")
+    val VOIP_MONITOR_ACTIVE = booleanPreferencesKey("voip_monitor_active")
+    val BATTERY_OPTIMIZATION_RECOMMENDATION_DISMISSED_UNTIL =
+        longPreferencesKey("battery_optimization_recommendation_dismissed_until")
     val AUTORUN_LAST_START_UTC_MS = longPreferencesKey("autorun_last_start_utc_ms")
     val AUTORUN_LAST_END_UTC_MS = longPreferencesKey("autorun_last_end_utc_ms")
     val AUTORUN_LAST_RESULT = stringPreferencesKey("autorun_last_result")

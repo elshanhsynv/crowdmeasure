@@ -60,6 +60,18 @@ interface CallSamplingDao {
     )
     suspend fun finishSession(sessionId: String, endedAtUtcMs: Long, endReason: String)
 
+    @Query(
+        "UPDATE call_sessions SET endedAtUtcMs = :endedAtUtcMs, endReason = :endReason " +
+            "WHERE endedAtUtcMs IS NULL"
+    )
+    suspend fun finishActiveSession(endedAtUtcMs: Long, endReason: String)
+
+    @Query(
+        "UPDATE call_sessions SET callType = :callType, callSource = :callSource " +
+            "WHERE sessionId = :sessionId AND endedAtUtcMs IS NULL"
+    )
+    suspend fun reclassifySession(sessionId: String, callType: String, callSource: String)
+
     @Query("UPDATE call_sessions SET uploadState = :state WHERE sessionId = :sessionId")
     suspend fun updateUploadState(sessionId: String, state: String)
 

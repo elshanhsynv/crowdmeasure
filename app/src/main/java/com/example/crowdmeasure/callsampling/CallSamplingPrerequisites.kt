@@ -10,16 +10,16 @@ data class CallSamplingPrerequisiteState(
     val phoneStateGranted: Boolean,
     val fineLocationGranted: Boolean,
     val backgroundLocationGranted: Boolean,
-//    val locationServicesEnabled: Boolean,
+    val locationServicesEnabled: Boolean,
     val notificationGranted: Boolean,
-//    val batteryOptimizationIgnored: Boolean
+    val batteryOptimizationIgnored: Boolean
 ) {
     val canStart: Boolean =
         phoneStateGranted &&
             fineLocationGranted &&
             backgroundLocationGranted &&
-//            locationServicesEnabled &&
-//            batteryOptimizationIgnored
+            locationServicesEnabled &&
+            batteryOptimizationIgnored &&
             notificationGranted
 
     val missingReason: String
@@ -27,9 +27,9 @@ data class CallSamplingPrerequisiteState(
             !phoneStateGranted -> "missing_read_phone_state"
             !fineLocationGranted -> "missing_fine_location"
             !backgroundLocationGranted -> "missing_background_location"
-//            !locationServicesEnabled -> "location_services_off"
+            !locationServicesEnabled -> "location_services_off"
             !notificationGranted -> "missing_post_notifications"
-//            !batteryOptimizationIgnored -> "battery_optimization_not_ignored"
+            !batteryOptimizationIgnored -> "battery_optimization_not_ignored"
             else -> "ready"
         }
 }
@@ -43,8 +43,8 @@ class CallSamplingPrerequisites @Inject constructor(
             phoneStateGranted = AppPermissions.hasPhoneState(context),
             fineLocationGranted = AppPermissions.hasFineLocation(context),
             backgroundLocationGranted = AppPermissions.hasBackgroundLocation(context),
-//            locationServicesEnabled = AppPermissions.isLocationServicesEnabled(context),
+            locationServicesEnabled = AppPermissions.isLocationServicesEnabled(context),
             notificationGranted = AppPermissions.hasPostNotifications(context),
-//            batteryOptimizationIgnored = AppPermissions.ignoresBatteryOptimizations(context)
+            batteryOptimizationIgnored = AppPermissions.ignoresBatteryOptimizations(context)
         )
 }
