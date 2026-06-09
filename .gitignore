@@ -7,9 +7,15 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.kotlin
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+/crowdmeasure-sdk-background/build
+/crowdmeasure-sdk-calls/build
+/crowdmeasure-sdk-core/build
+/crowdmeasure-sdk-upload/build
+/crowdmeasure-sdk-firestore/build

@@ -26,44 +26,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CrowdMeasure">
 
-        <receiver
-            android:name=".workers.BootAndUpdateReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".callsampling.PhoneStateReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.PHONE_STATE" />
-            </intent-filter>
-        </receiver>
-
-        <service
-            android:name=".callsampling.CallSamplingService"
-            android:exported="false"
-            android:foregroundServiceType="location" />
-
-        <!--
-        WhatsApp call sampling is disabled for now because notification-listener access
-        can trigger Play Protect blocks for sideloaded release builds. Keep the service
-        implementation in source so it can be restored later.
-        <service
-            android:name=".callsampling.WhatsappCallNotificationListener"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
-        -->
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

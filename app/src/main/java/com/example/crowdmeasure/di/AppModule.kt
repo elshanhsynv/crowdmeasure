@@ -1,19 +1,15 @@
 package com.example.crowdmeasure.di
 
 import android.content.Context
+import com.example.crowdmeasure.BuildConfig
 import com.example.crowdmeasure.data.export.Exporter
-import com.example.crowdmeasure.data.measurement.MeasurementRunner
-import com.example.crowdmeasure.data.measurement.net.OkHttpClientProvider
 import com.example.crowdmeasure.data.prefs.AppPreferences
+import com.example.crowdmeasure.data.repo.AppMeasurementStore
+import com.example.crowdmeasure.data.repo.AppSdkSettingsStore
 import com.example.crowdmeasure.data.repo.CallSamplingRepositoryImpl
 import com.example.crowdmeasure.data.repo.MeasurementRepositoryImpl
-import com.example.crowdmeasure.domain.repo.UploadRepositoryFirestore
 import com.example.crowdmeasure.data.repo.UserSessionRepositoryImpl
-import com.example.crowdmeasure.domain.repo.CallSamplingRepository
-import com.example.crowdmeasure.domain.repo.CallUploadRepository
-import com.example.crowdmeasure.domain.repo.CallUploadRepositoryFirestore
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
-import com.example.crowdmeasure.domain.repo.UploadRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
@@ -22,6 +18,19 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
+import com.yourcompany.crowdmeasure.sdk.CrowdMeasureConfig
+import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
+import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionClient
+import com.yourcompany.crowdmeasure.sdk.background.CrowdMeasureBackground
+import com.yourcompany.crowdmeasure.sdk.firestore.CrowdMeasureFirestore
+import com.yourcompany.crowdmeasure.sdk.upload.CrowdMeasureUploads
+import com.yourcompany.crowdmeasure.sdk.upload.InstallationIdProvider
+import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadClient
+import com.yourcompany.crowdmeasure.sdk.calls.CallInstallationIdProvider
+import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
+import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingConfig
+import com.yourcompany.crowdmeasure.sdk.calls.CallStore
+import com.yourcompany.crowdmeasure.sdk.calls.CrowdMeasureCalls
 import javax.inject.Singleton
 
 @Module
@@ -37,45 +46,73 @@ object AppModule {
         UserSessionRepositoryImpl(prefs)
 
     @Provides @Singleton
-    fun provideOkHttpProvider(): OkHttpClientProvider =
-        OkHttpClientProvider()
-
-    @Provides @Singleton
-    fun provideMeasurementRunner(
+    fun provideCrowdMeasureSdk(
         @ApplicationContext context: Context,
         prefs: AppPreferences,
-        okHttpClientProvider: OkHttpClientProvider,
-        @IoDispatcher io: CoroutineDispatcher
-    ): MeasurementRunner =
-        MeasurementRunner(context, prefs, okHttpClientProvider, io)
+        dao: com.example.crowdmeasure.data.db.MeasurementDao,
+    ): CrowdMeasureSdk = CrowdMeasureSdk.create(
+        context = context,
+        config = CrowdMeasureConfig(
+            databaseName = "crowdmeasure.db",
+            defaultEndpointUrl = AppPreferences.DEFAULT_ENDPOINT,
+            defaultRetentionDays = AppPreferences.DEFAULT_RETENTION_DAYS,
+            loggingEnabled = BuildConfig.DEBUG,
+        ),
+        measurementStore = AppMeasurementStore(dao),
+        settingsStore = AppSdkSettingsStore(prefs),
+    )
+
+    @Provides @Singleton
+    fun provideBackgroundCollectionClient(
+        @ApplicationContext context: Context,
+        sdk: CrowdMeasureSdk,
+    ): BackgroundCollectionClient = CrowdMeasureBackground.install(context, sdk)
+
+    @Provides @Singleton
+    fun provideMeasurementUploadClient(
+        @ApplicationContext context: Context,
+        sdk: CrowdMeasureSdk,
+        prefs: AppPreferences,
+        firestore: FirebaseFirestore,
+    ): MeasurementUploadClient = CrowdMeasureUploads.install(
+        context = context,
+        sdk = sdk,
+        uploader = CrowdMeasureFirestore.create(firestore),
+        installationIdProvider = InstallationIdProvider { prefs.installationId() },
+    )
 
     @Provides @Singleton
     fun provideMeasurementRepo(
         dao: com.example.crowdmeasure.data.db.MeasurementDao,
-        runner: MeasurementRunner,
+        sdk: CrowdMeasureSdk,
         @IoDispatcher io: CoroutineDispatcher
     ): MeasurementRepository =
-        MeasurementRepositoryImpl(dao, runner, io)
+        MeasurementRepositoryImpl(dao, sdk, io)
 
     @Provides @Singleton
-    fun provideCallSamplingRepository(
+    fun provideCallSamplingRepositoryImpl(
         dao: com.example.crowdmeasure.data.db.CallSamplingDao,
         @IoDispatcher io: CoroutineDispatcher
-    ): CallSamplingRepository = CallSamplingRepositoryImpl(dao, io)
+    ): CallSamplingRepositoryImpl = CallSamplingRepositoryImpl(dao, io)
+
+    @Provides
+    fun provideCallStore(impl: CallSamplingRepositoryImpl): CallStore = impl
 
     @Provides @Singleton
-    fun provideUploadRepo(
-        dao: com.example.crowdmeasure.data.db.MeasurementDao,
+    fun provideCallSamplingClient(
+        @ApplicationContext context: Context,
+        sdk: CrowdMeasureSdk,
+        store: CallStore,
         prefs: AppPreferences,
         firestore: FirebaseFirestore
-    ): UploadRepository = UploadRepositoryFirestore(dao, prefs, firestore)
-
-    @Provides @Singleton
-    fun provideCallUploadRepo(
-        dao: com.example.crowdmeasure.data.db.CallSamplingDao,
-        prefs: AppPreferences,
-        firestore: FirebaseFirestore
-    ): CallUploadRepository = CallUploadRepositoryFirestore(dao, prefs, firestore)
+    ): CallSamplingClient = CrowdMeasureCalls.install(
+        context = context,
+        sdk = sdk,
+        config = CallSamplingConfig(notificationIconResId = com.example.crowdmeasure.R.drawable.crowdmeasure),
+        uploader = CrowdMeasureFirestore.createCallUploader(firestore),
+        callStore = store,
+        installationIdProvider = CallInstallationIdProvider { prefs.installationId() },
+    )
 
     @Provides @Singleton
     fun provideExporter(@ApplicationContext context: Context): Exporter =

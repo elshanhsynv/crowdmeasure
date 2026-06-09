@@ -9,8 +9,9 @@ import com.example.crowdmeasure.domain.model.CallSession
 import com.example.crowdmeasure.domain.model.CallSessionExport
 import com.example.crowdmeasure.domain.model.CallSource
 import com.example.crowdmeasure.domain.model.CallType
-import com.example.crowdmeasure.domain.model.CellInfo
-import com.example.crowdmeasure.domain.repo.CallSamplingRepository
+import com.yourcompany.crowdmeasure.sdk.model.CellInfo
+import com.yourcompany.crowdmeasure.sdk.calls.CallStore
+import com.yourcompany.crowdmeasure.sdk.calls.CallUploadState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -22,7 +23,11 @@ import java.util.UUID
 class CallSamplingRepositoryImpl(
     private val dao: CallSamplingDao,
     private val io: CoroutineDispatcher
-) : CallSamplingRepository {
+) : CallStore {
+
+    override suspend fun getActiveSession(): CallSession? = withContext(io) {
+        dao.getActiveSession()?.toDomain(latestSample = null)
+    }
 
     override suspend fun startSession(
         callType: CallType,
@@ -105,7 +110,7 @@ class CallSamplingRepositoryImpl(
         dao.reclassifySession(sessionId, callType.name, callSource.name)
     }
 
-    override fun observeRecentSessions(limit: Int): Flow<List<CallSession>> =
+    fun observeRecentSessions(limit: Int = 50): Flow<List<CallSession>> =
         dao.observeRecentSessions(limit).combine(dao.observeRecentSamples(limit)) { sessions, samples ->
             val latestBySession = samples
                 .mapNotNull { it.toDomainOrNull() }
@@ -117,12 +122,14 @@ class CallSamplingRepositoryImpl(
             }
         }
 
+    override fun observeSessions(limit: Int): Flow<List<CallSession>> = observeRecentSessions(limit)
+
     override fun observeSamples(sessionId: String): Flow<List<CallCellSample>> =
         dao.observeSamples(sessionId).map { samples ->
             samples.mapNotNull { it.toDomainOrNull() }
         }
 
-    override suspend fun getRecentSessionsForExport(limit: Int): List<CallSessionExport> = withContext(io) {
+    suspend fun getRecentSessionsForExport(limit: Int): List<CallSessionExport> = withContext(io) {
         dao.getRecentSessions(limit).map { session ->
             CallSessionExport(
                 session = session.toDomain(latestSample = null),
@@ -131,13 +138,35 @@ class CallSamplingRepositoryImpl(
         }
     }
 
+    override suspend fun getRecentSessions(limit: Int): List<CallSessionExport> =
+        getRecentSessionsForExport(limit)
+
+    override suspend fun getUploadCandidates(limit: Int): List<CallSessionExport> = withContext(io) {
+        dao.getUploadCandidates(limit).map { session ->
+            CallSessionExport(
+                session.toDomain(latestSample = null),
+                dao.getSamples(session.sessionId).mapNotNull { it.toDomainOrNull() },
+            )
+        }
+    }
+
+    override suspend fun markUploaded(sessionIds: List<String>) = withContext(io) {
+        sessionIds.forEach { dao.updateUploadState(it, CallUploadState.UPLOADED.name) }
+    }
+
+    override suspend fun markFailed(sessionIds: List<String>) = withContext(io) {
+        sessionIds.forEach { dao.updateUploadState(it, CallUploadState.FAILED.name) }
+    }
+
     override suspend fun deleteOlderThan(cutoffUtcMs: Long) = withContext(io) {
         dao.deleteSessionsOlderThan(cutoffUtcMs)
     }
 
-    override suspend fun clearCallSamplingData() = withContext(io) {
+    suspend fun clearCallSamplingData() = withContext(io) {
         dao.clearSessions()
     }
+
+    override suspend fun deleteAll() = clearCallSamplingData()
 
     private fun CallSessionEntity.toDomain(latestSample: CallCellSample?): CallSession =
         CallSession(
@@ -149,6 +178,7 @@ class CallSamplingRepositoryImpl(
             sampleIntervalSeconds = sampleIntervalSeconds,
             sampleCount = sampleCount,
             endReason = endReason,
+            uploadState = runCatching { CallUploadState.valueOf(uploadState) }.getOrDefault(CallUploadState.PENDING),
             latestSample = latestSample
         )
 

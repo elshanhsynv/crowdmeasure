@@ -2,7 +2,6 @@ package com.example.crowdmeasure.presentation.util
 
 import android.Manifest
 import android.content.BroadcastReceiver
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -10,9 +9,7 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
 import android.os.PowerManager
-import android.provider.Settings
 import androidx.core.content.ContextCompat
-import com.example.crowdmeasure.callsampling.WhatsappCallNotificationListener
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -47,20 +44,6 @@ object AppPermissions {
     fun ignoresBatteryOptimizations(context: Context): Boolean {
         val powerManager = context.getSystemService(PowerManager::class.java) ?: return false
         return powerManager.isIgnoringBatteryOptimizations(context.packageName)
-    }
-
-    fun hasWhatsappNotificationAccess(context: Context): Boolean {
-        val enabledListeners = Settings.Secure.getString(
-            context.contentResolver,
-            "enabled_notification_listeners"
-        ) ?: return false
-        val expected = ComponentName(
-            context,
-            WhatsappCallNotificationListener::class.java
-        ).flattenToString()
-
-        return enabledListeners.split(':')
-            .any { it.equals(expected, ignoreCase = true) }
     }
 
     fun isLocationServicesEnabled(context: Context): Boolean {

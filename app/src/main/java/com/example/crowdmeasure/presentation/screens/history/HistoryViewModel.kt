@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.crowdmeasure.data.prefs.AppPreferences
-import com.example.crowdmeasure.domain.model.Measurement
+import com.yourcompany.crowdmeasure.sdk.model.Measurement
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.GetHistoryUseCase
 import com.example.crowdmeasure.presentation.util.AppPermissions

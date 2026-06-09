@@ -2,8 +2,6 @@ package com.example.crowdmeasure.di
 
 import android.content.Context
 import androidx.work.WorkManager
-import com.example.crowdmeasure.data.prefs.WorkerStatusStore
-import com.example.crowdmeasure.workers.WorkScheduler
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,8 +17,4 @@ object WorkManagerModule {
     fun provideWorkManager(@ApplicationContext context: Context): WorkManager =
         WorkManager.getInstance(context)
 
-    @Provides
-    @Singleton
-    fun provideWorkerStatusStore(@ApplicationContext context: Context): WorkerStatusStore =
-        WorkerStatusStore(context)
 }

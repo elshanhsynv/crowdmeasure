@@ -24,4 +24,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "CrowdMeasure"
 include(":app")
- 
+include(":crowdmeasure-sdk-core")
+include(":crowdmeasure-sdk-background")
+include(":crowdmeasure-sdk-upload")
+include(":crowdmeasure-sdk-firestore")
+include(":crowdmeasure-sdk-calls")
+include(":sample-host-app")

@@ -33,7 +33,7 @@ class AppPreferences(private val context: Context) {
             consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: false,
             firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: true,
             callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: true,
-            // Disabled while WhatsappCallNotificationListener is not registered in the manifest.
+            // Retained for existing-data compatibility; WhatsApp detection is not available.
             whatsappCallSamplingEnabled = false,
             voipCallSamplingEnabled = prefs[DataStoreKeys.VOIP_CALL_SAMPLING_ENABLED] ?: true,
         )
@@ -90,6 +90,32 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setVoipCallSamplingEnabled(enabled: Boolean) {
         context.dataStore.edit { it[DataStoreKeys.VOIP_CALL_SAMPLING_ENABLED] = enabled }
+    }
+
+    suspend fun isSdkBackgroundMigrated(): Boolean =
+        context.dataStore.data.first()[DataStoreKeys.SDK_BACKGROUND_MIGRATED] ?: false
+
+    suspend fun markSdkBackgroundMigrated() {
+        context.dataStore.edit { it[DataStoreKeys.SDK_BACKGROUND_MIGRATED] = true }
+    }
+
+    suspend fun isSdkUploadMigrated(): Boolean =
+        context.dataStore.data.first()[DataStoreKeys.SDK_UPLOAD_MIGRATED] ?: false
+
+    suspend fun markSdkUploadMigrated() {
+        context.dataStore.edit { it[DataStoreKeys.SDK_UPLOAD_MIGRATED] = true }
+    }
+
+    suspend fun isSdkCallsMigrated(): Boolean =
+        context.dataStore.data.first()[DataStoreKeys.SDK_CALLS_MIGRATED] ?: false
+
+    suspend fun markSdkCallsMigrated() {
+        context.dataStore.edit { it[DataStoreKeys.SDK_CALLS_MIGRATED] = true }
+    }
+
+    suspend fun installationId(): String {
+        ensureInstallId()
+        return settingsFirst().installId
     }
 
     suspend fun setBatteryOptimizationRecommendationDismissedUntil(timestampUtcMs: Long) {

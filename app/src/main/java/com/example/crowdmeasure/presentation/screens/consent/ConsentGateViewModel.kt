@@ -5,7 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.SetConsentGateDismissedUseCase
-import com.example.crowdmeasure.workers.WorkScheduler
+import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionClient
+import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +19,8 @@ import javax.inject.Inject
 class ConsentGateViewModel @Inject constructor(
     private val userSessionRepository: UserSessionRepository,
     private val setConsentGateDismissedUseCase: SetConsentGateDismissedUseCase,
-    private val workScheduler: WorkScheduler,
+    private val background: BackgroundCollectionClient,
+    private val calls: CallSamplingClient,
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings?> = userSessionRepository.settings
@@ -43,6 +45,9 @@ class ConsentGateViewModel @Inject constructor(
     }
 
     private fun rescheduleBackgroundWork() {
-        workScheduler.enqueueRescheduleWorker()
+        viewModelScope.launch {
+            background.reschedule()
+            calls.activateEnabledFeatures()
+        }
     }
 }

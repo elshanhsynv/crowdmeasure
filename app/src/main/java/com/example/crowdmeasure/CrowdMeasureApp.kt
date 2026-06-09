@@ -4,11 +4,17 @@ import android.app.Application
 import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.example.crowdmeasure.workers.WorkScheduler
-import com.example.crowdmeasure.callsampling.VoipCallMonitor
+import com.example.crowdmeasure.workers.AppBackgroundMigration
+import com.example.crowdmeasure.workers.AppUploadMigration
+import com.example.crowdmeasure.workers.AppCallsMigration
+import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 @HiltAndroidApp
 class CrowdMeasureApp : Application(), Configuration.Provider {
@@ -16,9 +22,14 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
     @Inject
-    lateinit var workScheduler: WorkScheduler
+    lateinit var appBackgroundMigration: AppBackgroundMigration
     @Inject
-    lateinit var voipCallMonitor: VoipCallMonitor
+    lateinit var appUploadMigration: AppUploadMigration
+    @Inject
+    lateinit var appCallsMigration: AppCallsMigration
+    @Inject
+    lateinit var calls: CallSamplingClient
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -33,7 +44,11 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
             Timber.plant(Timber.DebugTree())
         }
 
-        workScheduler.enqueueRescheduleWorker()
-        voipCallMonitor.start()
+        applicationScope.launch {
+            appBackgroundMigration.migrateOnce()
+            appUploadMigration.migrateOnce()
+            appCallsMigration.migrateOnce()
+            calls.activateEnabledFeatures()
+        }
     }
 }

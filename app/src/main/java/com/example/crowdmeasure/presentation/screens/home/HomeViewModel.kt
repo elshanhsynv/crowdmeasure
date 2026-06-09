@@ -3,11 +3,12 @@ package com.example.crowdmeasure.presentation.screens.home
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.crowdmeasure.domain.model.Measurement
+import com.yourcompany.crowdmeasure.sdk.model.Measurement
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.RunMeasurementUseCase
-import com.example.crowdmeasure.domain.usecase.UploadNowUseCase
+import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadClient
+import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadResult
 import com.example.crowdmeasure.presentation.util.AppPermissions
 import com.example.crowdmeasure.presentation.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +26,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val runMeasurementUseCase: RunMeasurementUseCase,
     private val measurementRepository: MeasurementRepository,
-    private val uploadNowUseCase: UploadNowUseCase,
+    private val uploads: MeasurementUploadClient,
     userSessionRepository: UserSessionRepository,
     @ApplicationContext context: Context
 ) : ViewModel() {
@@ -38,9 +39,9 @@ class HomeViewModel @Inject constructor(
     private val baseState = combine(
         userSessionRepository.settings,
         measurementRepository.observeLastMeasurement(),
-        measurementRepository.observeQueueCount(),
+        uploads.observeQueue(),
         AppPermissions.locationServicesEnabledFlow(appContext),
-    ) { settings, lastMeasurement, queueCount, locationServicesOn ->
+    ) { settings, lastMeasurement, queue, locationServicesOn ->
 
         val uploadsEnabled = settings.firestoreUploadsEnabled
 
@@ -48,7 +49,7 @@ class HomeViewModel @Inject constructor(
             uploadsEnabled = uploadsEnabled,
             canCollect = true,
             locationServicesOn = locationServicesOn,
-            queuedCount = queueCount,
+            queuedCount = queue.pendingCount + queue.failedCount,
             lastMeasurement = lastMeasurement?.toUiModel()
         )
     }
@@ -114,19 +115,13 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             uploadState.value = UiState.Loading
 
-            val result = uploadNowUseCase()
-
-            uploadState.value = result.fold(
-                onSuccess = { uploadedCount ->
-                    UiState.Success(uploadedCount)
-                },
-                onFailure = { error ->
-                    UiState.Error(
+            uploadState.value = when (val result = uploads.uploadNow()) {
+                is MeasurementUploadResult.Success -> UiState.Success(result.value)
+                is MeasurementUploadResult.Failure -> UiState.Error(
                         message = "Upload failed. Check your connection and try again.",
-                        throwable = error
+                        throwable = IllegalStateException(result.error.toString())
                     )
-                }
-            )
+            }
         }
     }
 

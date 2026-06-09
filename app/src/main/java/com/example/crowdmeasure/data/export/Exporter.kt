@@ -6,8 +6,8 @@ import androidx.core.content.FileProvider
 import com.example.crowdmeasure.domain.model.CallCellSample
 import com.example.crowdmeasure.domain.model.CallSession
 import com.example.crowdmeasure.domain.model.CallSessionExport
-import com.example.crowdmeasure.domain.model.CarrierInfo
-import com.example.crowdmeasure.domain.model.Measurement
+import com.yourcompany.crowdmeasure.sdk.model.CarrierInfo
+import com.yourcompany.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -143,20 +143,20 @@ class Exporter(
                             putOpt("voice_network_type", c.voiceNetworkType)
                             putOpt("roaming", c.roaming)
                             putOpt("serving_cell", c.serving?.let {
-                                putOpt("cell_id", c.serving.cellId)
-                                putOpt("nci", c.serving.nci)
-                                putOpt("band", c.serving.band)
-                                putOpt("arfcn", c.serving.arfcn)
-                                putOpt("nrarfcn", c.serving.nrarfcn)
-                                putOpt("tac", c.serving.tac)
-                                putOpt("pci", c.serving.pci)
-                                putOpt("rsrp_dbm", c.serving.rsrpDbm)
-                                putOpt("rsrq_db", c.serving.rsrqDb)
-                                putOpt("sinr_db", c.serving.sinrDb)
-                                putOpt("cqi", c.serving.cqi)
-                                putOpt("rssi", c.serving.rssiDbm)
-                                putOpt("bandwidth_mhz", c.serving.bandwidthMhz)
-                                putOpt("mimo_layers", c.serving.mimoLayers)
+                                putOpt("cell_id", it.cellId)
+                                putOpt("nci", it.nci)
+                                putOpt("band", it.band)
+                                putOpt("arfcn", it.arfcn)
+                                putOpt("nrarfcn", it.nrarfcn)
+                                putOpt("tac", it.tac)
+                                putOpt("pci", it.pci)
+                                putOpt("rsrp_dbm", it.rsrpDbm)
+                                putOpt("rsrq_db", it.rsrqDb)
+                                putOpt("sinr_db", it.sinrDb)
+                                putOpt("cqi", it.cqi)
+                                putOpt("rssi", it.rssiDbm)
+                                putOpt("bandwidth_mhz", it.bandwidthMhz)
+                                putOpt("mimo_layers", it.mimoLayers)
                             })
                             putOpt("neighbors", JSONArray().apply {
                                 c.neighbors.forEach {

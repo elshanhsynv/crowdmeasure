@@ -2,8 +2,8 @@ package com.example.crowdmeasure.presentation.screens.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.crowdmeasure.domain.model.CarrierInfo
-import com.example.crowdmeasure.domain.model.Measurement
+import com.yourcompany.crowdmeasure.sdk.model.CarrierInfo
+import com.yourcompany.crowdmeasure.sdk.model.Measurement
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.presentation.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel

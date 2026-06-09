@@ -1,16 +1,17 @@
 package com.example.crowdmeasure.domain.usecase
 
 import android.net.Uri
-import com.example.crowdmeasure.data.export.Exporter
-import com.example.crowdmeasure.domain.repo.CallSamplingRepository
+import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
+import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingResult
 import javax.inject.Inject
 
 class ExportCallSessionsUseCase @Inject constructor(
-    private val repository: CallSamplingRepository,
-    private val exporter: Exporter
+    private val calls: CallSamplingClient,
 ) {
     suspend operator fun invoke(lastN: Int): Result<Uri> {
-        val sessions = repository.getRecentSessionsForExport(lastN)
-        return exporter.exportCallSessionsToJson(sessions)
+        return when (val result = calls.exportSessions(lastN)) {
+            is CallSamplingResult.Success -> Result.success(result.value)
+            is CallSamplingResult.Failure -> Result.failure(IllegalStateException(result.error.toString()))
+        }
     }
 }

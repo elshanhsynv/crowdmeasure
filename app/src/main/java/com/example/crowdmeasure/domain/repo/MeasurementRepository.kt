@@ -1,6 +1,6 @@
 package com.example.crowdmeasure.domain.repo
 
-import com.example.crowdmeasure.domain.model.Measurement
+import com.yourcompany.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.flow.Flow
 
 interface MeasurementRepository {

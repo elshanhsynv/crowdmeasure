@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.crowdmeasure.domain.model.CallCellSample
 import com.example.crowdmeasure.domain.model.CallSession
-import com.example.crowdmeasure.domain.repo.CallSamplingRepository
+import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,11 +18,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CallSessionsViewModel @Inject constructor(
-    private val repository: CallSamplingRepository
+    private val calls: CallSamplingClient
 ) : ViewModel() {
     private val selectedSessionId = MutableStateFlow<String?>(null)
 
-    val sessions: StateFlow<List<CallSession>> = repository.observeRecentSessions()
+    val sessions: StateFlow<List<CallSession>> = calls.observeSessions()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
@@ -32,7 +32,7 @@ class CallSessionsViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val samples: StateFlow<List<CallCellSample>> = selectedSessionId
         .flatMapLatest { sessionId ->
-            if (sessionId == null) flowOf(emptyList()) else repository.observeSamples(sessionId)
+            if (sessionId == null) flowOf(emptyList()) else calls.observeSamples(sessionId)
         }
         .stateIn(
             scope = viewModelScope,
@@ -46,7 +46,7 @@ class CallSessionsViewModel @Inject constructor(
 
     fun clearData() {
         viewModelScope.launch {
-            repository.clearCallSamplingData()
+            calls.deleteAll()
             selectedSessionId.value = null
         }
     }

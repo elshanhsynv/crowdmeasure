@@ -3,9 +3,10 @@ package com.example.crowdmeasure.data.repo
 import com.example.crowdmeasure.data.db.Converters
 import com.example.crowdmeasure.data.db.MeasurementDao
 import com.example.crowdmeasure.data.db.MeasurementEntity
-import com.example.crowdmeasure.data.measurement.MeasurementRunner
-import com.example.crowdmeasure.domain.model.Measurement
-import com.example.crowdmeasure.domain.model.RecordState
+import com.yourcompany.crowdmeasure.sdk.model.Measurement
+import com.yourcompany.crowdmeasure.sdk.model.RecordState
+import com.yourcompany.crowdmeasure.sdk.CrowdMeasureResult
+import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -14,31 +15,36 @@ import kotlinx.coroutines.withContext
 
 class MeasurementRepositoryImpl(
     private val dao: MeasurementDao,
-    private val runner: MeasurementRunner,
+    private val sdk: CrowdMeasureSdk,
     private val io: CoroutineDispatcher
 ) : MeasurementRepository {
 
     override suspend fun runSingleMeasurement(): Result<Measurement> = withContext(io) {
-        runner.runOnce()
+        when (val result = sdk.measurements.runAndSave()) {
+            is CrowdMeasureResult.Success -> Result.success(result.value)
+            is CrowdMeasureResult.Failure -> Result.failure(
+                IllegalStateException(result.error.toString())
+            )
+        }
     }
 
     override suspend fun insert(measurement: Measurement) = withContext(io) {
-        val entity = MeasurementEntity(
-            measurementId = measurement.meta.measurementId,
-            timestampUtcMs = measurement.meta.timestampUtcMs,
-            transport = measurement.environment.network.transport.name,
-            json = Converters.measurementToJson(measurement),
-            recordState = RecordState.PENDING.name
-        )
-        dao.upsert(entity)
+        // SDK runAndSave() already persisted this record through AppMeasurementStore.
+        // Keep this method idempotent for existing app workers and ViewModels.
+        if (dao.getById(measurement.meta.measurementId) == null) {
+            val entity = MeasurementEntity(
+                measurementId = measurement.meta.measurementId,
+                timestampUtcMs = measurement.meta.timestampUtcMs,
+                transport = measurement.environment.network.transport.name,
+                json = Converters.measurementToJson(measurement),
+                recordState = RecordState.PENDING.name
+            )
+            dao.upsert(entity)
+        }
     }
 
     override fun observeLastMeasurement(): Flow<Measurement?> =
-        dao.observeLast().map { e ->
-            e?.let {
-                runCatching { Converters.jsonToMeasurement(it.json) }.getOrNull()
-            }
-        }
+        sdk.measurements.observeLatest()
 
     override fun observeQueueCount(): Flow<Int> = dao.observeQueueCount()
 
@@ -47,16 +53,11 @@ class MeasurementRepositoryImpl(
     override fun observeFailedCount(): Flow<Int> = dao.observeFailedCount()
 
     override fun observeHistory(limit: Int, feedbackTag: String?): Flow<List<Measurement>> {
-        val src = dao.observeHistory(limit)
-
-
-        return src.map { list ->
-            list.mapNotNull { e -> runCatching { Converters.jsonToMeasurement(e.json) }.getOrNull() }
-        }
+        return sdk.measurements.observeHistory(limit)
     }
 
     override suspend fun getMeasurementById(id: String): Measurement? = withContext(io) {
-        dao.getById(id)?.let { runCatching { Converters.jsonToMeasurement(it.json) }.getOrNull() }
+        sdk.measurements.getById(id)
     }
 
     override suspend fun deleteAll(): Result<Unit> = withContext(io) {

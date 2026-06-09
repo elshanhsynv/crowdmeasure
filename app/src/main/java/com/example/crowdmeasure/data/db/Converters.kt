@@ -1,6 +1,6 @@
 package com.example.crowdmeasure.data.db
 
-import com.example.crowdmeasure.domain.model.Measurement
+import com.yourcompany.crowdmeasure.sdk.model.Measurement
 import kotlinx.serialization.json.Json
 
 object Converters {

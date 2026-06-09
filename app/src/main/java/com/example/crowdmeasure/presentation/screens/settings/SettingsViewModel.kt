@@ -3,22 +3,19 @@ package com.example.crowdmeasure.presentation.screens.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.WorkInfo
 import com.example.crowdmeasure.data.export.ShareUtils
-import com.example.crowdmeasure.data.prefs.CallSamplingStatusStore
-import com.example.crowdmeasure.data.prefs.WorkerStatusStore
 import com.example.crowdmeasure.domain.repo.AppSettings
-import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.DeleteAllDataUseCase
 import com.example.crowdmeasure.domain.usecase.ExportCallSessionsUseCase
 import com.example.crowdmeasure.domain.usecase.ExportMeasurementsUseCase
-import com.example.crowdmeasure.domain.usecase.SetAutoRunUseCase
-import com.example.crowdmeasure.domain.usecase.SetCollectOnlyWifiUseCase
 import com.example.crowdmeasure.domain.usecase.SetEndpointUrlUseCase
-import com.example.crowdmeasure.domain.usecase.SetFirestoreUploadsEnabledUseCase
 import com.example.crowdmeasure.presentation.util.UiState
-import com.example.crowdmeasure.workers.WorkScheduler
+import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionClient
+import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionStatus
+import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadClient
+import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadStatus
+import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,10 +36,9 @@ class SettingsViewModel @Inject constructor(
     private val deleteAllDataUseCase: DeleteAllDataUseCase,
     private val exportMeasurementsUseCase: ExportMeasurementsUseCase,
     private val exportCallSessionsUseCase: ExportCallSessionsUseCase,
-    private val workScheduler: WorkScheduler,
-    measurementRepository: MeasurementRepository,
-    private val callSamplingStatusStore: CallSamplingStatusStore,
-    workerStatusStore: WorkerStatusStore,
+    private val background: BackgroundCollectionClient,
+    private val uploads: MeasurementUploadClient,
+    private val calls: CallSamplingClient,
 ) : ViewModel() {
     private val timeFormatter = DateTimeFormatter
         .ofPattern("MMM dd • HH:mm")
@@ -59,78 +55,48 @@ class SettingsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = null
         )
-    private val workInfos = combine(
-        workScheduler.observeAutoRunWorkInfo(),
-        workScheduler.observeUploadWorkInfo()
-    ) { autoRunInfo, uploadInfo ->
-        WorkInfos(autoRunInfo = autoRunInfo, uploadInfo = uploadInfo)
-    }
-
-    private val queueCounts = combine(
-        measurementRepository.observePendingCount(),
-        measurementRepository.observeFailedCount()
-    ) { pendingCount, failedCount ->
-        QueueCounts(pendingCount = pendingCount, failedCount = failedCount)
-    }
-
-    private val workerStatuses = combine(
-        workerStatusStore.autoRunStatus,
-        workerStatusStore.uploadStatus,
-        queueCounts
-    ) { autoRunStatus, uploadStatus, queueCounts ->
-        WorkerStatuses(
-            autoRunStatus = autoRunStatus,
-            uploadStatus = uploadStatus,
-            queueCounts = queueCounts
-        )
-    }
-
     val backgroundWorkState: StateFlow<BackgroundWorkUiState> = combine(
         settings,
-        workInfos,
-        workerStatuses
-    ) { userSettings, workInfos, workerStatuses ->
-        val autoRunInfo = workInfos.autoRunInfo
-        val uploadInfo = workInfos.uploadInfo
-        val workerStatus = workerStatuses.autoRunStatus
-        val uploadStatus = workerStatuses.uploadStatus
-        val queueCounts = workerStatuses.queueCounts
+        background.observeStatus(),
+        uploads.observeStatus(),
+    ) { userSettings, backgroundStatus, uploadStatus ->
+        val queueCounts = uploadStatus.queue
 
-        val autoRunStateLabel = autoRunInfo?.state?.toHumanLabel() ?: "Not scheduled"
-        val uploadStateLabel = uploadInfo?.state?.toHumanLabel() ?: "Not scheduled"
+        val autoRunStateLabel = backgroundStatus.workState.name
+        val uploadStateLabel = uploadStatus.workState.name
         val workManagerStateLabel = "Auto-run: $autoRunStateLabel / Upload: $uploadStateLabel"
-        val nextScheduledWorkStateLabel = nextWorkStateLabel(autoRunInfo, uploadInfo)
+        val nextScheduledWorkStateLabel = nextWorkStateLabel(backgroundStatus, uploadStatus)
 
-        val intervalLabel = userSettings?.autoRunIntervalMinutes
-            ?.coerceAtLeast(20)
-            ?.let { "$it min" }
-            ?: "—"
+        val intervalLabel = "${backgroundStatus.settings.intervalMinutes} min"
 
-        val lastStartLabel = formatTimestamp(workerStatus.lastStartUtcMs)
-        val lastEndLabel = formatTimestamp(workerStatus.lastEndUtcMs)
-        val lastResultLabel = workerStatus.lastResult?.takeIf { it.isNotBlank() } ?: "—"
-        val autoRunLastCodeLabel = workerStatus.lastCode?.takeIf { it.isNotBlank() } ?: "—"
-        val lastSuccessfulCollectionLabel = formatTimestamp(workerStatus.lastSuccessUtcMs)
-        val lastMeasurementLabel = workerStatus.lastMeasurementId
+        val lastRun = backgroundStatus.lastRun
+        val lastStartLabel = "—"
+        val lastEndLabel = formatTimestamp(lastRun?.completedAtUtcMs ?: 0L)
+        val lastResultLabel = lastRun?.outcome?.name ?: "—"
+        val autoRunLastCodeLabel = lastRun?.code?.name ?: "—"
+        val lastSuccessfulCollectionLabel = if (lastRun?.outcome?.name == "SUCCESS") {
+            formatTimestamp(lastRun.completedAtUtcMs)
+        } else "—"
+        val lastMeasurementLabel = lastRun?.measurementId
             ?.takeIf { it.isNotBlank() }
-            ?.let { id -> "${formatTimestamp(workerStatus.lastMeasurementTimestampUtcMs)} • ${id.take(12)}" }
+            ?.let { id -> "${formatTimestamp(lastRun.completedAtUtcMs)} • ${id.take(12)}" }
             ?: "—"
 
-        val uploadLastSuccessfulLabel = formatTimestamp(uploadStatus.lastSuccessUtcMs)
-        val uploadLastStartLabel = formatTimestamp(uploadStatus.lastStartUtcMs)
-        val uploadLastEndLabel = formatTimestamp(uploadStatus.lastEndUtcMs)
-        val uploadLastResultLabel = uploadStatus.lastResult?.takeIf { it.isNotBlank() } ?: "—"
-        val uploadLastCodeLabel = uploadStatus.lastCode?.takeIf { it.isNotBlank() } ?: "—"
-        val lastUploadedLabel = uploadStatus.uploadedCount.toString()
+        val uploadRun = uploadStatus.lastRun
+        val uploadLastSuccessfulLabel = if (uploadRun?.outcome?.name == "SUCCESS") formatTimestamp(uploadRun.completedAtUtcMs) else "—"
+        val uploadLastStartLabel = "—"
+        val uploadLastEndLabel = formatTimestamp(uploadRun?.completedAtUtcMs ?: 0L)
+        val uploadLastResultLabel = uploadRun?.outcome?.name ?: "—"
+        val uploadLastCodeLabel = uploadRun?.code?.name ?: "—"
+        val lastUploadedLabel = (uploadRun?.uploadedCount ?: 0).toString()
         val pendingRecordsLabel = queueCounts.pendingCount.toString()
         val failedRecordsLabel = queueCounts.failedCount.toString()
-        val lastErrorLabel = uploadStatus.lastError
+        val lastErrorLabel = uploadRun?.errorMessage
             ?.takeIf { it.isNotBlank() }
             ?.let(::sanitizeError)
             ?: "None"
 
-        val canRun = userSettings != null &&
-                userSettings.autoRunEnabled
+        val canRun = backgroundStatus.settings.enabled
 
         BackgroundWorkUiState(
             workManagerStateLabel = workManagerStateLabel,
@@ -180,9 +146,9 @@ class SettingsViewModel @Inject constructor(
         )
 
     val callSamplingStatus: StateFlow<CallSamplingStatusUiState> =
-        callSamplingStatusStore.status.map { status ->
-            val reason = status.lastMissedReason?.takeIf { it.isNotBlank() }
-            val timestamp = formatTimestamp(status.lastMissedAtUtcMs)
+        calls.observeStatus().map { status ->
+            val reason = status.lastMissedStart?.code?.name
+            val timestamp = formatTimestamp(status.lastMissedStart?.atUtcMs ?: 0)
             CallSamplingStatusUiState(
                 lastMissedLabel = if (reason == null) "None" else "$timestamp • $reason",
                 voipMonitorActive = status.voipMonitorActive
@@ -194,22 +160,28 @@ class SettingsViewModel @Inject constructor(
         )
 
     fun runAutoRunNow() {
-        workScheduler.runAutoRunOnceNowDebug(ignoreConstraints = true)
+        viewModelScope.launch { background.enqueueRunNow() }
     }
 
     fun rescheduleBackgroundWork() {
-        workScheduler.enqueueRescheduleWorker()
+        viewModelScope.launch {
+            background.reschedule()
+            uploads.reschedule()
+            calls.activateEnabledFeatures()
+        }
     }
 
     fun setCallSamplingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userSessionRepository.setCallSamplingEnabled(enabled)
+            calls.setCellularSamplingEnabled(enabled)
         }
     }
 
     fun setVoipCallSamplingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userSessionRepository.setVoipCallSamplingEnabled(enabled)
+            calls.setVoipSamplingEnabled(enabled)
         }
     }
 
@@ -292,7 +264,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun ensureMaintenanceScheduled() {
-        workScheduler.scheduleMaintenanceDaily()
+        viewModelScope.launch { background.reschedule() }
     }
 
     private fun formatTimestamp(timestampMs: Long): String {
@@ -313,35 +285,10 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
-private data class WorkInfos(
-    val autoRunInfo: WorkInfo?,
-    val uploadInfo: WorkInfo?
-)
-
-private data class QueueCounts(
-    val pendingCount: Int,
-    val failedCount: Int
-)
-
-private data class WorkerStatuses(
-    val autoRunStatus: WorkerStatusStore.AutoRunStatus,
-    val uploadStatus: WorkerStatusStore.UploadStatus,
-    val queueCounts: QueueCounts
-)
-
-private fun nextWorkStateLabel(autoRunInfo: WorkInfo?, uploadInfo: WorkInfo?): String {
+private fun nextWorkStateLabel(backgroundStatus: BackgroundCollectionStatus, uploadStatus: MeasurementUploadStatus): String {
     val active = listOfNotNull(
-        autoRunInfo?.let { "Auto-run: ${it.state.toHumanLabel()}" },
-        uploadInfo?.let { "Upload: ${it.state.toHumanLabel()}" }
+        "Auto-run: ${backgroundStatus.workState.name}",
+        "Upload: ${uploadStatus.workState.name}"
     )
     return active.firstOrNull() ?: "Not scheduled"
-}
-
-private fun WorkInfo.State.toHumanLabel(): String = when (this) {
-    WorkInfo.State.ENQUEUED -> "ENQUEUED"
-    WorkInfo.State.RUNNING -> "RUNNING"
-    WorkInfo.State.SUCCEEDED -> "COMPLETED"
-    WorkInfo.State.FAILED -> "FAILED"
-    WorkInfo.State.BLOCKED -> "BLOCKED"
-    WorkInfo.State.CANCELLED -> "CANCELLED"
 }

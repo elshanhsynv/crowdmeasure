@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.crowdmeasure.data.measurement.collectors.TelephonyCollector
+import com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors.TelephonyCollector
 import com.example.crowdmeasure.presentation.nav.AppNav
 import com.example.crowdmeasure.presentation.screens.consent.ConsentGateScreen
 import com.example.crowdmeasure.presentation.screens.consent.ConsentGateViewModel
