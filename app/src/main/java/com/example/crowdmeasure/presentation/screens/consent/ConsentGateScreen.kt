@@ -321,7 +321,7 @@ private fun ConsentHero() {
 private val privacyBullets = listOf(
     "No personal identifiers (name, email, phone number) are collected",
     "Network measurements are anonymized before upload",
-    "You can pause or stop collection anytime",
+//    "You can pause or stop collection anytime",
     "Data is used only for improving network quality insights"
 )
 

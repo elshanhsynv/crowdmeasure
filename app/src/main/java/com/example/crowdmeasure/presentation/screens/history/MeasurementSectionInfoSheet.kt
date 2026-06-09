@@ -77,29 +77,29 @@ internal fun MeasurementSectionInfoSheet(
                 OverviewCard(content)
             }
 
-            if (content.sensitiveValues.isNotEmpty()) {
-                item(key = "${section.name}:sensitive-heading") {
-                    SectionHeading(
-                        title = "Sensitive values",
-                        supportingText = "These values may identify or link measurements.",
-                        icon = Icons.Outlined.PrivacyTip
-                    )
-                }
-                items(
-                    items = content.sensitiveValues,
-                    key = { "${section.name}:sensitive:${it.id}" },
-                    contentType = { "sensitive-value" }
-                ) { value ->
-                    SensitiveValueItem(value)
-                }
-            } else {
-                item(key = "${section.name}:sensitive-empty") {
-                    EmptySectionMessage(
-                        title = "No sensitive values",
-                        body = "This section does not contain values marked as sensitive."
-                    )
-                }
-            }
+//            if (content.sensitiveValues.isNotEmpty()) {
+//                item(key = "${section.name}:sensitive-heading") {
+//                    SectionHeading(
+//                        title = "Sensitive values",
+//                        supportingText = "These values may identify or link measurements.",
+//                        icon = Icons.Outlined.PrivacyTip
+//                    )
+//                }
+//                items(
+//                    items = content.sensitiveValues,
+//                    key = { "${section.name}:sensitive:${it.id}" },
+//                    contentType = { "sensitive-value" }
+//                ) { value ->
+//                    SensitiveValueItem(value)
+//                }
+//            } else {
+//                item(key = "${section.name}:sensitive-empty") {
+//                    EmptySectionMessage(
+//                        title = "No sensitive values",
+//                        body = "This section does not contain values marked as sensitive."
+//                    )
+//                }
+//            }
 
             if (content.metrics.isNotEmpty()) {
                 item(key = "${section.name}:metrics-heading") {
