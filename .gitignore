@@ -1,21 +1,37 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-/.kotlin
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Gradle
+.gradle/
+
+# Local configuration
 local.properties
-/crowdmeasure-sdk-background/build
-/crowdmeasure-sdk-calls/build
-/crowdmeasure-sdk-core/build
-/crowdmeasure-sdk-upload/build
-/crowdmeasure-sdk-firestore/build
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Kotlin
+.kotlin/
+
+# macOS
+.DS_Store
+
+# Build outputs
+build/
+**/build/
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# Screenshots and captures
+captures/
+
+# Keystores (if applicable)
+*.jks
+*.keystore
+
+# Generated files
+bin/
+gen/
+
+# Firebase / Google services (only if not meant to be public)
+# google-services.json
