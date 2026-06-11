@@ -1,22 +1,20 @@
-package com.yourcompany.crowdmeasure.sdk.upload
+package com.crowdmeasure.sdk.upload
 
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.flow.Flow
 
-data class MeasurementUploadItem(val measurement: Measurement, val installId: String)
-data class UploadBatchResult(val uploadedIds: List<String>)
-
-sealed interface MeasurementUploaderResult {
-    data class Success(val result: UploadBatchResult) : MeasurementUploaderResult
-    data class Failure(val error: MeasurementUploadError) : MeasurementUploaderResult
-}
-
-fun interface MeasurementUploader {
-    suspend fun upload(items: List<MeasurementUploadItem>): MeasurementUploaderResult
-}
-
-fun interface InstallationIdProvider {
-    suspend fun getInstallationId(): String
+data class MeasurementUploadConfig(
+    val preferencesName: String = "crowdmeasure_sdk_upload",
+    val defaultBatchSize: Int = 50,
+    val defaultIntervalMinutes: Long = CrowdMeasureUploads.DEFAULT_INTERVAL_MINUTES,
+    val defaultWifiOnly: Boolean = true,
+) {
+    init {
+        require(preferencesName.isNotBlank()) { "preferencesName must not be blank" }
+        require(defaultBatchSize in 1..1_000) { "defaultBatchSize must be between 1 and 1000" }
+        require(defaultIntervalMinutes in CrowdMeasureUploads.MIN_INTERVAL_MINUTES..CrowdMeasureUploads.MAX_INTERVAL_MINUTES) {
+            "defaultIntervalMinutes must be between 20 minutes and 7 days"
+        }
+    }
 }
 
 data class MeasurementUploadSettings(
@@ -46,17 +44,6 @@ sealed interface MeasurementUploadResult<out T> {
     data class Success<T>(val value: T) : MeasurementUploadResult<T>
     data class Failure(val error: MeasurementUploadError) : MeasurementUploadResult<Nothing>
 }
-sealed interface MeasurementUploadError {
-    data object Disabled : MeasurementUploadError
-    data object NotInstalled : MeasurementUploadError
-    data class InvalidInterval(val intervalMinutes: Long) : MeasurementUploadError
-    data class BackendRejected(val cause: Throwable? = null) : MeasurementUploadError
-    data class TransientFailure(val cause: Throwable? = null) : MeasurementUploadError
-    data class SerializationFailure(val cause: Throwable? = null) : MeasurementUploadError
-    data class PersistenceFailure(val cause: Throwable? = null) : MeasurementUploadError
-    data class SchedulingFailure(val cause: Throwable) : MeasurementUploadError
-}
-
 interface MeasurementUploadClient {
     suspend fun enable(intervalMinutes: Long = 60, wifiOnly: Boolean = true): MeasurementUploadResult<Unit>
     suspend fun disable(): MeasurementUploadResult<Unit>

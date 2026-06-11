@@ -17,6 +17,7 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        mavenLocal()
         google()
         mavenCentral()
     }
@@ -27,6 +28,9 @@ include(":app")
 include(":crowdmeasure-sdk-core")
 include(":crowdmeasure-sdk-background")
 include(":crowdmeasure-sdk-upload")
-include(":crowdmeasure-sdk-firestore")
+include(":crowdmeasure-sdk-upload-api")
+include(":crowdmeasure-sdk-firestore-measurements")
+include(":crowdmeasure-sdk-firestore-calls")
 include(":crowdmeasure-sdk-calls")
+include(":crowdmeasure-sdk-calls-upload")
 include(":sample-host-app")

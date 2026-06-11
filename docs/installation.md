@@ -2,16 +2,21 @@ Available
 
 # Installation
 
-The SDK currently uses local Gradle modules and supports Android API 29+.
+The SDK supports Android API 29+. Use local modules during development or the `0.1.0` Maven Local preview artifacts.
 
 ```kotlin
 dependencies {
     implementation(project(":crowdmeasure-sdk-core"))
     implementation(project(":crowdmeasure-sdk-background")) // optional
     implementation(project(":crowdmeasure-sdk-upload")) // optional
-    implementation(project(":crowdmeasure-sdk-firestore")) // optional
+    implementation(project(":crowdmeasure-sdk-upload-api")) // uploader providers only
+    implementation(project(":crowdmeasure-sdk-firestore-measurements")) // optional
     implementation(project(":crowdmeasure-sdk-calls")) // optional
+    implementation(project(":crowdmeasure-sdk-calls-upload")) // optional
+    implementation(project(":crowdmeasure-sdk-firestore-calls")) // optional
 }
 ```
 
-Core remains free of Hilt, Compose, Firebase, Crashlytics, WorkManager, and call sampling. Upload and calls add WorkManager but no Firebase. Only the Firestore module depends on Firebase.
+Published coordinates use group `com.crowdmeasure`, artifact names without `sdk`, and version `0.1.0`.
+
+Core and calls remain free of Hilt, Compose, Firebase, Crashlytics, and WorkManager. Only upload scheduling artifacts use WorkManager. Firestore artifacts contain provider implementations only.

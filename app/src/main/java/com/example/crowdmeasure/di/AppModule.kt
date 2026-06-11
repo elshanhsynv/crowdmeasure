@@ -1,7 +1,6 @@
 package com.example.crowdmeasure.di
 
 import android.content.Context
-import com.example.crowdmeasure.BuildConfig
 import com.example.crowdmeasure.data.export.Exporter
 import com.example.crowdmeasure.data.prefs.AppPreferences
 import com.example.crowdmeasure.data.repo.AppMeasurementStore
@@ -18,19 +17,23 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureConfig
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionClient
-import com.yourcompany.crowdmeasure.sdk.background.CrowdMeasureBackground
-import com.yourcompany.crowdmeasure.sdk.firestore.CrowdMeasureFirestore
-import com.yourcompany.crowdmeasure.sdk.upload.CrowdMeasureUploads
-import com.yourcompany.crowdmeasure.sdk.upload.InstallationIdProvider
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadClient
-import com.yourcompany.crowdmeasure.sdk.calls.CallInstallationIdProvider
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingConfig
-import com.yourcompany.crowdmeasure.sdk.calls.CallStore
-import com.yourcompany.crowdmeasure.sdk.calls.CrowdMeasureCalls
+import com.crowdmeasure.sdk.CrowdMeasureConfig
+import com.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.background.BackgroundCollectionClient
+import com.crowdmeasure.sdk.background.CrowdMeasureBackground
+import com.crowdmeasure.sdk.firestore.measurements.CrowdMeasureFirestoreMeasurements
+import com.crowdmeasure.sdk.firestore.calls.CrowdMeasureFirestoreCalls
+import com.crowdmeasure.sdk.upload.CrowdMeasureUploads
+import com.crowdmeasure.sdk.upload.InstallationIdProvider
+import com.crowdmeasure.sdk.upload.MeasurementUploadClient
+import com.crowdmeasure.sdk.calls.CallInstallationIdProvider
+import com.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.calls.CallSamplingConfig
+import com.crowdmeasure.sdk.calls.CallStore
+import com.crowdmeasure.sdk.calls.CrowdMeasureCalls
+import com.crowdmeasure.sdk.calls.upload.CallUploadClient
+import com.crowdmeasure.sdk.calls.upload.CallUploadConfig
+import com.crowdmeasure.sdk.calls.upload.CrowdMeasureCallUploads
 import javax.inject.Singleton
 
 @Module
@@ -56,7 +59,6 @@ object AppModule {
             databaseName = "crowdmeasure.db",
             defaultEndpointUrl = AppPreferences.DEFAULT_ENDPOINT,
             defaultRetentionDays = AppPreferences.DEFAULT_RETENTION_DAYS,
-            loggingEnabled = BuildConfig.DEBUG,
         ),
         measurementStore = AppMeasurementStore(dao),
         settingsStore = AppSdkSettingsStore(prefs),
@@ -77,7 +79,7 @@ object AppModule {
     ): MeasurementUploadClient = CrowdMeasureUploads.install(
         context = context,
         sdk = sdk,
-        uploader = CrowdMeasureFirestore.create(firestore),
+        uploader = CrowdMeasureFirestoreMeasurements.create(firestore),
         installationIdProvider = InstallationIdProvider { prefs.installationId() },
     )
 
@@ -109,9 +111,22 @@ object AppModule {
         context = context,
         sdk = sdk,
         config = CallSamplingConfig(notificationIconResId = com.example.crowdmeasure.R.drawable.crowdmeasure),
-        uploader = CrowdMeasureFirestore.createCallUploader(firestore),
         callStore = store,
-        installationIdProvider = CallInstallationIdProvider { prefs.installationId() },
+    )
+
+    @Provides @Singleton
+    fun provideCallUploadClient(
+        @ApplicationContext context: Context,
+        calls: CallSamplingClient,
+        prefs: AppPreferences,
+        firestore: FirebaseFirestore,
+    ): CallUploadClient = CrowdMeasureCallUploads.install(
+        context,
+        calls,
+        CallUploadConfig(
+            uploader = CrowdMeasureFirestoreCalls.create(firestore),
+            installationIdProvider = CallInstallationIdProvider { prefs.installationId() },
+        ),
     )
 
     @Provides @Singleton

@@ -1,21 +1,25 @@
-package com.yourcompany.crowdmeasure.sdk.upload.internal
+package com.crowdmeasure.sdk.upload.internal
 
 import android.content.Context
 import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
-import com.yourcompany.crowdmeasure.sdk.upload.*
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.preferencesDataStoreFile
+import com.crowdmeasure.sdk.upload.*
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.firstOrNull
 import java.util.UUID
 
-private val Context.uploadDataStore by preferencesDataStore("crowdmeasure_sdk_upload")
-
-internal class DefaultInstallationIdProvider(private val context: Context) : InstallationIdProvider {
+internal class DefaultInstallationIdProvider(context: Context, preferencesName: String) : InstallationIdProvider {
+    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
+        context.preferencesDataStoreFile(preferencesName)
+    }
     override suspend fun getInstallationId(): String {
-        var id = context.uploadDataStore.data.map { it[Keys.installId] }.firstOrNull()
+        var id = dataStore.data.map { it[Keys.installId] }.firstOrNull()
         if (id.isNullOrBlank()) {
             id = UUID.randomUUID().toString()
-            context.uploadDataStore.edit { it[Keys.installId] = id }
+            dataStore.edit { it[Keys.installId] = id }
         }
         return id
     }
@@ -33,15 +37,18 @@ internal object Keys {
     val error = stringPreferencesKey("last_error")
 }
 
-internal class UploadStore(private val context: Context) {
-    val settings = context.uploadDataStore.data.map {
+internal class UploadStore(context: Context, private val config: MeasurementUploadConfig) {
+    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
+        context.preferencesDataStoreFile(config.preferencesName)
+    }
+    val settings = dataStore.data.map {
         MeasurementUploadSettings(
             it[Keys.enabled] ?: false,
-            it[Keys.interval] ?: CrowdMeasureUploads.DEFAULT_INTERVAL_MINUTES,
-            it[Keys.wifiOnly] ?: true,
+            it[Keys.interval] ?: config.defaultIntervalMinutes,
+            it[Keys.wifiOnly] ?: config.defaultWifiOnly,
         )
     }
-    val lastRun = context.uploadDataStore.data.map {
+    val lastRun = dataStore.data.map {
         val time = it[Keys.completedAt] ?: return@map null
         UploadRun(
             time,
@@ -51,12 +58,12 @@ internal class UploadStore(private val context: Context) {
             it[Keys.error]?.takeIf(String::isNotBlank),
         )
     }
-    suspend fun setSettings(value: MeasurementUploadSettings) = context.uploadDataStore.edit {
+    suspend fun setSettings(value: MeasurementUploadSettings) = dataStore.edit {
         it[Keys.enabled] = value.enabled
         it[Keys.interval] = value.intervalMinutes
         it[Keys.wifiOnly] = value.wifiOnly
     }
-    suspend fun record(run: UploadRun) = context.uploadDataStore.edit {
+    suspend fun record(run: UploadRun) = dataStore.edit {
         it[Keys.completedAt] = run.completedAtUtcMs
         it[Keys.outcome] = run.outcome.name
         it[Keys.code] = run.code.name

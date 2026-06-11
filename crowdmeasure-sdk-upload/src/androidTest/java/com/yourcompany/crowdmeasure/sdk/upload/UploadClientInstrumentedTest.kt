@@ -1,8 +1,8 @@
-package com.yourcompany.crowdmeasure.sdk.upload
+package com.crowdmeasure.sdk.upload
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.CrowdMeasureSdk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals

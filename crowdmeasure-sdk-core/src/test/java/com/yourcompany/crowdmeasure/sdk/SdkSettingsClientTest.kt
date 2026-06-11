@@ -1,6 +1,6 @@
-package com.yourcompany.crowdmeasure.sdk
+package com.crowdmeasure.sdk
 
-import com.yourcompany.crowdmeasure.sdk.internal.SdkSettingsClient
+import com.crowdmeasure.sdk.internal.SdkSettingsClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking

@@ -9,9 +9,9 @@ import com.example.crowdmeasure.domain.model.CallSession
 import com.example.crowdmeasure.domain.model.CallSessionExport
 import com.example.crowdmeasure.domain.model.CallSource
 import com.example.crowdmeasure.domain.model.CallType
-import com.yourcompany.crowdmeasure.sdk.model.CellInfo
-import com.yourcompany.crowdmeasure.sdk.calls.CallStore
-import com.yourcompany.crowdmeasure.sdk.calls.CallUploadState
+import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.calls.CallStore
+import com.crowdmeasure.sdk.calls.CallUploadState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine

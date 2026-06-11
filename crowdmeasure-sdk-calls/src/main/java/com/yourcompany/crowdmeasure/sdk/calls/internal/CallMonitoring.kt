@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.calls.internal
+package com.crowdmeasure.sdk.calls.internal
 
 import android.app.*
 import android.content.*
@@ -9,7 +9,7 @@ import android.telephony.TelephonyManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import com.yourcompany.crowdmeasure.sdk.calls.*
+import com.crowdmeasure.sdk.calls.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
@@ -31,7 +31,8 @@ internal class CallPhoneStateReceiver : BroadcastReceiver() {
                         val requirements = context.requirements()
                         if (!settings.cellularEnabled) rt.settingsStore.recordMissed(CallRunCode.DISABLED)
                         else if (!requirements.canStart) rt.settingsStore.recordMissed(requirements.failureCode())
-                        else CallSamplingService.start(context, type, CallSource.CELLULAR)
+                        else runCatching { CallSamplingService.start(context, type, CallSource.CELLULAR) }
+                            .onFailure { rt.settingsStore.recordMissed(CallRunCode.FOREGROUND_SERVICE_FAILED) }
                     } finally { pending.finish() }
                 }
             }
@@ -93,7 +94,13 @@ internal class CallSamplingService : Service() {
         val requirements = applicationContext.requirements()
         if (!requirements.canStart) { rt.settingsStore.recordMissed(requirements.failureCode()); stopSelf(); return }
         val config = rt.config
-        ServiceCompat.startForeground(this, 40_030, notification(config), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        try {
+            ServiceCompat.startForeground(this, 40_030, notification(config), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        } catch (error: RuntimeException) {
+            rt.settingsStore.recordMissed(CallRunCode.FOREGROUND_SERVICE_FAILED)
+            stopSelf()
+            return
+        }
         rt.store.finishActiveSession(System.currentTimeMillis(), "service_restarted")
         rt.store.deleteOlderThan(System.currentTimeMillis() - config.retentionDays * 86_400_000L)
         active = rt.store.startSession(type, source, config.sampleIntervalSeconds)
@@ -101,7 +108,13 @@ internal class CallSamplingService : Service() {
             while (isActive) {
                 val session = active ?: break
                 val at = System.currentTimeMillis()
-                runCatching { rt.store.insertSample(session.sessionId, at, at - session.startedAtUtcMs, rt.sdk.cellular.collect()) }
+                try {
+                    rt.store.insertSample(session.sessionId, at, at - session.startedAtUtcMs, rt.sdk.cellular.collect())
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    rt.settingsStore.recordMissed(CallRunCode.PERSISTENCE_FAILED)
+                }
                 delay(config.sampleIntervalSeconds * 1_000L)
             }
         }
@@ -112,7 +125,6 @@ internal class CallSamplingService : Service() {
         sampling?.cancelAndJoin(); sampling = null
         rt.store.finishSession(session.sessionId, System.currentTimeMillis(), "call_ended")
         active = null
-        if (rt.settingsStore.settings.first().uploadsEnabled) CallSamplingClientImpl(applicationContext).enqueueUploadNow()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE); stopSelf()
     }
     private fun createChannel() {
@@ -121,9 +133,9 @@ internal class CallSamplingService : Service() {
     }
     private fun notification(config: CallSamplingConfig) = NotificationCompat.Builder(this, CHANNEL).setSmallIcon(config.notificationIconResId).setContentTitle(config.notificationTitle).setContentText(config.notificationText).setOngoing(true).setSilent(true).build()
     companion object {
-        private const val CHANNEL = "com.yourcompany.crowdmeasure.sdk.calls.sampling"
-        private const val ACTION_START = "com.yourcompany.crowdmeasure.sdk.calls.START"
-        private const val ACTION_STOP = "com.yourcompany.crowdmeasure.sdk.calls.STOP"
+        private const val CHANNEL = "com.crowdmeasure.sdk.calls.sampling"
+        private const val ACTION_START = "com.crowdmeasure.sdk.calls.START"
+        private const val ACTION_STOP = "com.crowdmeasure.sdk.calls.STOP"
         private const val EXTRA_TYPE = "type"
         private const val EXTRA_SOURCE = "source"
         fun start(context: Context, type: CallType, source: CallSource) = ContextCompat.startForegroundService(context, Intent(context, CallSamplingService::class.java).setAction(ACTION_START).putExtra(EXTRA_TYPE, type.name).putExtra(EXTRA_SOURCE, source.name))

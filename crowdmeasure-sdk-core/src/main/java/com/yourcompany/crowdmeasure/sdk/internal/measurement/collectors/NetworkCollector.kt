@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors
+package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -6,23 +6,28 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
-import com.yourcompany.crowdmeasure.sdk.model.NetworkEnvironment
-import com.yourcompany.crowdmeasure.sdk.model.TransportType
+import com.crowdmeasure.sdk.model.NetworkEnvironment
+import com.crowdmeasure.sdk.model.TransportType
+import com.crowdmeasure.sdk.CrowdMeasureConfig
+import com.crowdmeasure.sdk.PublicIpPolicy
+import com.crowdmeasure.sdk.model.IpInfo
 import okhttp3.OkHttpClient
 
 object NetworkCollector {
 
     @RequiresApi(Build.VERSION_CODES.Q)
-    suspend fun collect(context: Context, okHttp: OkHttpClient): NetworkEnvironment {
+    suspend fun collect(context: Context, okHttp: OkHttpClient, config: CrowdMeasureConfig, ipHashSalt: String): NetworkEnvironment {
         val cm = context.getSystemService<ConnectivityManager>()
         val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
         val transport = caps.toTransportType()
-        val ip = IpCollector.collect(okHttp)
+        val ip = if (config.collectors.publicIpEnabled && config.publicIpPolicy == PublicIpPolicy.HASHED) {
+            IpCollector.collect(okHttp, ipHashSalt)
+        } else IpInfo()
 
-        val wifi = if (transport == TransportType.WIFI) {
+        val wifi = if (config.collectors.wifiEnabled && transport == TransportType.WIFI) {
             WifiCollector.collect(context)
         } else null
-        val cell = if (transport == TransportType.CELL) {
+        val cell = if (config.collectors.cellularEnabled && transport == TransportType.CELL) {
             TelephonyCollector.collect(context)
         } else null
 

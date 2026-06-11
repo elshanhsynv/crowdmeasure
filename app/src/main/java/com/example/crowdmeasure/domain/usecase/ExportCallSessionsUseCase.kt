@@ -1,8 +1,8 @@
 package com.example.crowdmeasure.domain.usecase
 
 import android.net.Uri
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingResult
+import com.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.calls.CallSamplingResult
 import javax.inject.Inject
 
 class ExportCallSessionsUseCase @Inject constructor(

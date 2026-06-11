@@ -1,8 +1,8 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors
+package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import androidx.annotation.WorkerThread
-import com.yourcompany.crowdmeasure.sdk.model.PerformanceInfo
-import com.yourcompany.crowdmeasure.sdk.model.ProtocolType
+import com.crowdmeasure.sdk.model.PerformanceInfo
+import com.crowdmeasure.sdk.model.ProtocolType
 import kotlinx.coroutines.CancellationException
 import okhttp3.Call
 import okhttp3.ConnectionPool
@@ -25,7 +25,6 @@ import kotlin.math.roundToLong
 
 object PerformanceCollector {
 
-    private const val PROBE_ATTEMPTS = 8
     private const val STALL_THRESHOLD_MS = 1_500L
 
     /**
@@ -45,6 +44,7 @@ object PerformanceCollector {
         okHttp: OkHttpClient,
         endpointUrl: String,
         endpointId: String,
+        attempts: Int = 8,
     ): PerformanceInfo {
         val parsedUrl = endpointUrl.toHttpUrl().also { url ->
             require(url.scheme == "https") {
@@ -69,7 +69,7 @@ object PerformanceCollector {
         val probes = mutableListOf<ProbeResult>()
         var failures = 0
 
-        repeat(PROBE_ATTEMPTS) {
+        repeat(attempts) {
             val probe = singleProbe(measurementClient, parsedUrl)
             if (probe == null) {
                 failures++
@@ -93,7 +93,7 @@ object PerformanceCollector {
             ?.protocol
             ?: ProtocolType.UNKNOWN
 
-        val probeFailurePct = (failures.toDouble() / PROBE_ATTEMPTS.toDouble()) * 100.0
+        val probeFailurePct = (failures.toDouble() / attempts.toDouble()) * 100.0
 
         return PerformanceInfo(
             endpointId = endpointId,
@@ -120,7 +120,7 @@ object PerformanceCollector {
 
             probeFailurePct = probeFailurePct,
 
-            probesAttempted = PROBE_ATTEMPTS,
+            probesAttempted = attempts,
             probesSucceeded = probes.size,
             probesFailed = failures,
 

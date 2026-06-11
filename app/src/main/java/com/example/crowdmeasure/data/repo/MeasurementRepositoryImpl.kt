@@ -3,10 +3,10 @@ package com.example.crowdmeasure.data.repo
 import com.example.crowdmeasure.data.db.Converters
 import com.example.crowdmeasure.data.db.MeasurementDao
 import com.example.crowdmeasure.data.db.MeasurementEntity
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
-import com.yourcompany.crowdmeasure.sdk.model.RecordState
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureResult
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.model.RecordState
+import com.crowdmeasure.sdk.CrowdMeasureResult
+import com.crowdmeasure.sdk.CrowdMeasureSdk
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow

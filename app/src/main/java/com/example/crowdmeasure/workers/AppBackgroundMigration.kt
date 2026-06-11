@@ -3,9 +3,9 @@ package com.example.crowdmeasure.workers
 import android.content.Context
 import androidx.work.WorkManager
 import com.example.crowdmeasure.data.prefs.AppPreferences
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionClient
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundResult
-import com.yourcompany.crowdmeasure.sdk.background.CrowdMeasureBackground
+import com.crowdmeasure.sdk.background.BackgroundCollectionClient
+import com.crowdmeasure.sdk.background.BackgroundResult
+import com.crowdmeasure.sdk.background.CrowdMeasureBackground
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

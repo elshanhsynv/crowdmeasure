@@ -1,14 +1,16 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement
+package com.crowdmeasure.sdk.internal.measurement
 
 import android.content.Context
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSettingsStore
-import com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors.DeviceInfoCollector
-import com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors.EnvironmentCollector
-import com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors.PerformanceCollector
-import com.yourcompany.crowdmeasure.sdk.internal.measurement.net.OkHttpClientProvider
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
-import com.yourcompany.crowdmeasure.sdk.model.Meta
-import com.yourcompany.crowdmeasure.sdk.model.TransportType
+import com.crowdmeasure.sdk.CrowdMeasureSettingsStore
+import com.crowdmeasure.sdk.CrowdMeasureConfig
+import com.crowdmeasure.sdk.IpHashSaltProvider
+import com.crowdmeasure.sdk.internal.measurement.collectors.DeviceInfoCollector
+import com.crowdmeasure.sdk.internal.measurement.collectors.EnvironmentCollector
+import com.crowdmeasure.sdk.internal.measurement.collectors.PerformanceCollector
+import com.crowdmeasure.sdk.internal.measurement.net.OkHttpClientProvider
+import com.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.model.Meta
+import com.crowdmeasure.sdk.model.TransportType
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -17,6 +19,8 @@ import java.util.UUID
 internal class MeasurementRunner(
     private val context: Context,
     private val settingsStore: CrowdMeasureSettingsStore,
+    private val config: CrowdMeasureConfig,
+    private val ipHashSaltProvider: IpHashSaltProvider,
     private val io: CoroutineDispatcher,
 ) {
     suspend fun runOnce(): Result<Measurement> = withContext(io) {
@@ -24,7 +28,7 @@ internal class MeasurementRunner(
             val settings = settingsStore.settings.first()
             val http = OkHttpClientProvider().create()
             val device = DeviceInfoCollector.collect(versionName = hostVersionName())
-            val environment = EnvironmentCollector.collect(context, http)
+            val environment = EnvironmentCollector.collect(context, http, config, ipHashSaltProvider.getSalt())
 
             if (settingsStore.collectOnlyOnWifi() &&
                 environment.network.transport != TransportType.WIFI
@@ -32,7 +36,14 @@ internal class MeasurementRunner(
                 error("Collect only on Wi-Fi is enabled.")
             }
 
-            val performance = PerformanceCollector.run(http, settings.endpointUrl, settings.endpointUrl)
+            val performance = if (config.collectors.performanceEnabled) {
+                PerformanceCollector.run(
+                    http,
+                    settings.endpointUrl,
+                    settings.endpointUrl,
+                    config.performanceProbe.attempts,
+                )
+            } else com.crowdmeasure.sdk.model.PerformanceInfo(endpointId = settings.endpointUrl)
             Measurement(
                 meta = Meta(
                     measurementId = UUID.randomUUID().toString(),

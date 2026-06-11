@@ -1,7 +1,7 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors
+package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import androidx.annotation.WorkerThread
-import com.yourcompany.crowdmeasure.sdk.model.IpInfo
+import com.crowdmeasure.sdk.model.IpInfo
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -38,13 +38,13 @@ object IpCollector {
      * Safe to call from any worker thread; suspends for up to [TIMEOUT_MS] ms.
      */
     @WorkerThread
-    suspend fun collect(okHttp: OkHttpClient): IpInfo =
+    suspend fun collect(okHttp: OkHttpClient, salt: String): IpInfo =
         withTimeoutOrNull(TIMEOUT_MS) {
-            tryPrimary(okHttp) ?: tryFallback(okHttp)
+            tryPrimary(okHttp, salt) ?: tryFallback(okHttp, salt)
         } ?: IpInfo()
 
 
-    private fun tryPrimary(okHttp: OkHttpClient): IpInfo? = runCatching {
+    private fun tryPrimary(okHttp: OkHttpClient, salt: String): IpInfo? = runCatching {
         val body = get(okHttp, PRIMARY_URL) ?: return null
         val json = JSONObject(body)
 
@@ -56,17 +56,17 @@ object IpCollector {
         val ispName = org?.substringAfter(' ', "")?.ifBlank { null }
 
         IpInfo(
-            publicIp = rawIp,
+            publicIpHash = hashIp(rawIp, salt),
             ispName = ispName,
             asn = asn,
         )
     }.getOrNull()
 
-    private fun tryFallback(okHttp: OkHttpClient): IpInfo? = runCatching {
+    private fun tryFallback(okHttp: OkHttpClient, salt: String): IpInfo? = runCatching {
         val body = get(okHttp, FALLBACK_URL) ?: return null
         val json = JSONObject(body)
         val rawIp = json.optString("ip").ifBlank { null } ?: return null
-        IpInfo(publicIp = hashIp(rawIp))
+        IpInfo(publicIpHash = hashIp(rawIp, salt))
     }.getOrNull()
 
     private fun get(okHttp: OkHttpClient, url: String): String? {
@@ -89,11 +89,9 @@ object IpCollector {
      * Returns the first 16 hex characters (64 bits) of SHA-256(ip + salt).
      * Sufficient for session/ISP correlation without reversing the raw address.
      */
-    private fun hashIp(ip: String): String {
-        val salt = "crowdmeasure_ip_salt_v1"
+    internal fun hashIp(ip: String, salt: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
-        return digest.digest((ip + salt).toByteArray(Charsets.UTF_8))
-            .take(8)
+        return digest.digest((salt + ip).toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
     }
 }

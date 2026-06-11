@@ -1,0 +1,5 @@
+# 0.1.0 preview public API
+com.crowdmeasure.sdk.background.CrowdMeasureBackground
+com.crowdmeasure.sdk.background.BackgroundCollectionClient
+com.crowdmeasure.sdk.background.BackgroundCollectionSettings
+com.crowdmeasure.sdk.background.BackgroundCollectionStatus

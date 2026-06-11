@@ -3,12 +3,12 @@ package com.example.crowdmeasure.presentation.screens.home
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.model.Measurement
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.RunMeasurementUseCase
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadClient
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadResult
+import com.crowdmeasure.sdk.upload.MeasurementUploadClient
+import com.crowdmeasure.sdk.upload.MeasurementUploadResult
 import com.example.crowdmeasure.presentation.util.AppPermissions
 import com.example.crowdmeasure.presentation.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel

@@ -1,0 +1,5 @@
+# 0.1.0 preview public API
+com.crowdmeasure.sdk.upload.CrowdMeasureUploads
+com.crowdmeasure.sdk.upload.MeasurementUploadClient
+com.crowdmeasure.sdk.upload.MeasurementUploadSettings
+com.crowdmeasure.sdk.upload.MeasurementUploadStatus

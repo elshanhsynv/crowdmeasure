@@ -1,6 +1,7 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors
+package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import android.content.Context
+import android.annotation.SuppressLint
 import android.os.Build
 import android.os.SystemClock
 import android.telephony.CellIdentityNr
@@ -19,13 +20,12 @@ import android.telephony.CellInfo as AndroidCellInfo
 import androidx.annotation.RequiresApi
 import androidx.annotation.WorkerThread
 import androidx.core.content.getSystemService
-import com.yourcompany.crowdmeasure.sdk.model.CarrierAggregationInfo
-import com.yourcompany.crowdmeasure.sdk.model.CarrierInfo
-import com.yourcompany.crowdmeasure.sdk.model.CellInfo
-import com.yourcompany.crowdmeasure.sdk.model.CellRadioSnapshot
-import com.yourcompany.crowdmeasure.sdk.model.NrState
-import com.yourcompany.crowdmeasure.sdk.model.SecondaryCell
-import timber.log.Timber
+import com.crowdmeasure.sdk.model.CarrierAggregationInfo
+import com.crowdmeasure.sdk.model.CarrierInfo
+import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.CellRadioSnapshot
+import com.crowdmeasure.sdk.model.NrState
+import com.crowdmeasure.sdk.model.SecondaryCell
 
 /**
  * Collects a telephony snapshot supporting all active RATs:
@@ -38,6 +38,7 @@ object TelephonyCollector {
 
     @WorkerThread
     @RequiresApi(Build.VERSION_CODES.Q)
+    @SuppressLint("MissingPermission")
     fun collect(context: Context): CellInfo {
         val tm = context.getSystemService<TelephonyManager>()
             ?: return CellInfo(
@@ -172,6 +173,7 @@ object TelephonyCollector {
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
+    @SuppressLint("MissingPermission")
     private fun collectSimCarriers(
         tm: TelephonyManager,
         sm: SubscriptionManager?,
@@ -489,7 +491,6 @@ object TelephonyCollector {
         val id = ci.cellIdentity
         val sig = ci.cellSignalStrength
 
-        Timber.tag("TelephonyCollector").d(id.cid.toString())
 
         val uarfcn = id.uarfcn.validId()
         val band = getWcdmaBand(uarfcn)

@@ -1,16 +1,16 @@
-package com.yourcompany.crowdmeasure.sdk
+package com.crowdmeasure.sdk
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.yourcompany.crowdmeasure.sdk.internal.DefaultMeasurementStore
-import com.yourcompany.crowdmeasure.sdk.model.DeviceEnvironment
-import com.yourcompany.crowdmeasure.sdk.model.EnvironmentInfo
-import com.yourcompany.crowdmeasure.sdk.model.IpInfo
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
-import com.yourcompany.crowdmeasure.sdk.model.Meta
-import com.yourcompany.crowdmeasure.sdk.model.NetworkEnvironment
-import com.yourcompany.crowdmeasure.sdk.model.PerformanceInfo
-import com.yourcompany.crowdmeasure.sdk.model.TransportType
+import com.crowdmeasure.sdk.internal.DefaultMeasurementStore
+import com.crowdmeasure.sdk.model.DeviceEnvironment
+import com.crowdmeasure.sdk.model.EnvironmentInfo
+import com.crowdmeasure.sdk.model.IpInfo
+import com.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.model.Meta
+import com.crowdmeasure.sdk.model.NetworkEnvironment
+import com.crowdmeasure.sdk.model.PerformanceInfo
+import com.crowdmeasure.sdk.model.TransportType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals

@@ -3,8 +3,8 @@ package com.example.crowdmeasure.workers
 import android.content.Context
 import androidx.work.WorkManager
 import com.example.crowdmeasure.data.prefs.AppPreferences
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadClient
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadResult
+import com.crowdmeasure.sdk.upload.MeasurementUploadClient
+import com.crowdmeasure.sdk.upload.MeasurementUploadResult
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

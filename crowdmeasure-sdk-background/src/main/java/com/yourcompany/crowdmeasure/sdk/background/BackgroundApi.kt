@@ -1,6 +1,19 @@
-package com.yourcompany.crowdmeasure.sdk.background
+package com.crowdmeasure.sdk.background
 
 import kotlinx.coroutines.flow.Flow
+
+data class BackgroundConfig(
+    val preferencesName: String = "crowdmeasure_sdk_background",
+    val defaultIntervalMinutes: Long = CrowdMeasureBackground.DEFAULT_INTERVAL_MINUTES,
+    val defaultWifiOnly: Boolean = false,
+) {
+    init {
+        require(preferencesName.isNotBlank()) { "preferencesName must not be blank" }
+        require(defaultIntervalMinutes in CrowdMeasureBackground.MIN_INTERVAL_MINUTES..CrowdMeasureBackground.MAX_INTERVAL_MINUTES) {
+            "defaultIntervalMinutes must be between 20 minutes and 7 days"
+        }
+    }
+}
 
 data class BackgroundCollectionSettings(
     val enabled: Boolean = false,

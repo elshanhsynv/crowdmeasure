@@ -7,7 +7,8 @@ import androidx.work.Configuration
 import com.example.crowdmeasure.workers.AppBackgroundMigration
 import com.example.crowdmeasure.workers.AppUploadMigration
 import com.example.crowdmeasure.workers.AppCallsMigration
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.calls.upload.CallUploadClient
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
@@ -29,6 +30,8 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
     lateinit var appCallsMigration: AppCallsMigration
     @Inject
     lateinit var calls: CallSamplingClient
+    @Inject
+    lateinit var callUploads: CallUploadClient
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val workManagerConfiguration: Configuration
@@ -49,6 +52,7 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
             appUploadMigration.migrateOnce()
             appCallsMigration.migrateOnce()
             calls.activateEnabledFeatures()
+            callUploads.reschedule()
         }
     }
 }

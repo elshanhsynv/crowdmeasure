@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.yourcompany.crowdmeasure.sdk.background"
+    namespace = "com.crowdmeasure.sdk.background"
     compileSdk {
         version = release(36)
     }

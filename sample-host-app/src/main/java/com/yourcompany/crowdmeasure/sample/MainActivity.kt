@@ -9,10 +9,10 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureResult
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundResult
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadResult
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingResult
+import com.crowdmeasure.sdk.CrowdMeasureResult
+import com.crowdmeasure.sdk.background.BackgroundResult
+import com.crowdmeasure.sdk.upload.MeasurementUploadResult
+import com.crowdmeasure.sdk.calls.CallSamplingResult
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     private val background get() = sampleApp.background
     private val uploads get() = sampleApp.uploads
     private val calls get() = sampleApp.calls
+    private val callUploads get() = sampleApp.callUploads
     private lateinit var status: TextView
 
     private val permissions = registerForActivityResult(
@@ -100,10 +101,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             addAction("Enable call uploads") {
-                lifecycleScope.launch { status.text = calls.setUploadsEnabled(true, 60, true).describe() }
+                lifecycleScope.launch { status.text = callUploads.enable(60, true).describe() }
             }
             addAction("Upload pending calls") {
-                lifecycleScope.launch { status.text = calls.uploadPending().describe() }
+                lifecycleScope.launch { status.text = callUploads.uploadPending().describe() }
             }
             addAction("Export call sessions") {
                 lifecycleScope.launch { status.text = calls.exportSessions().describe() }

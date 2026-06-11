@@ -23,11 +23,17 @@ android {
 }
 
 dependencies {
-    implementation(project(":crowdmeasure-sdk-core"))
-    implementation(project(":crowdmeasure-sdk-background"))
-    implementation(project(":crowdmeasure-sdk-upload"))
-    implementation(project(":crowdmeasure-sdk-firestore"))
-    implementation(project(":crowdmeasure-sdk-calls"))
+    val useMavenLocal = providers.gradleProperty("crowdmeasure.useMavenLocal").orNull == "true"
+    fun sdk(module: String) =
+        if (useMavenLocal) "com.crowdmeasure:crowdmeasure-$module:0.1.0" else project(":crowdmeasure-sdk-$module")
+
+    implementation(sdk("core"))
+    implementation(sdk("background"))
+    implementation(sdk("upload"))
+    implementation(sdk("firestore-measurements"))
+    implementation(sdk("firestore-calls"))
+    implementation(sdk("calls"))
+    implementation(sdk("calls-upload"))
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.androidx.work.runtime.ktx)

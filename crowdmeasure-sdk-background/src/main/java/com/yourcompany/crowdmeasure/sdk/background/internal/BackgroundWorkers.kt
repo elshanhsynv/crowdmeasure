@@ -1,14 +1,14 @@
-package com.yourcompany.crowdmeasure.sdk.background.internal
+package com.crowdmeasure.sdk.background.internal
 
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureResult
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundRun
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundRunCode
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundRunOutcome
+import com.crowdmeasure.sdk.CrowdMeasureResult
+import com.crowdmeasure.sdk.background.BackgroundRun
+import com.crowdmeasure.sdk.background.BackgroundRunCode
+import com.crowdmeasure.sdk.background.BackgroundRunOutcome
 import kotlinx.coroutines.flow.first
 
 internal class MeasurementWorker(
@@ -16,7 +16,7 @@ internal class MeasurementWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
-        val store = BackgroundStore(applicationContext)
+        val store = BackgroundStore(applicationContext, BackgroundRuntime.config())
         val sdk = BackgroundRuntime.sdk() ?: return finish(
             store, BackgroundRunOutcome.FAILURE, BackgroundRunCode.NOT_INSTALLED, null
         )
@@ -49,7 +49,7 @@ internal class RetentionWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
-        val store = BackgroundStore(applicationContext)
+        val store = BackgroundStore(applicationContext, BackgroundRuntime.config())
         val sdk = BackgroundRuntime.sdk() ?: return finish(
             store, BackgroundRunOutcome.FAILURE, BackgroundRunCode.NOT_INSTALLED, null
         )
@@ -70,7 +70,7 @@ private suspend fun CoroutineWorker.finish(
     failWork: Boolean = true,
 ): ListenableWorker.Result {
     store.recordRun(BackgroundRun(System.currentTimeMillis(), outcome, code, measurementId))
-    val output = workDataOf("com.yourcompany.crowdmeasure.sdk.background.code" to code.name)
+    val output = workDataOf("com.crowdmeasure.sdk.background.code" to code.name)
     return if (failWork && outcome == BackgroundRunOutcome.FAILURE) {
         ListenableWorker.Result.failure(output)
     } else {

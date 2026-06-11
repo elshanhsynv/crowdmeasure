@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.yourcompany.crowdmeasure.sdk.calls"
+    namespace = "com.crowdmeasure.sdk.calls"
     compileSdk { version = release(36) }
     defaultConfig {
         minSdk = 29
@@ -25,7 +25,6 @@ ksp {
 dependencies {
     api(project(":crowdmeasure-sdk-core"))
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

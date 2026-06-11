@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors
+package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -13,9 +13,8 @@ import android.os.Build
 import androidx.annotation.WorkerThread
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
-import com.yourcompany.crowdmeasure.sdk.model.WifiInfo
-import com.yourcompany.crowdmeasure.sdk.model.WifiStandard
-import timber.log.Timber
+import com.crowdmeasure.sdk.model.WifiInfo
+import com.crowdmeasure.sdk.model.WifiStandard
 import java.security.MessageDigest
 
 object WifiCollector {
@@ -31,10 +30,6 @@ object WifiCollector {
 
         val frequencyMhz = wifiInfo?.frequency?.takeIf { it > 0 }
         val channelWidthMhz = channelWidthMhz(wifiInfo)
-        Timber.tag("WifiCollector").d(
-            "Collected WifiInfo: channelWidth=%d MHz",
-            channelWidthMhz
-        )
 
         return WifiInfo(
             bssidHash = wifiInfo?.bssid
@@ -85,7 +80,6 @@ object WifiCollector {
     }
 
     private fun channelWidthMhz(info: AndroidWifiInfo?): Int? {
-        Timber.tag("WifiCollector").d("Deriving channel width from WifiInfo: linkSpeed=%d Mbps", info?.linkSpeed)
         return when (info?.linkSpeed) {
             ScanResult.CHANNEL_WIDTH_20MHZ -> 20
             ScanResult.CHANNEL_WIDTH_40MHZ -> 40
@@ -132,11 +126,6 @@ object WifiCollector {
 
         // 2. Fallback: Frequency + Width Heuristic
         if (freq == null || freq <= 0) return WifiStandard.UNKNOWN
-        Timber.tag("WifiCollector").w(
-            "OS did not report Wi-Fi standard; deriving from frequency=%d MHz, width=%d MHz",
-            freq,
-            width
-        )
         return when {
 
             // 6 GHz Band

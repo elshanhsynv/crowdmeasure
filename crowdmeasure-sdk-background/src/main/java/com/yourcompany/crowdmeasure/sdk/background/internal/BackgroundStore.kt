@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.background.internal
+package com.crowdmeasure.sdk.background.internal
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -6,17 +6,23 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionSettings
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundRun
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundRunCode
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundRunOutcome
-import com.yourcompany.crowdmeasure.sdk.background.CrowdMeasureBackground
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.preferencesDataStoreFile
+import com.crowdmeasure.sdk.background.BackgroundConfig
+import com.crowdmeasure.sdk.background.BackgroundCollectionSettings
+import com.crowdmeasure.sdk.background.BackgroundRun
+import com.crowdmeasure.sdk.background.BackgroundRunCode
+import com.crowdmeasure.sdk.background.BackgroundRunOutcome
+import com.crowdmeasure.sdk.background.CrowdMeasureBackground
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private val Context.backgroundDataStore by preferencesDataStore("crowdmeasure_sdk_background")
-
-internal class BackgroundStore(private val context: Context) {
+internal class BackgroundStore(context: Context, private val config: BackgroundConfig) {
+    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
+        context.preferencesDataStoreFile(config.preferencesName)
+    }
     private object Keys {
         val enabled = booleanPreferencesKey("enabled")
         val intervalMinutes = longPreferencesKey("interval_minutes")
@@ -27,15 +33,15 @@ internal class BackgroundStore(private val context: Context) {
         val lastMeasurementId = stringPreferencesKey("last_measurement_id")
     }
 
-    val settings: Flow<BackgroundCollectionSettings> = context.backgroundDataStore.data.map {
+    val settings: Flow<BackgroundCollectionSettings> = dataStore.data.map {
         BackgroundCollectionSettings(
             enabled = it[Keys.enabled] ?: false,
-            intervalMinutes = it[Keys.intervalMinutes] ?: CrowdMeasureBackground.DEFAULT_INTERVAL_MINUTES,
-            wifiOnly = it[Keys.wifiOnly] ?: false,
+            intervalMinutes = it[Keys.intervalMinutes] ?: config.defaultIntervalMinutes,
+            wifiOnly = it[Keys.wifiOnly] ?: config.defaultWifiOnly,
         )
     }
 
-    val lastRun: Flow<BackgroundRun?> = context.backgroundDataStore.data.map {
+    val lastRun: Flow<BackgroundRun?> = dataStore.data.map {
         val completedAt = it[Keys.lastCompletedAt] ?: return@map null
         BackgroundRun(
             completedAtUtcMs = completedAt,
@@ -46,7 +52,7 @@ internal class BackgroundStore(private val context: Context) {
     }
 
     suspend fun setSettings(settings: BackgroundCollectionSettings) {
-        context.backgroundDataStore.edit {
+        dataStore.edit {
             it[Keys.enabled] = settings.enabled
             it[Keys.intervalMinutes] = settings.intervalMinutes
             it[Keys.wifiOnly] = settings.wifiOnly
@@ -54,7 +60,7 @@ internal class BackgroundStore(private val context: Context) {
     }
 
     suspend fun recordRun(run: BackgroundRun) {
-        context.backgroundDataStore.edit {
+        dataStore.edit {
             it[Keys.lastCompletedAt] = run.completedAtUtcMs
             it[Keys.lastOutcome] = run.outcome.name
             it[Keys.lastCode] = run.code.name

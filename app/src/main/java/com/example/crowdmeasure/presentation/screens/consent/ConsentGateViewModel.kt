@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.SetConsentGateDismissedUseCase
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionClient
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.background.BackgroundCollectionClient
+import com.crowdmeasure.sdk.calls.CallSamplingClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

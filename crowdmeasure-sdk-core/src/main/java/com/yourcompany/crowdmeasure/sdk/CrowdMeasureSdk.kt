@@ -1,17 +1,17 @@
-package com.yourcompany.crowdmeasure.sdk
+package com.crowdmeasure.sdk
 
 import android.content.Context
-import com.yourcompany.crowdmeasure.sdk.internal.DefaultCrowdMeasureSettingsStore
-import com.yourcompany.crowdmeasure.sdk.internal.DefaultMeasurementStore
-import com.yourcompany.crowdmeasure.sdk.internal.SdkDataClient
-import com.yourcompany.crowdmeasure.sdk.internal.SdkMeasurementClient
-import com.yourcompany.crowdmeasure.sdk.internal.SdkRequirementsClient
-import com.yourcompany.crowdmeasure.sdk.internal.SdkMeasurementQueueClient
-import com.yourcompany.crowdmeasure.sdk.internal.SdkSettingsClient
-import com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors.TelephonyCollector
+import com.crowdmeasure.sdk.internal.DefaultCrowdMeasureSettingsStore
+import com.crowdmeasure.sdk.internal.DefaultMeasurementStore
+import com.crowdmeasure.sdk.internal.DefaultIpHashSaltProvider
+import com.crowdmeasure.sdk.internal.SdkDataClient
+import com.crowdmeasure.sdk.internal.SdkMeasurementClient
+import com.crowdmeasure.sdk.internal.SdkRequirementsClient
+import com.crowdmeasure.sdk.internal.SdkMeasurementQueueClient
+import com.crowdmeasure.sdk.internal.SdkSettingsClient
+import com.crowdmeasure.sdk.internal.measurement.collectors.TelephonyCollector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import timber.log.Timber
 
 class CrowdMeasureSdk private constructor(
     val measurements: MeasurementClient,
@@ -36,11 +36,9 @@ class CrowdMeasureSdk private constructor(
             require(config.defaultRetentionDays in 1..90) {
                 "defaultRetentionDays must be between 1 and 90"
             }
-            if (config.loggingEnabled && Timber.treeCount == 0) {
-                Timber.plant(Timber.DebugTree())
-            }
-
             val appContext = context.applicationContext
+            val resolvedIpHashSaltProvider = config.ipHashSaltProvider
+                ?: DefaultIpHashSaltProvider(appContext, "${config.preferencesName}_privacy")
             val resolvedSettingsStore = settingsStore ?: DefaultCrowdMeasureSettingsStore(
                 context = appContext,
                 preferencesName = config.preferencesName,
@@ -50,12 +48,15 @@ class CrowdMeasureSdk private constructor(
             val resolvedMeasurementStore = measurementStore ?: DefaultMeasurementStore.create(
                 context = appContext,
                 databaseName = config.databaseName,
+                ipHashSaltProvider = resolvedIpHashSaltProvider,
             )
             val requirements = SdkRequirementsClient(appContext)
 
             return CrowdMeasureSdk(
                 measurements = SdkMeasurementClient(
                     context = appContext,
+                    config = config,
+                    ipHashSaltProvider = resolvedIpHashSaltProvider,
                     settingsStore = resolvedSettingsStore,
                     measurementStore = resolvedMeasurementStore,
                     requirementsClient = requirements,

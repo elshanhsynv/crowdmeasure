@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.background.internal
+package com.crowdmeasure.sdk.background.internal
 
 import android.content.Context
 import androidx.work.BackoffPolicy
@@ -9,27 +9,28 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionClient
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionSettings
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionStatus
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundError
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundResult
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundWorkState
+import com.crowdmeasure.sdk.background.BackgroundCollectionClient
+import com.crowdmeasure.sdk.background.BackgroundConfig
+import com.crowdmeasure.sdk.background.BackgroundCollectionSettings
+import com.crowdmeasure.sdk.background.BackgroundCollectionStatus
+import com.crowdmeasure.sdk.background.BackgroundError
+import com.crowdmeasure.sdk.background.BackgroundResult
+import com.crowdmeasure.sdk.background.BackgroundWorkState
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.concurrent.TimeUnit
 
 internal object BackgroundWorkNames {
-    const val PREFIX = "com.yourcompany.crowdmeasure.sdk.background"
+    const val PREFIX = "com.crowdmeasure.sdk.background"
     const val PERIODIC = "$PREFIX.measurement.periodic"
     const val RUN_NOW = "$PREFIX.measurement.immediate"
     const val CLEANUP = "$PREFIX.retention.daily"
     const val TAG = "$PREFIX.owned"
 }
 
-internal class BackgroundClientImpl(context: Context) : BackgroundCollectionClient {
-    private val store = BackgroundStore(context)
+internal class BackgroundClientImpl(context: Context, config: BackgroundConfig) : BackgroundCollectionClient {
+    private val store = BackgroundStore(context, config)
     private val workManager = WorkManager.getInstance(context)
 
     override suspend fun enable(intervalMinutes: Long, wifiOnly: Boolean): BackgroundResult<Unit> {
@@ -38,15 +39,15 @@ internal class BackgroundClientImpl(context: Context) : BackgroundCollectionClie
         }
         return scheduleSafely {
             val settings = BackgroundCollectionSettings(true, intervalMinutes, wifiOnly)
-            store.setSettings(settings)
             schedule(settings)
+            store.setSettings(settings)
         }
     }
 
     override suspend fun disable(): BackgroundResult<Unit> = scheduleSafely {
         val current = store.settings.first()
-        store.setSettings(current.copy(enabled = false))
         cancelAll()
+        store.setSettings(current.copy(enabled = false))
     }
 
     override suspend fun enqueueRunNow(): BackgroundResult<Unit> {

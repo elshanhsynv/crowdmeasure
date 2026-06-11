@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.internal
+package com.crowdmeasure.sdk.internal
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -17,14 +17,36 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSettings
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSettingsStore
-import com.yourcompany.crowdmeasure.sdk.MeasurementStore
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.CrowdMeasureSettings
+import com.crowdmeasure.sdk.CrowdMeasureSettingsStore
+import com.crowdmeasure.sdk.MeasurementStore
+import com.crowdmeasure.sdk.IpHashSaltProvider
+import com.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.flow.first
+import java.util.UUID
+
+internal class DefaultIpHashSaltProvider(
+    context: Context,
+    preferencesName: String,
+) : IpHashSaltProvider {
+    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
+        context.preferencesDataStoreFile(preferencesName)
+    }
+    private val key = stringPreferencesKey("ip_hash_salt")
+
+    override suspend fun getSalt(): String {
+        dataStore.data.first()[key]?.takeIf(String::isNotBlank)?.let { return it }
+        val generated = UUID.randomUUID().toString()
+        dataStore.edit { preferences ->
+            if (preferences[key].isNullOrBlank()) preferences[key] = generated
+        }
+        return dataStore.data.first()[key] ?: generated
+    }
+}
 
 internal class DefaultCrowdMeasureSettingsStore(
     context: Context,
@@ -59,21 +81,25 @@ internal class DefaultCrowdMeasureSettingsStore(
 
 internal class DefaultMeasurementStore private constructor(
     private val dao: SdkMeasurementDao,
+    private val ipPrivacy: IpPrivacy,
 ) : MeasurementStore {
     override suspend fun save(measurement: Measurement) {
-        dao.upsert(measurement.toEntity())
+        dao.upsert(ipPrivacy.sanitize(measurement).toEntity())
     }
 
     override fun observeLatest(): Flow<Measurement?> =
-        dao.observeLatest().map { it?.toMeasurementOrNull() }
+        dao.observeLatest().map { it?.toMeasurementOrNull()?.let { value -> ipPrivacy.sanitize(value) } }
 
     override fun observeHistory(limit: Int): Flow<List<Measurement>> =
-        dao.observeHistory(limit).map { items -> items.mapNotNull(SdkMeasurementEntity::toMeasurementOrNull) }
+        dao.observeHistory(limit).map { items ->
+            items.mapNotNull(SdkMeasurementEntity::toMeasurementOrNull).map { ipPrivacy.sanitize(it) }
+        }
 
-    override suspend fun getById(id: String): Measurement? = dao.getById(id)?.toMeasurementOrNull()
+    override suspend fun getById(id: String): Measurement? =
+        dao.getById(id)?.toMeasurementOrNull()?.let { ipPrivacy.sanitize(it) }
 
     override suspend fun getLastN(limit: Int): List<Measurement> =
-        dao.getLastN(limit).mapNotNull(SdkMeasurementEntity::toMeasurementOrNull)
+        dao.getLastN(limit).mapNotNull(SdkMeasurementEntity::toMeasurementOrNull).map { ipPrivacy.sanitize(it) }
 
     override suspend fun deleteAll() = dao.deleteAll()
 
@@ -82,14 +108,23 @@ internal class DefaultMeasurementStore private constructor(
     override fun observePendingCount(): Flow<Int> = dao.observePendingCount()
     override fun observeFailedCount(): Flow<Int> = dao.observeFailedCount()
     override suspend fun getUploadCandidates(limit: Int): List<Measurement> =
-        dao.getUploadCandidates(limit).mapNotNull(SdkMeasurementEntity::toMeasurementOrNull)
+        dao.getUploadCandidates(limit).mapNotNull { entity ->
+            entity.toMeasurementOrNull()?.let { value ->
+                val sanitized = ipPrivacy.sanitize(value)
+                if (sanitized != value) dao.upsert(entity.copy(json = measurementJson.encodeToString(Measurement.serializer(), sanitized)))
+                sanitized
+            } ?: run {
+                dao.updateState(listOf(entity.measurementId), "FAILED")
+                null
+            }
+        }
     override suspend fun markUploaded(ids: List<String>) = dao.updateState(ids, "UPLOADED")
     override suspend fun markFailed(ids: List<String>) = dao.updateState(ids, "FAILED")
 
     companion object {
-        fun create(context: Context, databaseName: String): DefaultMeasurementStore {
+        fun create(context: Context, databaseName: String, ipHashSaltProvider: IpHashSaltProvider): DefaultMeasurementStore {
             val database = Room.databaseBuilder(context, SdkDatabase::class.java, databaseName).build()
-            return DefaultMeasurementStore(database.measurements())
+            return DefaultMeasurementStore(database.measurements(), IpPrivacy(ipHashSaltProvider))
         }
     }
 }

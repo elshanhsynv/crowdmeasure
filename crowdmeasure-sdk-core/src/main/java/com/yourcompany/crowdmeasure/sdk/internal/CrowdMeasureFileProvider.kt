@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.internal
+package com.crowdmeasure.sdk.internal
 
 import androidx.core.content.FileProvider
 

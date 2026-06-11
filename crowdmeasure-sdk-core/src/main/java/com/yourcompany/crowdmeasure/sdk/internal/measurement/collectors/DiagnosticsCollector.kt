@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors
+package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import android.app.ActivityManager
 import android.content.Context
@@ -11,8 +11,8 @@ import android.os.PowerManager
 import androidx.annotation.RequiresApi
 import androidx.annotation.WorkerThread
 import androidx.core.content.getSystemService
-import com.yourcompany.crowdmeasure.sdk.model.DeviceEnvironment
-import com.yourcompany.crowdmeasure.sdk.model.ThermalStatus
+import com.crowdmeasure.sdk.model.DeviceEnvironment
+import com.crowdmeasure.sdk.model.ThermalStatus
 
 object DiagnosticsCollector {
 

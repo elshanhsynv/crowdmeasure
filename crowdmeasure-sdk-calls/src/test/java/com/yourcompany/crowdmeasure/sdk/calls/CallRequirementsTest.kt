@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.calls
+package com.crowdmeasure.sdk.calls
 
 import org.junit.Assert.assertTrue
 import org.junit.Test

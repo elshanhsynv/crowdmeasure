@@ -1,6 +1,6 @@
-package com.yourcompany.crowdmeasure.sdk.background.internal
+package com.crowdmeasure.sdk.background.internal
 
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundWorkState
+import com.crowdmeasure.sdk.background.BackgroundWorkState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -4,6 +4,14 @@ Available
 
 ## 0.1.0 Unreleased
 
+- Adopted permanent namespace `com.crowdmeasure.sdk` and Maven group `com.crowdmeasure`.
+- Split provider contracts, WorkManager runtimes, and Firestore measurement/call implementations into dependency-minimal artifacts.
+- Removed WorkManager and the battery-optimization permission from local call sampling.
+- Added independent call-upload controls and partial measurement/call upload outcomes.
+- Replaced SDK-global Timber installation with a no-op-by-default host logger.
+- Added configurable collector and probe policies and removed unused throughput configuration.
+- Raw public IP values are now sanitized to per-install salted hashes while preserving the serialized `publicIp` field name.
+- Added Maven Local publication, sample-host Maven switching, dependency checks, and aggregate `sdkCheck`.
 - Added core manual measurement, storage, settings, requirements, export, deletion, and retention APIs.
 - Added optional WorkManager-based background collection and retention cleanup.
 - Added typed background settings/status/results and namespaced unique work.

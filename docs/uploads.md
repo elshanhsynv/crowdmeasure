@@ -9,10 +9,18 @@ val uploads = CrowdMeasureUploads.install(
     context = applicationContext,
     sdk = sdk,
     uploader = uploader,
+    config = MeasurementUploadConfig(
+        preferencesName = "crowdmeasure_sdk_upload",
+        defaultBatchSize = 50,
+        defaultIntervalMinutes = 60,
+        defaultWifiOnly = true,
+    ),
 )
 ```
 
-Installation registers the runtime but schedules nothing. Enable uploads explicitly:
+Installation registers the runtime but schedules nothing. The default preferences name preserves
+compatibility with existing SDK installations. Repeated equivalent installation is idempotent;
+conflicting installation fails with `IllegalStateException`. Enable uploads explicitly:
 
 ```kotlin
 uploads.enable(intervalMinutes = 60, wifiOnly = true)

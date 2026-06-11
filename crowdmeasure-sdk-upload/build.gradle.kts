@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.yourcompany.crowdmeasure.sdk.upload"
+    namespace = "com.crowdmeasure.sdk.upload"
     compileSdk { version = release(36) }
     defaultConfig {
         minSdk = 29
@@ -18,6 +18,7 @@ android {
 
 dependencies {
     api(project(":crowdmeasure-sdk-core"))
+    api(project(":crowdmeasure-sdk-upload-api"))
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)

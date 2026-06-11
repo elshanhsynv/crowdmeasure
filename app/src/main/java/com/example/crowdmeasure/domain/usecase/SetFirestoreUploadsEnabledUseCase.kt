@@ -1,7 +1,7 @@
 package com.example.crowdmeasure.domain.usecase
 
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadClient
+import com.crowdmeasure.sdk.upload.MeasurementUploadClient
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 

@@ -1,0 +1,5 @@
+# 0.1.0 preview public API
+com.crowdmeasure.sdk.calls.upload.CrowdMeasureCallUploads
+com.crowdmeasure.sdk.calls.upload.CallUploadClient
+com.crowdmeasure.sdk.calls.upload.CallUploadConfig
+com.crowdmeasure.sdk.calls.upload.CallUploadStatus

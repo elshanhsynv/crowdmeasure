@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.model
+package com.crowdmeasure.sdk.model
 
 import android.os.Build
 import kotlinx.serialization.Serializable

@@ -1,11 +1,12 @@
-package com.yourcompany.crowdmeasure.sdk.model
+package com.crowdmeasure.sdk.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 
 /**
  * Public-network identity snapshot derived from an IP-geolocation lookup.
  *
- * [publicIp] — SHA-256 of the raw public IP, truncated to 16 hex chars (64 bits).
+ * [publicIpHash] — a per-install salted SHA-256 hash of the raw public IP.
  *   Provides enough entropy for session correlation without exposing the IP itself.
  *
  * [ispName] — carrier/ISP name as reported by the lookup service (e.g. "AS1234 Vodafone").
@@ -16,7 +17,8 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class IpInfo(
-    val publicIp: String? = null,
+    @SerialName("publicIp")
+    val publicIpHash: String? = null,
     val ispName: String? = null,
     val asn: Int? = null,
 )

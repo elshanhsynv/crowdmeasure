@@ -1,6 +1,6 @@
 package com.example.crowdmeasure.domain.usecase
 
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.CrowdMeasureSdk
 import javax.inject.Inject
 
 class SetEndpointUrlUseCase @Inject constructor(

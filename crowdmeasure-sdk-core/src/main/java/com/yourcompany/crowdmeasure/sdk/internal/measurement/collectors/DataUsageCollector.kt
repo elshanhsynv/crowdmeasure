@@ -1,8 +1,8 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors
+package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import android.content.Context
 import android.net.TrafficStats
-import com.yourcompany.crowdmeasure.sdk.model.DataUsageInfo
+import com.crowdmeasure.sdk.model.DataUsageInfo
 
 internal object DataUsageCollector {
     private var lastRxBytes: Long? = null

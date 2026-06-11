@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.internal
+package com.crowdmeasure.sdk.internal
 
 import android.Manifest
 import android.content.Context
@@ -7,34 +7,39 @@ import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.ContextCompat
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureError
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureResult
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSettings
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSettingsStore
-import com.yourcompany.crowdmeasure.sdk.DataClient
-import com.yourcompany.crowdmeasure.sdk.MeasurementClient
-import com.yourcompany.crowdmeasure.sdk.MeasurementRequirements
-import com.yourcompany.crowdmeasure.sdk.MeasurementQueueClient
-import com.yourcompany.crowdmeasure.sdk.MeasurementQueueStatus
-import com.yourcompany.crowdmeasure.sdk.MeasurementStore
-import com.yourcompany.crowdmeasure.sdk.RequirementsClient
-import com.yourcompany.crowdmeasure.sdk.SettingsClient
-import com.yourcompany.crowdmeasure.sdk.internal.measurement.MeasurementRunner
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.CrowdMeasureError
+import com.crowdmeasure.sdk.CrowdMeasureResult
+import com.crowdmeasure.sdk.CrowdMeasureSettings
+import com.crowdmeasure.sdk.CrowdMeasureSettingsStore
+import com.crowdmeasure.sdk.CrowdMeasureConfig
+import com.crowdmeasure.sdk.IpHashSaltProvider
+import com.crowdmeasure.sdk.DataClient
+import com.crowdmeasure.sdk.MeasurementClient
+import com.crowdmeasure.sdk.MeasurementRequirements
+import com.crowdmeasure.sdk.MeasurementQueueClient
+import com.crowdmeasure.sdk.MeasurementQueueStatus
+import com.crowdmeasure.sdk.MeasurementStore
+import com.crowdmeasure.sdk.RequirementsClient
+import com.crowdmeasure.sdk.SettingsClient
+import com.crowdmeasure.sdk.internal.measurement.MeasurementRunner
+import com.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
 import java.net.URI
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 
 internal class SdkMeasurementClient(
     context: Context,
+    config: CrowdMeasureConfig,
+    ipHashSaltProvider: IpHashSaltProvider,
     private val settingsStore: CrowdMeasureSettingsStore,
     private val measurementStore: MeasurementStore,
     private val requirementsClient: RequirementsClient,
 ) : MeasurementClient {
-    private val runner = MeasurementRunner(context, settingsStore, Dispatchers.IO)
+    private val runner = MeasurementRunner(context, settingsStore, config, ipHashSaltProvider, Dispatchers.IO)
 
     override suspend fun runAndSave(): CrowdMeasureResult<Measurement> {
         val requirements = requirementsClient.evaluateManualMeasurement()
@@ -43,11 +48,14 @@ internal class SdkMeasurementClient(
         }
 
         val measurement = runner.runOnce().getOrElse {
+            if (it is CancellationException) throw it
             return CrowdMeasureResult.Failure(CrowdMeasureError.CollectionFailed(it))
         }
         return try {
             measurementStore.save(measurement)
             CrowdMeasureResult.Success(measurement)
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Exception) {
             CrowdMeasureResult.Failure(CrowdMeasureError.PersistenceFailed(error))
         }

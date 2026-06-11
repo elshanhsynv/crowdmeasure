@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors
+package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -11,7 +11,7 @@ import android.os.Looper
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
-import com.yourcompany.crowdmeasure.sdk.model.Location as CoarseLocation
+import com.crowdmeasure.sdk.model.Location as CoarseLocation
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices

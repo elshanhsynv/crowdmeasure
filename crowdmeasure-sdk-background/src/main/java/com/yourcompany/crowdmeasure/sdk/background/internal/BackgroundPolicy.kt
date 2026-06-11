@@ -1,7 +1,7 @@
-package com.yourcompany.crowdmeasure.sdk.background.internal
+package com.crowdmeasure.sdk.background.internal
 
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundWorkState
-import com.yourcompany.crowdmeasure.sdk.background.CrowdMeasureBackground
+import com.crowdmeasure.sdk.background.BackgroundWorkState
+import com.crowdmeasure.sdk.background.CrowdMeasureBackground
 import java.util.concurrent.TimeUnit
 
 internal fun isValidBackgroundInterval(intervalMinutes: Long): Boolean =

@@ -1,0 +1,7 @@
+# 0.1.0 preview public API
+com.crowdmeasure.sdk.calls.CrowdMeasureCalls
+com.crowdmeasure.sdk.calls.CallSamplingClient
+com.crowdmeasure.sdk.calls.CallSamplingConfig
+com.crowdmeasure.sdk.calls.CallSession
+com.crowdmeasure.sdk.calls.CallCellSample
+com.crowdmeasure.sdk.calls.CallUploadQueueClient

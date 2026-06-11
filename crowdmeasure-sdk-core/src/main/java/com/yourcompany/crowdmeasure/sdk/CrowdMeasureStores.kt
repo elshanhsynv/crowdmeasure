@@ -1,6 +1,6 @@
-package com.yourcompany.crowdmeasure.sdk
+package com.crowdmeasure.sdk
 
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.flow.Flow
 
 interface MeasurementStore {

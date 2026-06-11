@@ -11,11 +11,11 @@ import com.example.crowdmeasure.domain.usecase.ExportCallSessionsUseCase
 import com.example.crowdmeasure.domain.usecase.ExportMeasurementsUseCase
 import com.example.crowdmeasure.domain.usecase.SetEndpointUrlUseCase
 import com.example.crowdmeasure.presentation.util.UiState
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionClient
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionStatus
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadClient
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadStatus
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.background.BackgroundCollectionClient
+import com.crowdmeasure.sdk.background.BackgroundCollectionStatus
+import com.crowdmeasure.sdk.upload.MeasurementUploadClient
+import com.crowdmeasure.sdk.upload.MeasurementUploadStatus
+import com.crowdmeasure.sdk.calls.CallSamplingClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

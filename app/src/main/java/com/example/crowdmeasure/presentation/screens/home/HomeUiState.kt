@@ -1,12 +1,12 @@
 package com.example.crowdmeasure.presentation.screens.home
 
 import androidx.compose.runtime.Immutable
-import com.yourcompany.crowdmeasure.sdk.model.CellInfo
-import com.yourcompany.crowdmeasure.sdk.model.DeviceEnvironment
-import com.yourcompany.crowdmeasure.sdk.model.EnvironmentInfo
-import com.yourcompany.crowdmeasure.sdk.model.Meta
-import com.yourcompany.crowdmeasure.sdk.model.PerformanceInfo
-import com.yourcompany.crowdmeasure.sdk.model.WifiInfo
+import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.DeviceEnvironment
+import com.crowdmeasure.sdk.model.EnvironmentInfo
+import com.crowdmeasure.sdk.model.Meta
+import com.crowdmeasure.sdk.model.PerformanceInfo
+import com.crowdmeasure.sdk.model.WifiInfo
 import com.example.crowdmeasure.presentation.util.UiState
 
 @Immutable

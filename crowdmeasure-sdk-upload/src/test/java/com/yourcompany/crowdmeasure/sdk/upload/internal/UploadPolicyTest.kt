@@ -1,7 +1,7 @@
-package com.yourcompany.crowdmeasure.sdk.upload.internal
+package com.crowdmeasure.sdk.upload.internal
 
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadError
-import com.yourcompany.crowdmeasure.sdk.upload.UploadRunCode
+import com.crowdmeasure.sdk.upload.MeasurementUploadError
+import com.crowdmeasure.sdk.upload.UploadRunCode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

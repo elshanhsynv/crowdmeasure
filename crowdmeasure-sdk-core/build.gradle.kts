@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.yourcompany.crowdmeasure.sdk"
+    namespace = "com.crowdmeasure.sdk"
     compileSdk {
         version = release(36)
     }
@@ -36,7 +36,6 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.timber)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

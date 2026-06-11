@@ -1,10 +1,10 @@
-package com.yourcompany.crowdmeasure.sdk.upload.internal
+package com.crowdmeasure.sdk.upload.internal
 
 import android.content.Context
 import androidx.work.*
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureResult
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
-import com.yourcompany.crowdmeasure.sdk.upload.*
+import com.crowdmeasure.sdk.CrowdMeasureResult
+import com.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.upload.*
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -12,7 +12,7 @@ import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
 
 internal object UploadWorkNames {
-    const val PREFIX = "com.yourcompany.crowdmeasure.sdk.upload"
+    const val PREFIX = "com.crowdmeasure.sdk.upload"
     const val PERIODIC = "$PREFIX.periodic"
     const val IMMEDIATE = "$PREFIX.immediate"
     const val TAG = "$PREFIX.owned"
@@ -21,8 +21,9 @@ internal object UploadWorkNames {
 internal class MeasurementUploadClientImpl(
     context: Context,
     private val sdk: CrowdMeasureSdk,
+    private val config: MeasurementUploadConfig,
 ) : MeasurementUploadClient {
-    private val store = UploadStore(context)
+    private val store = UploadStore(context, config)
     private val workManager = WorkManager.getInstance(context)
 
     override suspend fun enable(intervalMinutes: Long, wifiOnly: Boolean): MeasurementUploadResult<Unit> {
@@ -31,14 +32,14 @@ internal class MeasurementUploadClientImpl(
         }
         return scheduling {
             val settings = MeasurementUploadSettings(true, intervalMinutes, wifiOnly)
-            store.setSettings(settings)
             schedule(settings)
+            store.setSettings(settings)
         }
     }
 
     override suspend fun disable(): MeasurementUploadResult<Unit> = scheduling {
-        store.setSettings(store.settings.first().copy(enabled = false))
         cancel()
+        store.setSettings(store.settings.first().copy(enabled = false))
     }
 
     override suspend fun uploadNow(limit: Int): MeasurementUploadResult<Int> {
@@ -142,11 +143,25 @@ internal suspend fun executeUpload(
     val items = candidates.map { MeasurementUploadItem(it, installId) }
     return when (val result = runtime.uploader.upload(items)) {
         is MeasurementUploaderResult.Success -> {
-            val ids = result.result.uploadedIds
-            when (val persisted = runtime.sdk.queue.markUploaded(ids)) {
+            val uploadedIds = result.result.uploadedIds.toList()
+            val rejectedIds = result.result.rejectedIds.toList()
+            val knownIds = candidates.map { it.meta.measurementId }.toSet()
+            val returnedIds = result.result.uploadedIds + result.result.retryableIds + result.result.rejectedIds
+            if (!knownIds.containsAll(returnedIds)) {
+                return finishFailure(
+                    store,
+                    UploadRunCode.BACKEND_REJECTED,
+                    MeasurementUploadError.BackendRejected(
+                        IllegalArgumentException("Uploader returned IDs outside the requested batch")
+                    ),
+                )
+            }
+            when (val persisted = runtime.sdk.queue.markUploaded(uploadedIds)) {
                 is CrowdMeasureResult.Success -> {
-                    store.record(UploadRun(System.currentTimeMillis(), UploadRunOutcome.SUCCESS, UploadRunCode.OK, ids.size))
-                    MeasurementUploadResult.Success(ids.size)
+                    if (rejectedIds.isNotEmpty()) runtime.sdk.queue.markFailed(rejectedIds)
+                    val outcome = if (result.result.retryableIds.isEmpty()) UploadRunOutcome.SUCCESS else UploadRunOutcome.RETRYING
+                    store.record(UploadRun(System.currentTimeMillis(), outcome, UploadRunCode.OK, uploadedIds.size))
+                    MeasurementUploadResult.Success(uploadedIds.size)
                 }
                 is CrowdMeasureResult.Failure -> finishFailure(
                     store, UploadRunCode.PERSISTENCE_FAILED, MeasurementUploadError.PersistenceFailure()

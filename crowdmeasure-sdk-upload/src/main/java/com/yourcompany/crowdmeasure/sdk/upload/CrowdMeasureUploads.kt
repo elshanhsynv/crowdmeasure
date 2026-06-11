@@ -1,10 +1,10 @@
-package com.yourcompany.crowdmeasure.sdk.upload
+package com.crowdmeasure.sdk.upload
 
 import android.content.Context
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
-import com.yourcompany.crowdmeasure.sdk.upload.internal.DefaultInstallationIdProvider
-import com.yourcompany.crowdmeasure.sdk.upload.internal.MeasurementUploadClientImpl
-import com.yourcompany.crowdmeasure.sdk.upload.internal.UploadRuntime
+import com.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.upload.internal.DefaultInstallationIdProvider
+import com.crowdmeasure.sdk.upload.internal.MeasurementUploadClientImpl
+import com.crowdmeasure.sdk.upload.internal.UploadRuntime
 
 object CrowdMeasureUploads {
     const val MIN_INTERVAL_MINUTES = 20L
@@ -16,13 +16,15 @@ object CrowdMeasureUploads {
         sdk: CrowdMeasureSdk,
         uploader: MeasurementUploader,
         installationIdProvider: InstallationIdProvider? = null,
+        config: MeasurementUploadConfig = MeasurementUploadConfig(),
     ): MeasurementUploadClient {
         val appContext = context.applicationContext
         UploadRuntime.install(
             sdk,
             uploader,
-            installationIdProvider ?: DefaultInstallationIdProvider(appContext),
+            installationIdProvider ?: DefaultInstallationIdProvider(appContext, config.preferencesName),
+            config,
         )
-        return MeasurementUploadClientImpl(appContext, sdk)
+        return MeasurementUploadClientImpl(appContext, sdk, config)
     }
 }

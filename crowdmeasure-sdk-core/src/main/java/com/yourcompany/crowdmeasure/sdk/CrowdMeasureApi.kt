@@ -1,8 +1,8 @@
-package com.yourcompany.crowdmeasure.sdk
+package com.crowdmeasure.sdk
 
 import android.net.Uri
-import com.yourcompany.crowdmeasure.sdk.model.CellInfo
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.flow.Flow
 
 data class CrowdMeasureConfig(
@@ -10,8 +10,51 @@ data class CrowdMeasureConfig(
     val preferencesName: String = "crowdmeasure_sdk_preferences",
     val defaultEndpointUrl: String = "https://www.google.com/",
     val defaultRetentionDays: Int = 7,
-    val loggingEnabled: Boolean = false,
+    val collectors: CollectorConfig = CollectorConfig(),
+    val publicIpPolicy: PublicIpPolicy = PublicIpPolicy.HASHED,
+    val performanceProbe: PerformanceProbeConfig = PerformanceProbeConfig(),
+    val logger: CrowdMeasureLogger = CrowdMeasureLogger.NONE,
+    val ipHashSaltProvider: IpHashSaltProvider? = null,
 )
+
+data class CollectorConfig(
+    val locationEnabled: Boolean = true,
+    val wifiEnabled: Boolean = true,
+    val cellularEnabled: Boolean = true,
+    val publicIpEnabled: Boolean = true,
+    val performanceEnabled: Boolean = true,
+)
+
+data class PerformanceProbeConfig(
+    val attempts: Int = 8,
+    val timeoutMs: Long = 10_000,
+) {
+    init {
+        require(attempts in 1..50) { "attempts must be between 1 and 50" }
+        require(timeoutMs in 1_000..120_000) { "timeoutMs must be between 1 and 120000" }
+    }
+}
+
+enum class PublicIpPolicy { HASHED, DISABLED }
+
+fun interface IpHashSaltProvider {
+    suspend fun getSalt(): String
+}
+
+fun interface CrowdMeasureLogger {
+    fun log(level: Level, message: String, error: Throwable?)
+
+    enum class Level { DEBUG, INFO, WARN, ERROR }
+
+    companion object {
+        val NONE = CrowdMeasureLogger { _, _, _ -> }
+    }
+}
+
+sealed interface SdkResult<out T, out E> {
+    data class Success<T>(val value: T) : SdkResult<T, Nothing>
+    data class Failure<E>(val error: E) : SdkResult<Nothing, E>
+}
 
 data class CrowdMeasureSettings(
     val endpointUrl: String,

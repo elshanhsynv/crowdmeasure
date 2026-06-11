@@ -1,0 +1,5 @@
+# 0.1.0 preview public API
+com.crowdmeasure.sdk.upload.MeasurementUploader
+com.crowdmeasure.sdk.upload.MeasurementUploadItem
+com.crowdmeasure.sdk.upload.UploadBatchResult
+com.crowdmeasure.sdk.upload.InstallationIdProvider

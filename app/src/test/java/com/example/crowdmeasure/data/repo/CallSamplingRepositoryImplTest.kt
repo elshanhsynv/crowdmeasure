@@ -3,12 +3,12 @@ package com.example.crowdmeasure.data.repo
 import com.example.crowdmeasure.data.db.CallCellSampleEntity
 import com.example.crowdmeasure.data.db.CallSamplingDao
 import com.example.crowdmeasure.data.db.CallSessionEntity
-import com.yourcompany.crowdmeasure.sdk.model.CarrierInfo
-import com.yourcompany.crowdmeasure.sdk.model.CellInfo
-import com.yourcompany.crowdmeasure.sdk.model.CellRadioSnapshot
+import com.crowdmeasure.sdk.model.CarrierInfo
+import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.CellRadioSnapshot
 import com.example.crowdmeasure.domain.model.CallSource
 import com.example.crowdmeasure.domain.model.CallType
-import com.yourcompany.crowdmeasure.sdk.model.NrState
+import com.crowdmeasure.sdk.model.NrState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

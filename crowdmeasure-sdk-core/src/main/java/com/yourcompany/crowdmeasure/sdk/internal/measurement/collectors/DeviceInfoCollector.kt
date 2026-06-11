@@ -1,8 +1,7 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.collectors
+package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import android.os.Build
-import com.yourcompany.crowdmeasure.sdk.model.DeviceInfo
-import timber.log.Timber
+import com.crowdmeasure.sdk.model.DeviceInfo
 
 object DeviceInfoCollector {
 
@@ -32,7 +31,6 @@ object DeviceInfoCollector {
             chipset = chipset,
             chipsetManufacturer = chipsetManufacturer
         )
-        Timber.tag("DeviceCollector").d("Collected DeviceInfo: %s", deviceInfo)
         return deviceInfo
     }
 }

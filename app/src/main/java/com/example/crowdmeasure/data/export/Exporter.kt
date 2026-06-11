@@ -6,8 +6,8 @@ import androidx.core.content.FileProvider
 import com.example.crowdmeasure.domain.model.CallCellSample
 import com.example.crowdmeasure.domain.model.CallSession
 import com.example.crowdmeasure.domain.model.CallSessionExport
-import com.yourcompany.crowdmeasure.sdk.model.CarrierInfo
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.model.CarrierInfo
+import com.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray

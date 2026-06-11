@@ -1,9 +1,9 @@
-package com.yourcompany.crowdmeasure.sdk.calls.internal
+package com.crowdmeasure.sdk.calls.internal
 
 import android.content.Context
 import androidx.room.*
-import com.yourcompany.crowdmeasure.sdk.calls.*
-import com.yourcompany.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.calls.*
+import com.crowdmeasure.sdk.model.CellInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map

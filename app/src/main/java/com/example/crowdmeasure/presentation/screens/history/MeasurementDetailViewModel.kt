@@ -2,8 +2,8 @@ package com.example.crowdmeasure.presentation.screens.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.yourcompany.crowdmeasure.sdk.model.CarrierInfo
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.model.CarrierInfo
+import com.crowdmeasure.sdk.model.Measurement
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.presentation.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -225,7 +225,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     // IP info
     val ipUi = environment.network.ip.let { i ->
         buildList {
-            add("Public IP" to i.publicIp.toString())
+            add("Public IP hash" to i.publicIpHash.toString())
             add("ISP" to i.ispName.toString())
             add("ASN" to i.asn.toString())
         }.takeIf { it.isNotEmpty() }

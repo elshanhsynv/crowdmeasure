@@ -1,20 +1,24 @@
 package com.yourcompany.crowdmeasure.sample
 
 import android.app.Application
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureConfig
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
-import com.yourcompany.crowdmeasure.sdk.background.BackgroundCollectionClient
-import com.yourcompany.crowdmeasure.sdk.background.CrowdMeasureBackground
+import com.crowdmeasure.sdk.CrowdMeasureConfig
+import com.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.background.BackgroundCollectionClient
+import com.crowdmeasure.sdk.background.CrowdMeasureBackground
 import com.google.firebase.firestore.FirebaseFirestore
-import com.yourcompany.crowdmeasure.sdk.firestore.CrowdMeasureFirestore
-import com.yourcompany.crowdmeasure.sdk.upload.CrowdMeasureUploads
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadClient
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadError
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploader
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploaderResult
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingConfig
-import com.yourcompany.crowdmeasure.sdk.calls.CrowdMeasureCalls
+import com.crowdmeasure.sdk.firestore.measurements.CrowdMeasureFirestoreMeasurements
+import com.crowdmeasure.sdk.firestore.calls.CrowdMeasureFirestoreCalls
+import com.crowdmeasure.sdk.upload.CrowdMeasureUploads
+import com.crowdmeasure.sdk.upload.MeasurementUploadClient
+import com.crowdmeasure.sdk.upload.MeasurementUploadError
+import com.crowdmeasure.sdk.upload.MeasurementUploader
+import com.crowdmeasure.sdk.upload.MeasurementUploaderResult
+import com.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.calls.CallSamplingConfig
+import com.crowdmeasure.sdk.calls.CrowdMeasureCalls
+import com.crowdmeasure.sdk.calls.upload.CallUploadClient
+import com.crowdmeasure.sdk.calls.upload.CallUploadConfig
+import com.crowdmeasure.sdk.calls.upload.CrowdMeasureCallUploads
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,13 +33,15 @@ class SampleApplication : Application() {
         private set
     lateinit var calls: CallSamplingClient
         private set
+    lateinit var callUploads: CallUploadClient
+        private set
 
     override fun onCreate() {
         super.onCreate()
-        sdk = CrowdMeasureSdk.create(this, CrowdMeasureConfig(loggingEnabled = true))
+        sdk = CrowdMeasureSdk.create(this)
         background = CrowdMeasureBackground.install(this, sdk)
         val uploader = runCatching {
-            CrowdMeasureFirestore.create(FirebaseFirestore.getInstance())
+            CrowdMeasureFirestoreMeasurements.create(FirebaseFirestore.getInstance())
         }.getOrElse { initError ->
             MeasurementUploader { _ ->
                 MeasurementUploaderResult.Failure(MeasurementUploadError.BackendRejected(initError))
@@ -48,8 +54,13 @@ class SampleApplication : Application() {
             config = CallSamplingConfig(
                 notificationIconResId = R.drawable.crowdmeasure_sample_notification,
             ),
-            uploader = runCatching { CrowdMeasureFirestore.createCallUploader(FirebaseFirestore.getInstance()) }
-                .getOrNull(),
+        )
+        callUploads = CrowdMeasureCallUploads.install(
+            this,
+            calls,
+            CallUploadConfig(
+                uploader = CrowdMeasureFirestoreCalls.create(FirebaseFirestore.getInstance()),
+            ),
         )
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             calls.activateEnabledFeatures()

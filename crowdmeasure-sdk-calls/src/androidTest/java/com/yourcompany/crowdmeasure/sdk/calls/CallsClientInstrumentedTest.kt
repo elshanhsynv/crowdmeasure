@@ -1,9 +1,9 @@
-package com.yourcompany.crowdmeasure.sdk.calls
+package com.crowdmeasure.sdk.calls
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.CrowdMeasureSdk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse

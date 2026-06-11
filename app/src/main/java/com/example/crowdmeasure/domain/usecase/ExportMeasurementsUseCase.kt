@@ -1,8 +1,8 @@
 package com.example.crowdmeasure.domain.usecase
 
 import android.net.Uri
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureResult
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.CrowdMeasureResult
+import com.crowdmeasure.sdk.CrowdMeasureSdk
 import javax.inject.Inject
 
 class ExportMeasurementsUseCase @Inject constructor(

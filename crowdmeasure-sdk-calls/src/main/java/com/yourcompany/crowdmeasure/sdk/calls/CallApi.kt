@@ -1,12 +1,12 @@
-package com.yourcompany.crowdmeasure.sdk.calls
+package com.crowdmeasure.sdk.calls
 
 import android.net.Uri
-import com.yourcompany.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.CellInfo
 import kotlinx.coroutines.flow.Flow
 
 data class CallSamplingConfig(
     val databaseName: String = "crowdmeasure_calls.db",
-    val preferencesName: String = "crowdmeasure_calls_preferences",
+    val preferencesName: String = "crowdmeasure_sdk_calls",
     val notificationIconResId: Int,
     val notificationChannelName: String = "Call cell sampling",
     val notificationTitle: String = "Measuring signal quality",
@@ -18,9 +18,6 @@ data class CallSamplingConfig(
 data class CallSamplingSettings(
     val cellularEnabled: Boolean = false,
     val voipEnabled: Boolean = false,
-    val uploadsEnabled: Boolean = false,
-    val uploadIntervalMinutes: Long = 60,
-    val uploadWifiOnly: Boolean = true,
 )
 
 data class CallSamplingRequirements(
@@ -43,13 +40,11 @@ data class CallSamplingStatus(
     val activeSession: CallSession?,
     val voipMonitorActive: Boolean,
     val lastMissedStart: MissedCallStart?,
-    val uploadWorkState: CallUploadWorkState,
 )
 
 enum class CallType { INCOMING, OUTGOING, UNKNOWN }
 enum class CallSource { CELLULAR, WHATSAPP_VOICE, WHATSAPP_VIDEO, WHATSAPP_UNKNOWN, VOIP_GENERIC, UNKNOWN }
 enum class CallUploadState { PENDING, UPLOADED, FAILED }
-enum class CallUploadWorkState { DISABLED, ENQUEUED, RUNNING, BLOCKED, SUCCEEDED, FAILED, CANCELLED, UNKNOWN }
 enum class CallRunCode {
     OK, DISABLED, NOT_INSTALLED, MISSING_PHONE_STATE, MISSING_FINE_LOCATION,
     MISSING_BACKGROUND_LOCATION, LOCATION_SERVICES_DISABLED, MISSING_NOTIFICATIONS,
@@ -89,7 +84,11 @@ data class CallCellSample(
 
 data class CallSessionExport(val session: CallSession, val samples: List<CallCellSample>)
 data class CallUploadItem(val session: CallSession, val samples: List<CallCellSample>, val installId: String, val deviceModel: String)
-data class CallUploadBatchResult(val uploadedSessionIds: List<String>)
+data class CallUploadBatchResult(
+    val uploadedSessionIds: Set<String> = emptySet(),
+    val retryableSessionIds: Set<String> = emptySet(),
+    val rejectedSessionIds: Set<String> = emptySet(),
+)
 
 sealed interface CallUploaderResult {
     data class Success(val result: CallUploadBatchResult) : CallUploaderResult
@@ -141,9 +140,13 @@ interface CallSamplingClient {
     fun observeStatus(): Flow<CallSamplingStatus>
     fun observeSessions(limit: Int = 50): Flow<List<CallSession>>
     fun observeSamples(sessionId: String): Flow<List<CallCellSample>>
-    suspend fun setUploadsEnabled(enabled: Boolean, intervalMinutes: Long = 60, wifiOnly: Boolean = true): CallSamplingResult<Unit>
-    suspend fun uploadPending(limit: Int = 50): CallSamplingResult<Int>
-    suspend fun enqueueUploadNow(): CallSamplingResult<Unit>
     suspend fun exportSessions(lastN: Int = 100): CallSamplingResult<Uri>
     suspend fun deleteAll(): CallSamplingResult<Unit>
+    val uploadQueue: CallUploadQueueClient
+}
+
+interface CallUploadQueueClient {
+    suspend fun getCandidates(limit: Int = 50): List<CallSessionExport>
+    suspend fun markUploaded(sessionIds: List<String>): CallSamplingResult<Unit>
+    suspend fun markFailed(sessionIds: List<String>): CallSamplingResult<Unit>
 }

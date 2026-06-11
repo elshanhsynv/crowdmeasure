@@ -4,11 +4,11 @@ import com.example.crowdmeasure.data.db.Converters
 import com.example.crowdmeasure.data.db.MeasurementDao
 import com.example.crowdmeasure.data.db.MeasurementEntity
 import com.example.crowdmeasure.data.prefs.AppPreferences
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSettings
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSettingsStore
-import com.yourcompany.crowdmeasure.sdk.MeasurementStore
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
-import com.yourcompany.crowdmeasure.sdk.model.RecordState
+import com.crowdmeasure.sdk.CrowdMeasureSettings
+import com.crowdmeasure.sdk.CrowdMeasureSettingsStore
+import com.crowdmeasure.sdk.MeasurementStore
+import com.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.model.RecordState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map

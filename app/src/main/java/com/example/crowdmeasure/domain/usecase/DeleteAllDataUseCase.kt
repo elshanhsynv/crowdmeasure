@@ -1,9 +1,9 @@
 package com.example.crowdmeasure.domain.usecase
 
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureResult
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureSdk
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingClient
-import com.yourcompany.crowdmeasure.sdk.calls.CallSamplingResult
+import com.crowdmeasure.sdk.CrowdMeasureResult
+import com.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.calls.CallSamplingResult
 import javax.inject.Inject
 
 class DeleteAllDataUseCase @Inject constructor(

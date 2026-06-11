@@ -1,11 +1,11 @@
-package com.yourcompany.crowdmeasure.sdk.internal
+package com.crowdmeasure.sdk.internal
 
 import android.content.Context
 import android.net.Uri
 import androidx.core.content.FileProvider
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureError
-import com.yourcompany.crowdmeasure.sdk.CrowdMeasureResult
-import com.yourcompany.crowdmeasure.sdk.model.Measurement
+import com.crowdmeasure.sdk.CrowdMeasureError
+import com.crowdmeasure.sdk.CrowdMeasureResult
+import com.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString

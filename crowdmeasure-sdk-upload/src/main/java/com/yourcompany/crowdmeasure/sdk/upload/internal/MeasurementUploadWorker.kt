@@ -1,14 +1,14 @@
-package com.yourcompany.crowdmeasure.sdk.upload.internal
+package com.crowdmeasure.sdk.upload.internal
 
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadError
-import com.yourcompany.crowdmeasure.sdk.upload.MeasurementUploadResult
-import com.yourcompany.crowdmeasure.sdk.upload.UploadRun
-import com.yourcompany.crowdmeasure.sdk.upload.UploadRunCode
-import com.yourcompany.crowdmeasure.sdk.upload.UploadRunOutcome
+import com.crowdmeasure.sdk.upload.MeasurementUploadError
+import com.crowdmeasure.sdk.upload.MeasurementUploadResult
+import com.crowdmeasure.sdk.upload.UploadRun
+import com.crowdmeasure.sdk.upload.UploadRunCode
+import com.crowdmeasure.sdk.upload.UploadRunOutcome
 import kotlinx.coroutines.flow.first
 
 internal class MeasurementUploadWorker(
@@ -16,7 +16,8 @@ internal class MeasurementUploadWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        val store = UploadStore(applicationContext)
+        val config = UploadRuntime.get()?.config ?: com.crowdmeasure.sdk.upload.MeasurementUploadConfig()
+        val store = UploadStore(applicationContext, config)
         if (!store.settings.first().enabled) {
             store.record(UploadRun(System.currentTimeMillis(), UploadRunOutcome.SKIPPED, UploadRunCode.DISABLED, 0))
             return Result.success()
@@ -29,7 +30,7 @@ internal class MeasurementUploadWorker(
             return Result.success()
         }
         return try {
-            when (val result = executeUpload(runtime, store, 50)) {
+            when (val result = executeUpload(runtime, store, runtime.config.defaultBatchSize)) {
                 is MeasurementUploadResult.Success -> Result.success()
                 is MeasurementUploadResult.Failure -> when (result.error) {
                     is MeasurementUploadError.TransientFailure -> Result.retry()
@@ -42,6 +43,6 @@ internal class MeasurementUploadWorker(
     }
 
     companion object {
-        const val KEY_CODE = "com.yourcompany.crowdmeasure.sdk.upload.code"
+        const val KEY_CODE = "com.crowdmeasure.sdk.upload.code"
     }
 }

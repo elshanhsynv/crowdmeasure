@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sdk.internal.measurement.net
+package com.crowdmeasure.sdk.internal.measurement.net
 
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
