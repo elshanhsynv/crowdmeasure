@@ -1,3 +1,0 @@
-com.yourcompany.crowdmeasure.sample
-drawable crowdmeasure_sample_notification
-style AppTheme

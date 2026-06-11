@@ -17,6 +17,8 @@ local.properties
 # Build outputs
 build/
 **/build/
+*/build
+
 
 # Native build
 .externalNativeBuild/
