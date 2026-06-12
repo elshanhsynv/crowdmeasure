@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import com.crowdmeasure.sdk.calls.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
@@ -62,7 +63,7 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
     override fun observeRequirements(): Flow<CallSamplingRequirements> = flow {
         while (true) {
             emit(context.requirements())
-            kotlinx.coroutines.delay(2_000)
+            delay(2_000)
         }
     }.distinctUntilChanged()
 
@@ -98,6 +99,10 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
     override fun observeSamples(sessionId: String) =
         runtime()?.store?.observeSamples(sessionId) ?: flowOf(emptyList())
 
+    private val jsonP: Json by lazy {
+        Json { prettyPrint = true }
+    }
+
     override suspend fun exportSessions(lastN: Int): CallSamplingResult<Uri> {
         val rt = runtime() ?: return CallSamplingResult.Failure(CallSamplingError.NotInstalled)
         return try {
@@ -105,9 +110,13 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
             val dir = File(context.cacheDir, "crowdmeasure-call-exports").apply { mkdirs() }
             val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val file = File(dir, "crowdmeasure_call_sessions_$stamp.json")
-            file.writeText(Json { prettyPrint = true }.encodeToString(JsonObject.serializer(), callExportJson(sessions)))
+            file.writeText(jsonP.encodeToString(JsonObject.serializer(), callExportJson(sessions)))
             CallSamplingResult.Success(
-                FileProvider.getUriForFile(context, "${context.packageName}.crowdmeasure-calls.fileprovider", file)
+                FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.crowdmeasure-calls.fileprovider",
+                    file
+                )
             )
         } catch (error: CancellationException) {
             throw error
