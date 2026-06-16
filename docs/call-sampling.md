@@ -15,7 +15,7 @@ val calls = CrowdMeasureCalls.install(
 
 Installation starts nothing. Persisted enabled features are restored only after the host calls `activateEnabledFeatures()` during application startup.
 
-Cellular sampling uses phone-state events. Generic VoIP sampling observes Android audio communication mode on a best-effort basis. Both collect cellular snapshots in a foreground location service. Battery-optimization exemption improves reliability but is not a start requirement.
+Cellular sampling uses phone-state events. Generic VoIP sampling observes Android audio communication mode on a best-effort basis. Both collect cellular and best-effort location snapshots in a foreground location service. Location is omitted from an individual sample when no fix is available. Battery-optimization exemption improves reliability but is not a start requirement.
 
 Call uploads have independent enabled, interval, and Wi-Fi-only settings. Default storage is `crowdmeasure_calls.db`; existing apps can provide a `CallStore`.
 

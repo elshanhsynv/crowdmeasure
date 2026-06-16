@@ -6,4 +6,5 @@ com.crowdmeasure.sdk.MeasurementClient
 com.crowdmeasure.sdk.DataClient
 com.crowdmeasure.sdk.SettingsClient
 com.crowdmeasure.sdk.RequirementsClient
+com.crowdmeasure.sdk.LocationSnapshotClient
 com.crowdmeasure.sdk.model.Measurement

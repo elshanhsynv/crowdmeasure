@@ -4,6 +4,7 @@ Available
 
 ## 0.1.0 Unreleased
 
+- Added optional location snapshots to cellular and generic VoIP call samples without changing existing database schemas.
 - Adopted permanent namespace `com.crowdmeasure.sdk` and Maven group `com.crowdmeasure`.
 - Split provider contracts, WorkManager runtimes, and Firestore measurement/call implementations into dependency-minimal artifacts.
 - Removed WorkManager and the battery-optimization permission from local call sampling.

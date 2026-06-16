@@ -2,6 +2,7 @@ package com.crowdmeasure.sdk
 
 import android.net.Uri
 import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.Location
 import com.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.flow.Flow
 
@@ -109,6 +110,10 @@ interface RequirementsClient {
 
 fun interface CellularSnapshotClient {
     suspend fun collect(): CellInfo
+}
+
+fun interface LocationSnapshotClient {
+    suspend fun collect(): Location?
 }
 
 data class MeasurementQueueStatus(

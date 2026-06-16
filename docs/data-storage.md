@@ -8,4 +8,4 @@ Existing apps can preserve their database and settings by supplying `Measurement
 
 Measurements are saved as pending upload records. The optional upload module marks successful records uploaded and permanent failures failed. Both pending and failed records remain observable through the queue API.
 
-Calls use `crowdmeasure_calls.db` and a calls-specific DataStore by default. Supply `CallStore` to preserve an existing schema, as the CrowdMeasure app does for its version-4 shared database.
+Calls use `crowdmeasure_calls.db` and a calls-specific DataStore by default. Each call sample stores cellular data and an optional location snapshot. Supply `CallStore` to preserve an existing schema, as the CrowdMeasure app does for its version-4 shared database.

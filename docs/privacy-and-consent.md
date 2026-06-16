@@ -8,4 +8,4 @@ Raw public IP addresses are never exposed, exported, or uploaded. The default po
 
 Consent UI, consent records, permission explanations, runtime permission requests, privacy-policy presentation, and deciding when uploads may be enabled are host-app responsibilities.
 
-Call sampling collects cellular snapshots during cellular and generic VoIP calls. Hosts must disclose and explicitly enable it. The SDK does not inspect call audio or include WhatsApp notification-listener detection.
+Call sampling collects cellular and best-effort location snapshots during cellular and generic VoIP calls. Hosts must disclose and explicitly enable it. The SDK does not inspect call audio or include WhatsApp notification-listener detection.

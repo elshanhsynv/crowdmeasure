@@ -2,6 +2,7 @@ package com.crowdmeasure.sdk.calls
 
 import android.net.Uri
 import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.Location
 import kotlinx.coroutines.flow.Flow
 
 data class CallSamplingConfig(
@@ -80,6 +81,7 @@ data class CallCellSample(
     val pci: Int?,
     val tac: Int?,
     val band: Int?,
+    val location: Location? = null,
 )
 
 data class CallSessionExport(val session: CallSession, val samples: List<CallCellSample>)
@@ -117,7 +119,13 @@ sealed interface CallSamplingError {
 interface CallStore {
     suspend fun getActiveSession(): CallSession?
     suspend fun startSession(callType: CallType, callSource: CallSource, intervalSeconds: Int): CallSession
-    suspend fun insertSample(sessionId: String, sampledAtUtcMs: Long, elapsedMs: Long, cellInfo: CellInfo)
+    suspend fun insertSample(
+        sessionId: String,
+        sampledAtUtcMs: Long,
+        elapsedMs: Long,
+        cellInfo: CellInfo,
+        location: Location? = null,
+    )
     suspend fun finishSession(sessionId: String, endedAtUtcMs: Long, endReason: String)
     suspend fun finishActiveSession(endedAtUtcMs: Long, endReason: String)
     suspend fun reclassifySession(sessionId: String, callType: CallType, callSource: CallSource)

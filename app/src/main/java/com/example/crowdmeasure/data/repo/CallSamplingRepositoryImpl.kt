@@ -10,6 +10,7 @@ import com.example.crowdmeasure.domain.model.CallSessionExport
 import com.example.crowdmeasure.domain.model.CallSource
 import com.example.crowdmeasure.domain.model.CallType
 import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.Location
 import com.crowdmeasure.sdk.calls.CallStore
 import com.crowdmeasure.sdk.calls.CallUploadState
 import kotlinx.coroutines.CoroutineDispatcher
@@ -18,7 +19,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.Serializable
 import java.util.UUID
+
+@Serializable
+private data class StoredCallSample(
+    val cell: CellInfo,
+    val location: Location? = null,
+)
 
 class CallSamplingRepositoryImpl(
     private val dao: CallSamplingDao,
@@ -65,7 +73,8 @@ class CallSamplingRepositoryImpl(
         sessionId: String,
         sampledAtUtcMs: Long,
         elapsedMs: Long,
-        cellInfo: CellInfo
+        cellInfo: CellInfo,
+        location: Location?,
     ) = withContext(io) {
         val serving = cellInfo.serving
         dao.insertSampleAndIncrement(
@@ -73,7 +82,7 @@ class CallSamplingRepositoryImpl(
                 sessionId = sessionId,
                 sampledAtUtcMs = sampledAtUtcMs,
                 elapsedMs = elapsedMs,
-                cellJson = Converters.json.encodeToString(cellInfo),
+                cellJson = Converters.json.encodeToString(StoredCallSample(cellInfo, location)),
                 rat = cellInfo.rat,
                 nrState = cellInfo.nrState.name,
                 dbm = serving?.dbm,
@@ -184,12 +193,13 @@ class CallSamplingRepositoryImpl(
 
     private fun CallCellSampleEntity.toDomainOrNull(): CallCellSample? =
         runCatching {
+            val stored = decodeStoredSample(cellJson)
             CallCellSample(
                 id = id,
                 sessionId = sessionId,
                 sampledAtUtcMs = sampledAtUtcMs,
                 elapsedMs = elapsedMs,
-                cell = Converters.json.decodeFromString(CellInfo.serializer(), cellJson),
+                cell = stored.cell,
                 rat = rat,
                 nrState = nrState,
                 dbm = dbm,
@@ -198,7 +208,14 @@ class CallSamplingRepositoryImpl(
                 sinrDb = sinrDb,
                 pci = pci,
                 tac = tac,
-                band = band
+                band = band,
+                location = stored.location,
             )
         }.getOrNull()
+
+    private fun decodeStoredSample(value: String): StoredCallSample =
+        runCatching { Converters.json.decodeFromString(StoredCallSample.serializer(), value) }
+            .getOrElse {
+                StoredCallSample(Converters.json.decodeFromString(CellInfo.serializer(), value))
+            }
 }

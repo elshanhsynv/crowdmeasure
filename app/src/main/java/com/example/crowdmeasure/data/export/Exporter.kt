@@ -346,6 +346,13 @@ class Exporter(
         putOpt("pci", sample.pci)
         putOpt("tac", sample.tac)
         putOpt("band", sample.band)
+        putOpt("location", sample.location?.let {
+            JSONObject().apply {
+                put("lat", it.lat)
+                put("lon", it.lon)
+                put("accuracy_meters", it.accuracyMeters)
+            }
+        })
         putOpt("collected_subscription_id", sample.cell.collectedSubscriptionId)
         putOpt("collected_sim_slot_index", sample.cell.collectedSimSlotIndex)
         put("sim_carriers", JSONArray().apply {

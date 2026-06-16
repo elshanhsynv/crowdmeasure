@@ -3,9 +3,11 @@ package com.example.crowdmeasure.data.repo
 import com.example.crowdmeasure.data.db.CallCellSampleEntity
 import com.example.crowdmeasure.data.db.CallSamplingDao
 import com.example.crowdmeasure.data.db.CallSessionEntity
+import com.example.crowdmeasure.data.db.Converters
 import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.CellInfo
 import com.crowdmeasure.sdk.model.CellRadioSnapshot
+import com.crowdmeasure.sdk.model.Location
 import com.example.crowdmeasure.domain.model.CallSource
 import com.example.crowdmeasure.domain.model.CallType
 import com.crowdmeasure.sdk.model.NrState
@@ -76,7 +78,8 @@ class CallSamplingRepositoryImplTest {
             sessionId = session.sessionId,
             sampledAtUtcMs = 1_000L,
             elapsedMs = 0L,
-            cellInfo = testCellInfo()
+            cellInfo = testCellInfo(),
+            location = Location(40.4093, 49.8671, 12f),
         )
 
         val sessions = repository.observeRecentSessions().first()
@@ -86,6 +89,38 @@ class CallSamplingRepositoryImplTest {
         assertEquals("LTE", sessions.single().latestSample?.rat)
         assertEquals(1, samples.size)
         assertEquals(-91, samples.single().dbm)
+        assertEquals(40.4093, samples.single().location?.lat)
+    }
+
+    @Test
+    fun observeSamples_readsLegacyCellOnlyRows() = runBlocking {
+        val session = repository.startSession(
+            callType = CallType.INCOMING,
+            callSource = CallSource.CELLULAR,
+            intervalSeconds = 30
+        )
+        dao.insertSample(
+            CallCellSampleEntity(
+                sessionId = session.sessionId,
+                sampledAtUtcMs = 1_000L,
+                elapsedMs = 0L,
+                cellJson = Converters.json.encodeToString(CellInfo.serializer(), testCellInfo()),
+                rat = "LTE",
+                nrState = "NONE",
+                dbm = -91,
+                rsrpDbm = -95,
+                rsrqDb = -12,
+                sinrDb = 14,
+                pci = 20,
+                tac = 10,
+                band = 3,
+            )
+        )
+
+        val sample = repository.observeSamples(session.sessionId).first().single()
+
+        assertEquals("LTE", sample.rat)
+        assertNull(sample.location)
     }
 
     @Test

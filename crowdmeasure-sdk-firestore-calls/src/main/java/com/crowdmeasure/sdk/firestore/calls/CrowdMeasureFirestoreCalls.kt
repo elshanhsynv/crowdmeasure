@@ -79,6 +79,13 @@ internal object CallFirestorePayload {
         "pci" to value.pci,
         "tac" to value.tac,
         "band" to value.band,
+        "location" to value.location?.let {
+            mapOf(
+                "lat" to it.lat,
+                "lon" to it.lon,
+                "accuracyMeters" to it.accuracyMeters,
+            )
+        },
         "cell" to json.parseToJsonElement(json.encodeToString(value.cell)).toFirestoreValue(),
     )
 

@@ -109,7 +109,25 @@ internal class CallSamplingService : Service() {
                 val session = active ?: break
                 val at = System.currentTimeMillis()
                 try {
-                    rt.store.insertSample(session.sessionId, at, at - session.startedAtUtcMs, rt.sdk.cellular.collect())
+                    coroutineScope {
+                        val cell = async { rt.sdk.cellular.collect() }
+                        val location = async {
+                            try {
+                                rt.sdk.location.collect()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (_: Exception) {
+                                null
+                            }
+                        }
+                        rt.store.insertSample(
+                            session.sessionId,
+                            at,
+                            at - session.startedAtUtcMs,
+                            cell.await(),
+                            location.await(),
+                        )
+                    }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {

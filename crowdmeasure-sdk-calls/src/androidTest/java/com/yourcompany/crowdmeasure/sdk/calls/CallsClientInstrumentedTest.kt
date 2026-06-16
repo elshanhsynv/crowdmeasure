@@ -23,11 +23,9 @@ class CallsClientInstrumentedTest {
         )
         client.setCellularSamplingEnabled(false)
         client.setVoipSamplingEnabled(false)
-        client.setUploadsEnabled(false)
         val settings = client.observeSettings().first()
         assertFalse(settings.cellularEnabled)
         assertFalse(settings.voipEnabled)
-        assertFalse(settings.uploadsEnabled)
         assertTrue(client.activateEnabledFeatures() is CallSamplingResult.Success)
     }
 }

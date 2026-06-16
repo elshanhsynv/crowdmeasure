@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.room.*
 import com.crowdmeasure.sdk.calls.*
 import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.Location
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
@@ -107,6 +109,12 @@ internal abstract class CallsDatabase : RoomDatabase() {
     abstract fun dao(): CallsDao
 }
 
+@Serializable
+internal data class StoredCallSample(
+    val cell: CellInfo,
+    val location: Location? = null,
+)
+
 internal class DefaultCallStore private constructor(private val dao: CallsDao) : CallStore {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
@@ -142,7 +150,8 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
         sessionId: String,
         sampledAtUtcMs: Long,
         elapsedMs: Long,
-        cellInfo: CellInfo
+        cellInfo: CellInfo,
+        location: Location?,
     ) {
         val serving = cellInfo.serving
         dao.insertAndIncrement(
@@ -151,7 +160,7 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
                 sessionId,
                 sampledAtUtcMs,
                 elapsedMs,
-                json.encodeToString(CellInfo.serializer(), cellInfo),
+                json.encodeToString(StoredCallSample.serializer(), StoredCallSample(cellInfo, location)),
                 cellInfo.rat,
                 cellInfo.nrState.name,
                 serving?.dbm,
@@ -225,12 +234,13 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
     )
 
     private fun SampleEntity.domainOrNull() = runCatching {
+        val stored = decodeStoredSample(cellJson)
         CallCellSample(
             id,
             sessionId,
             sampledAtUtcMs,
             elapsedMs,
-            json.decodeFromString(CellInfo.serializer(), cellJson),
+            stored.cell,
             rat,
             nrState,
             dbm,
@@ -239,9 +249,16 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
             sinrDb,
             pci,
             tac,
-            band
+            band,
+            stored.location,
         )
     }.getOrNull()
+
+    private fun decodeStoredSample(value: String): StoredCallSample =
+        runCatching { json.decodeFromString(StoredCallSample.serializer(), value) }
+            .getOrElse {
+                StoredCallSample(json.decodeFromString(CellInfo.serializer(), value))
+            }
 
     private inline fun <reified T : Enum<T>> enum(value: String, fallback: T) =
         runCatching { enumValueOf<T>(value) }.getOrDefault(fallback)
