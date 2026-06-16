@@ -18,7 +18,7 @@ class UploadClientInstrumentedTest {
         val client = CrowdMeasureUploads.install(
             context,
             CrowdMeasureSdk.create(context),
-            MeasurementUploader { MeasurementUploaderResult.Success(UploadBatchResult(emptyList())) },
+            MeasurementUploader { MeasurementUploaderResult.Success(UploadBatchResult()) },
         )
 
         assertTrue(client.enable(19, true) is MeasurementUploadResult.Failure)

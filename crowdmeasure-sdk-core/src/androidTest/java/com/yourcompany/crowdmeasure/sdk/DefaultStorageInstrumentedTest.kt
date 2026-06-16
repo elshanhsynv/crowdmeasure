@@ -1,5 +1,6 @@
 package com.crowdmeasure.sdk
 
+import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.crowdmeasure.sdk.internal.DefaultMeasurementStore
@@ -22,10 +23,14 @@ import org.junit.runner.RunWith
 class DefaultStorageInstrumentedTest {
     @Test
     fun defaultStorePersistsExportsAndDeletesMeasurements() = runBlocking {
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val context = ApplicationProvider.getApplicationContext<Context>()
         val databaseName = "sdk-instrumented-test.db"
         context.deleteDatabase(databaseName)
-        val store = DefaultMeasurementStore.create(context, databaseName)
+        val store = DefaultMeasurementStore.create(
+            context = context,
+            databaseName = databaseName,
+            ipHashSaltProvider = { "test-salt" },
+        )
         val sdk = CrowdMeasureSdk.create(context, measurementStore = store)
 
         store.save(testMeasurement())

@@ -15,6 +15,7 @@ internal class CallsSettingsStore(context: Context, preferencesName: String) {
     private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
         context.preferencesDataStoreFile(preferencesName)
     }
+
     private object Keys {
         val cellular = booleanPreferencesKey("cellular_enabled")
         val voip = booleanPreferencesKey("voip_enabled")
@@ -65,6 +66,7 @@ internal data class InstalledCallsRuntime(
 internal object CallsRuntime {
     @Volatile
     private var runtime: InstalledCallsRuntime? = null
+
     @Synchronized
     fun install(value: InstalledCallsRuntime) {
         val current = runtime

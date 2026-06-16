@@ -74,13 +74,16 @@ internal interface CallsDao {
 
     @Query("SELECT * FROM call_cell_samples WHERE sessionId IN (SELECT sessionId FROM call_sessions ORDER BY startedAtUtcMs DESC LIMIT :limit) ORDER BY sampledAtUtcMs DESC")
     fun recentSamples(limit: Int): Flow<List<SampleEntity>>
+
     @Insert
     suspend fun insertSession(entity: SessionEntity)
+
     @Insert
     suspend fun insertSample(entity: SampleEntity)
 
     @Query("UPDATE call_sessions SET sampleCount = sampleCount + 1 WHERE sessionId = :id")
     suspend fun increment(id: String)
+
     @Transaction
     suspend fun insertAndIncrement(entity: SampleEntity) {
         insertSample(entity); increment(entity.sessionId)
@@ -100,6 +103,7 @@ internal interface CallsDao {
 
     @Query("DELETE FROM call_sessions WHERE startedAtUtcMs < :cutoff AND uploadState = 'UPLOADED'")
     suspend fun prune(cutoff: Long)
+
     @Query("DELETE FROM call_sessions")
     suspend fun clear()
 }

@@ -67,7 +67,7 @@ class CrowdMeasureSdk private constructor(
                 settings = SdkSettingsClient(resolvedSettingsStore),
                 requirements = requirements,
                 queue = SdkMeasurementQueueClient(resolvedMeasurementStore),
-                cellular = CellularSnapshotClient {
+                cellular = {
                     withContext(Dispatchers.IO) { TelephonyCollector.collect(appContext) }
                 },
                 location = LocationSnapshotClient {
