@@ -20,10 +20,6 @@ build/
 */build
 app/release/
 
-# Local hosting/release staging artifacts
-.firebase/
-firebase-hosting/
-
 # Native build
 .externalNativeBuild/
 .cxx/
