@@ -28,8 +28,13 @@ android {
         applicationId = "com.example.crowdmeasure"
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.2"
+        versionCode = 3
+        versionName = "1.3"
+        buildConfigField(
+            "String",
+            "UPDATE_METADATA_URL",
+            "\"${providers.gradleProperty("crowdmeasure.updateMetadataUrl").orNull ?: "https://elshanwork.github.io/crowdmeasure-releases/latest.json"}\""
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -89,6 +94,7 @@ dependencies {
 
     // AppCompat
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.compose.animation.core)
 
     // Test

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -61,7 +62,8 @@ fun CallSamplingSettingsCard(
     onVoipEnableChanged: (Boolean) -> Unit,
     onOpenLocationSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onCallUpload: () -> Unit
 ) {
     val state = remember(
         enabled,
@@ -125,7 +127,14 @@ fun CallSamplingSettingsCard(
                 cellularEnabled = state.cellularEnabled,
                 voipEnabled = state.voipEnabled,
                 onEnableChanged = onEnableChanged,
-                onVoipEnableChanged = onVoipEnableChanged
+                onVoipEnableChanged = onVoipEnableChanged,
+            )
+
+            FixActionButton(
+                text = "Upload pending samples",
+                icon = Icons.Outlined.Upload,
+                onClick = onCallUpload,
+                enabled = state.cellularEnabled || state.voipEnabled
             )
 
             LastMissedStartRow(
@@ -352,10 +361,11 @@ private fun SamplingFixActions(
 
 @Composable
 private fun FixActionButton(
+    modifier: Modifier = Modifier,
     text: String,
     icon: ImageVector,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    enabled: Boolean = true
 ) {
     OutlinedButton(
         onClick = onClick,
@@ -384,7 +394,7 @@ private fun SamplingToggleSection(
     cellularEnabled: Boolean,
     voipEnabled: Boolean,
     onEnableChanged: (Boolean) -> Unit,
-    onVoipEnableChanged: (Boolean) -> Unit
+    onVoipEnableChanged: (Boolean) -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -660,7 +670,8 @@ private fun CallSamplingSettingsCardPreview() {
             onVoipEnableChanged = {},
             onOpenLocationSettings = {},
             onOpenBatterySettings = {},
-            onRefresh = {}
+            onRefresh = {},
+            onCallUpload = {}
         )
     }
 }

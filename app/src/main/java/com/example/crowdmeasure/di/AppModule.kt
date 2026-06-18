@@ -34,6 +34,9 @@ import com.crowdmeasure.sdk.calls.CrowdMeasureCalls
 import com.crowdmeasure.sdk.calls.upload.CallUploadClient
 import com.crowdmeasure.sdk.calls.upload.CallUploadConfig
 import com.crowdmeasure.sdk.calls.upload.CrowdMeasureCallUploads
+import com.example.crowdmeasure.update.ApkVerifier
+import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
 @Module
@@ -43,6 +46,17 @@ object AppModule {
     @Provides @Singleton
     fun providePrefs(@ApplicationContext context: Context): AppPreferences =
         AppPreferences(context)
+
+    @Provides @Singleton
+    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder().build()
+
+    @Provides @Singleton
+    fun provideJson(): Json = Json {
+        ignoreUnknownKeys = true
+    }
+
+    @Provides @Singleton
+    fun provideApkVerifier(): ApkVerifier = ApkVerifier()
 
     @Provides @Singleton
     fun provideSessionRepo(prefs: AppPreferences): UserSessionRepository =

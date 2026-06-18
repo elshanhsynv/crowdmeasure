@@ -131,4 +131,13 @@ class AppPreferences(private val context: Context) {
                 timestampUtcMs.coerceAtLeast(0L)
         }
     }
+
+    suspend fun lastNotifiedUpdateVersionCode(): Int =
+        context.dataStore.data.first()[DataStoreKeys.UPDATE_LAST_NOTIFIED_VERSION_CODE] ?: 0
+
+    suspend fun markUpdateVersionNotified(versionCode: Int) {
+        context.dataStore.edit {
+            it[DataStoreKeys.UPDATE_LAST_NOTIFIED_VERSION_CODE] = versionCode.coerceAtLeast(0)
+        }
+    }
 }

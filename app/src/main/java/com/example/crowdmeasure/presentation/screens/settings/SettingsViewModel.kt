@@ -1,6 +1,7 @@
 package com.example.crowdmeasure.presentation.screens.settings
 
 import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.crowdmeasure.data.export.ShareUtils
@@ -16,6 +17,8 @@ import com.crowdmeasure.sdk.background.BackgroundCollectionStatus
 import com.crowdmeasure.sdk.upload.MeasurementUploadClient
 import com.crowdmeasure.sdk.upload.MeasurementUploadStatus
 import com.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.calls.CallUploadQueueClient
+import com.crowdmeasure.sdk.calls.upload.CallUploadClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,6 +42,7 @@ class SettingsViewModel @Inject constructor(
     private val background: BackgroundCollectionClient,
     private val uploads: MeasurementUploadClient,
     private val calls: CallSamplingClient,
+    private val callUpload: CallUploadClient
 ) : ViewModel() {
     private val timeFormatter = DateTimeFormatter
         .ofPattern("MMM dd • HH:mm")
@@ -83,7 +87,8 @@ class SettingsViewModel @Inject constructor(
             ?: "—"
 
         val uploadRun = uploadStatus.lastRun
-        val uploadLastSuccessfulLabel = if (uploadRun?.outcome?.name == "SUCCESS") formatTimestamp(uploadRun.completedAtUtcMs) else "—"
+        val uploadLastSuccessfulLabel =
+            if (uploadRun?.outcome?.name == "SUCCESS") formatTimestamp(uploadRun.completedAtUtcMs) else "—"
         val uploadLastStartLabel = "—"
         val uploadLastEndLabel = formatTimestamp(uploadRun?.completedAtUtcMs ?: 0L)
         val uploadLastResultLabel = uploadRun?.outcome?.name ?: "—"
@@ -161,6 +166,25 @@ class SettingsViewModel @Inject constructor(
 
     fun runAutoRunNow() {
         viewModelScope.launch { background.enqueueRunNow() }
+    }
+
+    fun runUploadCallSampleNow(context: Context) {
+        viewModelScope.launch {
+            if (calls.observeSessions().first().isEmpty()) {
+                Toast.makeText(
+                    context,
+                    "No call sessions to upload",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+            callUpload.enqueueUploadNow()
+            Toast.makeText(
+                context,
+                "Call upload enqueued",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     fun rescheduleBackgroundWork() {
@@ -285,7 +309,10 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
-private fun nextWorkStateLabel(backgroundStatus: BackgroundCollectionStatus, uploadStatus: MeasurementUploadStatus): String {
+private fun nextWorkStateLabel(
+    backgroundStatus: BackgroundCollectionStatus,
+    uploadStatus: MeasurementUploadStatus
+): String {
     val active = listOfNotNull(
         "Auto-run: ${backgroundStatus.workState.name}",
         "Upload: ${uploadStatus.workState.name}"

@@ -16,14 +16,29 @@ internal class MeasurementUploadWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        val config = UploadRuntime.get()?.config ?: com.crowdmeasure.sdk.upload.MeasurementUploadConfig()
+        val config =
+            UploadRuntime.get()?.config ?: com.crowdmeasure.sdk.upload.MeasurementUploadConfig()
         val store = UploadStore(applicationContext, config)
         if (!store.settings.first().enabled) {
-            store.record(UploadRun(System.currentTimeMillis(), UploadRunOutcome.SKIPPED, UploadRunCode.DISABLED, 0))
+            store.record(
+                UploadRun(
+                    System.currentTimeMillis(),
+                    UploadRunOutcome.SKIPPED,
+                    UploadRunCode.DISABLED,
+                    0
+                )
+            )
             return Result.success()
         }
         val runtime = UploadRuntime.get() ?: run {
-            store.record(UploadRun(System.currentTimeMillis(), UploadRunOutcome.FAILURE, UploadRunCode.NOT_INSTALLED, 0))
+            store.record(
+                UploadRun(
+                    System.currentTimeMillis(),
+                    UploadRunOutcome.FAILURE,
+                    UploadRunCode.NOT_INSTALLED,
+                    0
+                )
+            )
             return Result.failure(workDataOf(KEY_CODE to UploadRunCode.NOT_INSTALLED.name))
         }
         if (!UploadRuntime.mutex.tryLock()) {

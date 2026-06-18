@@ -26,9 +26,16 @@ internal class MeasurementUploadClientImpl(
     private val store = UploadStore(context, config)
     private val workManager = WorkManager.getInstance(context)
 
-    override suspend fun enable(intervalMinutes: Long, wifiOnly: Boolean): MeasurementUploadResult<Unit> {
+    override suspend fun enable(
+        intervalMinutes: Long,
+        wifiOnly: Boolean
+    ): MeasurementUploadResult<Unit> {
         if (intervalMinutes !in CrowdMeasureUploads.MIN_INTERVAL_MINUTES..CrowdMeasureUploads.MAX_INTERVAL_MINUTES) {
-            return MeasurementUploadResult.Failure(MeasurementUploadError.InvalidInterval(intervalMinutes))
+            return MeasurementUploadResult.Failure(
+                MeasurementUploadError.InvalidInterval(
+                    intervalMinutes
+                )
+            )
         }
         return scheduling {
             val settings = MeasurementUploadSettings(true, intervalMinutes, wifiOnly)
@@ -62,7 +69,11 @@ internal class MeasurementUploadClientImpl(
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .addTag(UploadWorkNames.TAG)
                 .build()
-            workManager.enqueueUniqueWork(UploadWorkNames.IMMEDIATE, ExistingWorkPolicy.KEEP, request)
+            workManager.enqueueUniqueWork(
+                UploadWorkNames.IMMEDIATE,
+                ExistingWorkPolicy.KEEP,
+                request
+            )
         }
     }
 
@@ -98,7 +109,11 @@ internal class MeasurementUploadClientImpl(
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
             .addTag(UploadWorkNames.TAG)
             .build()
-        workManager.enqueueUniquePeriodicWork(UploadWorkNames.PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request)
+        workManager.enqueueUniquePeriodicWork(
+            UploadWorkNames.PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request
+        )
     }
 
     private fun cancel() {
@@ -118,7 +133,8 @@ internal class MeasurementUploadClientImpl(
         )
 
     private fun mapState(state: WorkInfo.State?): UploadWorkState =
-        runCatching { state?.name?.let(UploadWorkState::valueOf) }.getOrNull() ?: UploadWorkState.UNKNOWN
+        runCatching { state?.name?.let(UploadWorkState::valueOf) }.getOrNull()
+            ?: UploadWorkState.UNKNOWN
 }
 
 internal suspend fun executeUpload(
@@ -129,16 +145,31 @@ internal suspend fun executeUpload(
     val candidates = try {
         runtime.sdk.queue.getCandidates(limit)
     } catch (error: Exception) {
-        return finishFailure(store, UploadRunCode.PERSISTENCE_FAILED, MeasurementUploadError.PersistenceFailure(error))
+        return finishFailure(
+            store,
+            UploadRunCode.PERSISTENCE_FAILED,
+            MeasurementUploadError.PersistenceFailure(error)
+        )
     }
     if (candidates.isEmpty()) {
-        store.record(UploadRun(System.currentTimeMillis(), UploadRunOutcome.SKIPPED, UploadRunCode.NOTHING_TO_UPLOAD, 0))
+        store.record(
+            UploadRun(
+                System.currentTimeMillis(),
+                UploadRunOutcome.SKIPPED,
+                UploadRunCode.NOTHING_TO_UPLOAD,
+                0
+            )
+        )
         return MeasurementUploadResult.Success(0)
     }
     val installId = try {
         runtime.installationIdProvider.getInstallationId()
     } catch (error: Exception) {
-        return finishFailure(store, UploadRunCode.PERSISTENCE_FAILED, MeasurementUploadError.PersistenceFailure(error))
+        return finishFailure(
+            store,
+            UploadRunCode.PERSISTENCE_FAILED,
+            MeasurementUploadError.PersistenceFailure(error)
+        )
     }
     val items = candidates.map { MeasurementUploadItem(it, installId) }
     return when (val result = runtime.uploader.upload(items)) {
@@ -146,7 +177,8 @@ internal suspend fun executeUpload(
             val uploadedIds = result.result.uploadedIds.toList()
             val rejectedIds = result.result.rejectedIds.toList()
             val knownIds = candidates.map { it.meta.measurementId }.toSet()
-            val returnedIds = result.result.uploadedIds + result.result.retryableIds + result.result.rejectedIds
+            val returnedIds =
+                result.result.uploadedIds + result.result.retryableIds + result.result.rejectedIds
             if (!knownIds.containsAll(returnedIds)) {
                 return finishFailure(
                     store,
@@ -159,15 +191,27 @@ internal suspend fun executeUpload(
             when (val persisted = runtime.sdk.queue.markUploaded(uploadedIds)) {
                 is CrowdMeasureResult.Success -> {
                     if (rejectedIds.isNotEmpty()) runtime.sdk.queue.markFailed(rejectedIds)
-                    val outcome = if (result.result.retryableIds.isEmpty()) UploadRunOutcome.SUCCESS else UploadRunOutcome.RETRYING
-                    store.record(UploadRun(System.currentTimeMillis(), outcome, UploadRunCode.OK, uploadedIds.size))
+                    val outcome =
+                        if (result.result.retryableIds.isEmpty()) UploadRunOutcome.SUCCESS else UploadRunOutcome.RETRYING
+                    store.record(
+                        UploadRun(
+                            System.currentTimeMillis(),
+                            outcome,
+                            UploadRunCode.OK,
+                            uploadedIds.size
+                        )
+                    )
                     MeasurementUploadResult.Success(uploadedIds.size)
                 }
+
                 is CrowdMeasureResult.Failure -> finishFailure(
-                    store, UploadRunCode.PERSISTENCE_FAILED, MeasurementUploadError.PersistenceFailure()
+                    store,
+                    UploadRunCode.PERSISTENCE_FAILED,
+                    MeasurementUploadError.PersistenceFailure()
                 )
             }
         }
+
         is MeasurementUploaderResult.Failure -> {
             val ids = candidates.map { it.meta.measurementId }
             if (result.error !is MeasurementUploadError.TransientFailure) {
@@ -184,8 +228,17 @@ private suspend fun finishFailure(
     code: UploadRunCode,
     error: MeasurementUploadError,
 ): MeasurementUploadResult.Failure {
-    val outcome = if (error is MeasurementUploadError.TransientFailure) UploadRunOutcome.RETRYING else UploadRunOutcome.FAILURE
-    store.record(UploadRun(System.currentTimeMillis(), outcome, code, 0, error.toString().take(160)))
+    val outcome =
+        if (error is MeasurementUploadError.TransientFailure) UploadRunOutcome.RETRYING else UploadRunOutcome.FAILURE
+    store.record(
+        UploadRun(
+            System.currentTimeMillis(),
+            outcome,
+            code,
+            0,
+            error.toString().take(160)
+        )
+    )
     return MeasurementUploadResult.Failure(error)
 }
 

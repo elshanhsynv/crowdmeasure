@@ -11,10 +11,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.firstOrNull
 import java.util.UUID
 
-internal class DefaultInstallationIdProvider(context: Context, preferencesName: String) : InstallationIdProvider {
+internal class DefaultInstallationIdProvider(context: Context, preferencesName: String) :
+    InstallationIdProvider {
     private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
         context.preferencesDataStoreFile(preferencesName)
     }
+
     override suspend fun getInstallationId(): String {
         var id = dataStore.data.map { it[Keys.installId] }.firstOrNull()
         if (id.isNullOrBlank()) {
@@ -43,26 +45,32 @@ internal class UploadStore(context: Context, private val config: MeasurementUplo
     }
     val settings = dataStore.data.map {
         MeasurementUploadSettings(
-            it[Keys.enabled] ?: false,
-            it[Keys.interval] ?: config.defaultIntervalMinutes,
-            it[Keys.wifiOnly] ?: config.defaultWifiOnly,
+            enabled = it[Keys.enabled] ?: config.defaultMeasurementUploadEnabled,
+            intervalMinutes = it[Keys.interval] ?: config.defaultIntervalMinutes,
+            wifiOnly = it[Keys.wifiOnly] ?: config.defaultWifiOnly,
         )
     }
     val lastRun = dataStore.data.map {
         val time = it[Keys.completedAt] ?: return@map null
         UploadRun(
             time,
-            runCatching { UploadRunOutcome.valueOf(it[Keys.outcome].orEmpty()) }.getOrDefault(UploadRunOutcome.FAILURE),
-            runCatching { UploadRunCode.valueOf(it[Keys.code].orEmpty()) }.getOrDefault(UploadRunCode.UNEXPECTED_ERROR),
+            runCatching { UploadRunOutcome.valueOf(it[Keys.outcome].orEmpty()) }.getOrDefault(
+                UploadRunOutcome.FAILURE
+            ),
+            runCatching { UploadRunCode.valueOf(it[Keys.code].orEmpty()) }.getOrDefault(
+                UploadRunCode.UNEXPECTED_ERROR
+            ),
             it[Keys.uploadedCount] ?: 0,
             it[Keys.error]?.takeIf(String::isNotBlank),
         )
     }
+
     suspend fun setSettings(value: MeasurementUploadSettings) = dataStore.edit {
         it[Keys.enabled] = value.enabled
         it[Keys.interval] = value.intervalMinutes
         it[Keys.wifiOnly] = value.wifiOnly
     }
+
     suspend fun record(run: UploadRun) = dataStore.edit {
         it[Keys.completedAt] = run.completedAtUtcMs
         it[Keys.outcome] = run.outcome.name

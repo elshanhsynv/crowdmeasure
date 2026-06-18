@@ -13,7 +13,7 @@ class CallRequirementsTest {
             backgroundLocationGranted = true,
             locationServicesEnabled = true,
             notificationGranted = true,
-            batteryOptimizationIgnored = false,
+//            batteryOptimizationIgnored = false,
         )
         assertTrue(requirements.canStart)
     }

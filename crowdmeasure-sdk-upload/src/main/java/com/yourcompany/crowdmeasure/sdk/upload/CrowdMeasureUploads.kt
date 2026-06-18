@@ -10,6 +10,7 @@ object CrowdMeasureUploads {
     const val MIN_INTERVAL_MINUTES = 20L
     const val MAX_INTERVAL_MINUTES = 7L * 24L * 60L
     const val DEFAULT_INTERVAL_MINUTES = 60L
+    const val DEFAULT_WIFI_ONLY = false
 
     fun install(
         context: Context,

@@ -54,4 +54,6 @@ object DataStoreKeys {
     val DATA_USAGE_LAST_RX_BYTES = longPreferencesKey("data_usage_last_rx_bytes")
     val DATA_USAGE_LAST_TX_BYTES = longPreferencesKey("data_usage_last_tx_bytes")
     val DATA_USAGE_LAST_TIME_MS = longPreferencesKey("data_usage_last_time_ms")
+    val UPDATE_LAST_NOTIFIED_VERSION_CODE =
+        intPreferencesKey("update_last_notified_version_code")
 }

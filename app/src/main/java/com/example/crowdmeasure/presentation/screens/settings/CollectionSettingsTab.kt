@@ -59,7 +59,8 @@ internal fun CollectionSettingsTab(
     onReschedule: () -> Unit,
     callSamplingStatus: CallSamplingStatusUiState,
     onSetCallSamplingEnabled: (Boolean) -> Unit,
-    onSetVoipCallSamplingEnabled: (Boolean) -> Unit
+    onSetVoipCallSamplingEnabled: (Boolean) -> Unit,
+    onCallUpload: () -> Unit
 ) {
     val context = LocalContext.current
     var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(context)) }
@@ -112,7 +113,8 @@ internal fun CollectionSettingsTab(
             onOpenBatterySettings = {
                 SystemSettingsIntents.openBatteryOptimizationSettings(context)
             },
-            onRefresh = ::refreshCallSamplingPrerequisites
+            onRefresh = ::refreshCallSamplingPrerequisites,
+            onCallUpload = onCallUpload
         )
 
         BackgroundReliabilityCard(
@@ -167,7 +169,8 @@ private fun CollectionSettingsTabPreview() {
                 voipMonitorActive = false
             ),
             onSetCallSamplingEnabled = {},
-            onSetVoipCallSamplingEnabled = {}
+            onSetVoipCallSamplingEnabled = {},
+            onCallUpload = {}
         )
     }
 }

@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -71,6 +72,8 @@ fun SettingsRoute(
         newValue = viewModel::ensureMaintenanceScheduled
     )
 
+    val context = LocalContext.current
+
     LaunchedEffect(Unit) {
         ensureMaintenanceScheduled()
     }
@@ -95,7 +98,8 @@ fun SettingsRoute(
             onExportCalls = viewModel::exportCallData,
             onClearCallExportState = viewModel::clearCallExportState,
             onDelete = viewModel::deleteAllData,
-            onClearDeleteState = viewModel::clearDeleteState
+            onClearDeleteState = viewModel::clearDeleteState,
+            onCallUpload = { viewModel.runUploadCallSampleNow(context) }
         )
     )
 }
@@ -154,7 +158,8 @@ private fun SettingsScreen(
                         onReschedule = actions.onReschedule,
                         callSamplingStatus = state.callSamplingStatus,
                         onSetCallSamplingEnabled = actions.onSetCallSamplingEnabled,
-                        onSetVoipCallSamplingEnabled = actions.onSetVoipCallSamplingEnabled
+                        onSetVoipCallSamplingEnabled = actions.onSetVoipCallSamplingEnabled,
+                        onCallUpload = actions.onCallUpload
                     )
                 }
 
@@ -293,7 +298,8 @@ private data class SettingsScreenActions(
     val onExportCalls: (Context, Int) -> Unit,
     val onClearCallExportState: () -> Unit,
     val onDelete: () -> Unit,
-    val onClearDeleteState: () -> Unit
+    val onClearDeleteState: () -> Unit,
+    val onCallUpload: () -> Unit
 )
 
 @Immutable
@@ -346,7 +352,8 @@ private fun SettingsScreenPreview() {
                 onExportCalls = { _, _ -> },
                 onClearCallExportState = {},
                 onDelete = {},
-                onClearDeleteState = {}
+                onClearDeleteState = {},
+                onCallUpload = {}
             )
         )
     }
