@@ -23,6 +23,7 @@ internal class BackgroundStore(context: Context, private val config: BackgroundC
     private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
         context.preferencesDataStoreFile(config.preferencesName)
     }
+
     private object Keys {
         val enabled = booleanPreferencesKey("enabled")
         val intervalMinutes = longPreferencesKey("interval_minutes")
@@ -33,11 +34,13 @@ internal class BackgroundStore(context: Context, private val config: BackgroundC
         val lastMeasurementId = stringPreferencesKey("last_measurement_id")
     }
 
-    val settings: Flow<BackgroundCollectionSettings> = dataStore.data.map {
+    val settings: Flow<BackgroundCollectionSettings> = dataStore.data.map { preferences ->
         BackgroundCollectionSettings(
-            enabled = it[Keys.enabled] ?: false,
-            intervalMinutes = it[Keys.intervalMinutes] ?: config.defaultIntervalMinutes,
-            wifiOnly = it[Keys.wifiOnly] ?: config.defaultWifiOnly,
+            enabled = preferences[Keys.enabled] ?: config.defaultEnabled,
+            intervalMinutes = preferences[Keys.intervalMinutes]
+                ?: config.defaultIntervalMinutes,
+            wifiOnly = preferences[Keys.wifiOnly]
+                ?: config.defaultWifiOnly,
         )
     }
 

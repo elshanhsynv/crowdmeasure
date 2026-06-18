@@ -16,6 +16,13 @@ class AppPreferences(private val context: Context) {
         const val DEFAULT_ENDPOINT = "https://www.google.com/"
         const val DEFAULT_RETENTION_DAYS = 7
         const val DEFAULT_AUTORUN_MINUTES = 20
+        const val DEFAULT_COLLECT_ONLY_ON_WIFI = true
+        const val DEFAULT_AUTO_RUN_ENABLED = true
+        const val DEFAULT_FIRESTORE_UPLOADS_ENABLED = true
+        const val DEFAULT_CALL_SAMPLING_ENABLED = true
+        const val DEFAULT_VOIP_CALL_SAMPLING_ENABLED = true
+        const val DEFAULT_WHATSAPP_CALL_SAMPLING_ENABLED = true
+        const val DEFAULT_CONSENT_GATE_DISMISSED = false
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -25,17 +32,17 @@ class AppPreferences(private val context: Context) {
         AppSettings(
             consentVersion = CONSENT_VERSION,
             endpointUrl = prefs[DataStoreKeys.ENDPOINT_URL] ?: DEFAULT_ENDPOINT,
-            collectOnlyWifi = prefs[DataStoreKeys.COLLECT_ONLY_WIFI] ?: false,
-            autoRunEnabled = prefs[DataStoreKeys.AUTO_RUN_ENABLED] ?: true,
+            collectOnlyWifi = prefs[DataStoreKeys.COLLECT_ONLY_WIFI] ?: DEFAULT_COLLECT_ONLY_ON_WIFI,
+            autoRunEnabled = prefs[DataStoreKeys.AUTO_RUN_ENABLED] ?: DEFAULT_AUTO_RUN_ENABLED,
             autoRunIntervalMinutes = minutes.coerceIn(15, 7 * 24 * 60),
             retentionDays = prefs[DataStoreKeys.RETENTION_DAYS] ?: DEFAULT_RETENTION_DAYS,
             installId = installId,
-            consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: false,
-            firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: true,
-            callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: true,
+            consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: DEFAULT_CONSENT_GATE_DISMISSED,
+            firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: DEFAULT_FIRESTORE_UPLOADS_ENABLED,
+            callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: DEFAULT_CALL_SAMPLING_ENABLED,
             // Retained for existing-data compatibility; WhatsApp detection is not available.
-            whatsappCallSamplingEnabled = false,
-            voipCallSamplingEnabled = prefs[DataStoreKeys.VOIP_CALL_SAMPLING_ENABLED] ?: true,
+            whatsappCallSamplingEnabled = prefs[DataStoreKeys.WHATSAPP_CALL_SAMPLING_ENABLED] ?: DEFAULT_WHATSAPP_CALL_SAMPLING_ENABLED,
+            voipCallSamplingEnabled = prefs[DataStoreKeys.VOIP_CALL_SAMPLING_ENABLED] ?: DEFAULT_VOIP_CALL_SAMPLING_ENABLED,
         )
     }
 

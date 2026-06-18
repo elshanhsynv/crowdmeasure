@@ -1,7 +1,9 @@
 package com.crowdmeasure.sdk.calls.internal
 
+import android.Manifest
 import android.content.Context
 import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -24,10 +26,12 @@ internal class CallsSettingsStore(context: Context, preferencesName: String) {
         val voipActive = booleanPreferencesKey("voip_active")
     }
 
-    val settings = dataStore.data.map {
+    val settings = dataStore.data.map { preferences ->
         CallSamplingSettings(
-            it[Keys.cellular] ?: false,
-            it[Keys.voip] ?: false,
+            cellularEnabled = preferences[Keys.cellular]
+                ?: CallSamplingSettings.DEFAULT_CELLULAR_ENABLED,
+            voipEnabled = preferences[Keys.voip]
+                ?: CallSamplingSettings.DEFAULT_VOIP_ENABLED,
         )
     }
     val missed = dataStore.data.map { p ->
@@ -81,7 +85,7 @@ internal object CallsRuntime {
 }
 
 internal fun Context.requirements(): CallSamplingRequirements {
-    fun granted(permission: String) = androidx.core.content.ContextCompat.checkSelfPermission(
+    fun granted(permission: String) = ContextCompat.checkSelfPermission(
         this,
         permission
     ) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -90,12 +94,12 @@ internal fun Context.requirements(): CallSamplingRequirements {
     val power = getSystemService(android.os.PowerManager::class.java)
     return CallSamplingRequirements(
         supportedAndroidVersion = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q,
-        phoneStateGranted = granted(android.Manifest.permission.READ_PHONE_STATE),
-        fineLocationGranted = granted(android.Manifest.permission.ACCESS_FINE_LOCATION),
-        backgroundLocationGranted = granted(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+        phoneStateGranted = granted(Manifest.permission.READ_PHONE_STATE),
+        fineLocationGranted = granted(Manifest.permission.ACCESS_FINE_LOCATION),
+        backgroundLocationGranted = granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
         locationServicesEnabled = location?.isLocationEnabled == true,
-        notificationGranted = Build.VERSION.SDK_INT < 33 || granted(android.Manifest.permission.POST_NOTIFICATIONS),
-        batteryOptimizationIgnored = power?.isIgnoringBatteryOptimizations(packageName) == true,
+        notificationGranted = Build.VERSION.SDK_INT < 33 || granted(Manifest.permission.POST_NOTIFICATIONS),
+//        batteryOptimizationIgnored = power?.isIgnoringBatteryOptimizations(packageName) == true,
     )
 }
 

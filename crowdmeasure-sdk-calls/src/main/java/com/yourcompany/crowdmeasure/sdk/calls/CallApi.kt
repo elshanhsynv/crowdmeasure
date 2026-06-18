@@ -17,9 +17,14 @@ data class CallSamplingConfig(
 )
 
 data class CallSamplingSettings(
-    val cellularEnabled: Boolean = false,
-    val voipEnabled: Boolean = false,
-)
+    val cellularEnabled: Boolean = DEFAULT_CELLULAR_ENABLED,
+    val voipEnabled: Boolean = DEFAULT_VOIP_ENABLED,
+) {
+    companion object {
+        const val DEFAULT_CELLULAR_ENABLED = true
+        const val DEFAULT_VOIP_ENABLED = true
+    }
+}
 
 data class CallSamplingRequirements(
     val supportedAndroidVersion: Boolean,
@@ -28,10 +33,11 @@ data class CallSamplingRequirements(
     val backgroundLocationGranted: Boolean,
     val locationServicesEnabled: Boolean,
     val notificationGranted: Boolean,
-    val batteryOptimizationIgnored: Boolean,
+//    val batteryOptimizationIgnored: Boolean,
 ) {
-    val canStart: Boolean get() = supportedAndroidVersion && phoneStateGranted && fineLocationGranted &&
-        backgroundLocationGranted && locationServicesEnabled && notificationGranted
+    val canStart: Boolean
+        get() = supportedAndroidVersion && phoneStateGranted && fineLocationGranted &&
+                backgroundLocationGranted && locationServicesEnabled && notificationGranted
 }
 
 data class MissedCallStart(val atUtcMs: Long, val code: CallRunCode)
@@ -85,7 +91,13 @@ data class CallCellSample(
 )
 
 data class CallSessionExport(val session: CallSession, val samples: List<CallCellSample>)
-data class CallUploadItem(val session: CallSession, val samples: List<CallCellSample>, val installId: String, val deviceModel: String)
+data class CallUploadItem(
+    val session: CallSession,
+    val samples: List<CallCellSample>,
+    val installId: String,
+    val deviceModel: String
+)
+
 data class CallUploadBatchResult(
     val uploadedSessionIds: Set<String> = emptySet(),
     val retryableSessionIds: Set<String> = emptySet(),
@@ -96,13 +108,20 @@ sealed interface CallUploaderResult {
     data class Success(val result: CallUploadBatchResult) : CallUploaderResult
     data class Failure(val error: CallSamplingError) : CallUploaderResult
 }
-fun interface CallUploader { suspend fun upload(items: List<CallUploadItem>): CallUploaderResult }
-fun interface CallInstallationIdProvider { suspend fun getInstallationId(): String }
+
+fun interface CallUploader {
+    suspend fun upload(items: List<CallUploadItem>): CallUploaderResult
+}
+
+fun interface CallInstallationIdProvider {
+    suspend fun getInstallationId(): String
+}
 
 sealed interface CallSamplingResult<out T> {
     data class Success<T>(val value: T) : CallSamplingResult<T>
     data class Failure(val error: CallSamplingError) : CallSamplingResult<Nothing>
 }
+
 sealed interface CallSamplingError {
     data object Disabled : CallSamplingError
     data object NotInstalled : CallSamplingError
@@ -118,7 +137,12 @@ sealed interface CallSamplingError {
 
 interface CallStore {
     suspend fun getActiveSession(): CallSession?
-    suspend fun startSession(callType: CallType, callSource: CallSource, intervalSeconds: Int): CallSession
+    suspend fun startSession(
+        callType: CallType,
+        callSource: CallSource,
+        intervalSeconds: Int
+    ): CallSession
+
     suspend fun insertSample(
         sessionId: String,
         sampledAtUtcMs: Long,
@@ -126,6 +150,7 @@ interface CallStore {
         cellInfo: CellInfo,
         location: Location? = null,
     )
+
     suspend fun finishSession(sessionId: String, endedAtUtcMs: Long, endReason: String)
     suspend fun finishActiveSession(endedAtUtcMs: Long, endReason: String)
     suspend fun reclassifySession(sessionId: String, callType: CallType, callSource: CallSource)

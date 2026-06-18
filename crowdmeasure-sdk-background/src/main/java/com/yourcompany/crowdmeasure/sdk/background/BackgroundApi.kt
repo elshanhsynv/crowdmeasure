@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 
 data class BackgroundConfig(
     val preferencesName: String = "crowdmeasure_sdk_background",
+    val defaultEnabled: Boolean = DEFAULT_BACKGROUND_COLLECTION_ENABLED,
     val defaultIntervalMinutes: Long = CrowdMeasureBackground.DEFAULT_INTERVAL_MINUTES,
     val defaultWifiOnly: Boolean = false,
 ) {
@@ -12,6 +13,9 @@ data class BackgroundConfig(
         require(defaultIntervalMinutes in CrowdMeasureBackground.MIN_INTERVAL_MINUTES..CrowdMeasureBackground.MAX_INTERVAL_MINUTES) {
             "defaultIntervalMinutes must be between 20 minutes and 7 days"
         }
+    }
+    companion object {
+        const val DEFAULT_BACKGROUND_COLLECTION_ENABLED = true
     }
 }
 

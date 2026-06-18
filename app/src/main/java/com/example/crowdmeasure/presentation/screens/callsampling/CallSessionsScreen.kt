@@ -291,6 +291,15 @@ private fun SampleCard(sample: CallCellSample) {
                     "Neighbors" to sample.cell.neighbors.size
                 )
             )
+
+            MetricSection(
+                title = "Location",
+                metrics = listOf(
+                    "Latitude" to sample.location?.lat,
+                    "Longitude" to sample.location?.lon,
+                    "Accuracy (m)" to sample.location?.accuracyMeters
+                )
+            )
         }
     }
 }

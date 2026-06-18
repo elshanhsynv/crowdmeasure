@@ -1,6 +1,7 @@
 package com.yourcompany.crowdmeasure.sample
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
@@ -29,6 +30,7 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { showRequirements() }
 
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         status = TextView(this)
