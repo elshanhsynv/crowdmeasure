@@ -11,11 +11,23 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.firstOrNull
 import java.util.UUID
 
+private object UploadDataStores {
+    private val stores = mutableMapOf<String, DataStore<Preferences>>()
+
+    fun get(context: Context, preferencesName: String): DataStore<Preferences> {
+        val appContext = context.applicationContext
+        val file = appContext.preferencesDataStoreFile(preferencesName)
+        return synchronized(stores) {
+            stores.getOrPut(file.absolutePath) {
+                PreferenceDataStoreFactory.create { file }
+            }
+        }
+    }
+}
+
 internal class DefaultInstallationIdProvider(context: Context, preferencesName: String) :
     InstallationIdProvider {
-    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
-        context.preferencesDataStoreFile(preferencesName)
-    }
+    private val dataStore: DataStore<Preferences> = UploadDataStores.get(context, preferencesName)
 
     override suspend fun getInstallationId(): String {
         var id = dataStore.data.map { it[Keys.installId] }.firstOrNull()
@@ -40,9 +52,7 @@ internal object Keys {
 }
 
 internal class UploadStore(context: Context, private val config: MeasurementUploadConfig) {
-    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
-        context.preferencesDataStoreFile(config.preferencesName)
-    }
+    private val dataStore: DataStore<Preferences> = UploadDataStores.get(context, config.preferencesName)
     val settings = dataStore.data.map {
         MeasurementUploadSettings(
             enabled = it[Keys.enabled] ?: config.defaultMeasurementUploadEnabled,

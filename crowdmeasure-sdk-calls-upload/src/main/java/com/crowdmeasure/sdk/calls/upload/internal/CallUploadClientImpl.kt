@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.work.*
 import com.crowdmeasure.sdk.calls.*
@@ -14,6 +15,20 @@ import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
 import java.util.UUID
 
+private object CallUploadDataStores {
+    private val stores = mutableMapOf<String, DataStore<Preferences>>()
+
+    fun get(context: Context, preferencesName: String): DataStore<Preferences> {
+        val appContext = context.applicationContext
+        val file = appContext.preferencesDataStoreFile(preferencesName)
+        return synchronized(stores) {
+            stores.getOrPut(file.absolutePath) {
+                PreferenceDataStoreFactory.create { file }
+            }
+        }
+    }
+}
+
 internal object CallUploadWorkNames {
     const val PERIODIC = "com.crowdmeasure.sdk.calls.upload.periodic"
     const val IMMEDIATE = "com.crowdmeasure.sdk.calls.upload.immediate"
@@ -22,9 +37,7 @@ internal object CallUploadWorkNames {
 internal class CallUploadClientImpl(context: Context, private val config: CallUploadConfig) : CallUploadClient {
     private val appContext = context.applicationContext
     private val workManager = WorkManager.getInstance(appContext)
-    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
-        appContext.preferencesDataStoreFile(config.preferencesName)
-    }
+    private val dataStore: DataStore<Preferences> = CallUploadDataStores.get(appContext, config.preferencesName)
     private object Keys {
         val enabled = booleanPreferencesKey("enabled")
         val interval = longPreferencesKey("interval")
