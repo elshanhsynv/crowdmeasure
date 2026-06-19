@@ -1,24 +1,20 @@
 package com.example.crowdmeasure.presentation.screens.settings
 
 import android.content.Context
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Security
@@ -30,13 +26,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.NonRestartableComposable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -44,8 +38,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Devices.PIXEL_9_PRO
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.presentation.ui.theme.CrowdMeasureTheme
 import com.example.crowdmeasure.presentation.util.UiState
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsRoute(
@@ -110,10 +105,17 @@ private fun SettingsScreen(
     state: SettingsScreenState,
     actions: SettingsScreenActions
 ) {
-    var selectedTab by rememberSaveable(
-        stateSaver = SettingsTabSaver
-    ) {
-        mutableStateOf(SettingsTab.Collection)
+    val pagerState = rememberPagerState(
+        initialPage = SettingsTab.Collection.ordinal,
+        pageCount = { SettingsTab.entries.size }
+    )
+
+    val coroutineScope = rememberCoroutineScope()
+
+    val selectedTab by remember {
+        derivedStateOf {
+            SettingsTab.entries[pagerState.targetPage]
+        }
     }
 
     Column(
@@ -123,60 +125,72 @@ private fun SettingsScreen(
     ) {
         SettingsSegmentedTabs(
             selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it }
-        )
-
-        AnimatedContent(
-            targetState = selectedTab,
-            label = "SettingsTabContentAnimation",
-//            transitionSpec = {
-//                fadeIn(
-//                    animationSpec = tween(
-//                        durationMillis = 140,
-//                        delayMillis = 40,
-//                        easing = LinearOutSlowInEasing
-//                    )
-//                ) togetherWith fadeOut(
-//                    animationSpec = tween(
-//                        durationMillis = 90,
-//                        easing = FastOutSlowInEasing
-//                    )
-//                ) using SizeTransform(clip = false)
-//            },
-            modifier = Modifier.fillMaxSize()
-        ) { tab ->
-            when (tab) {
-                SettingsTab.Privacy -> {
-                    PrivacySettingsTab()
-                }
-
-                SettingsTab.Collection -> {
-                    CollectionSettingsTab(
-                        settings = state.settings,
-                        backgroundWorkState = state.backgroundWorkState,
-                        onRunNow = actions.onRunNow,
-                        onReschedule = actions.onReschedule,
-                        callSamplingStatus = state.callSamplingStatus,
-                        onSetCallSamplingEnabled = actions.onSetCallSamplingEnabled,
-                        onSetVoipCallSamplingEnabled = actions.onSetVoipCallSamplingEnabled,
-                        onCallUpload = actions.onCallUpload
-                    )
-                }
-
-                SettingsTab.Data -> {
-                    DataSettingsTab(
-                        exportState = state.exportState,
-                        callExportState = state.callExportState,
-                        deleteState = state.deleteState,
-                        onExport = actions.onExport,
-                        onClearExportState = actions.onClearExportState,
-                        onExportCalls = actions.onExportCalls,
-                        onClearCallExportState = actions.onClearCallExportState,
-                        onDelete = actions.onDelete,
-                        onClearDeleteState = actions.onClearDeleteState
-                    )
+            onTabSelected = { tab ->
+                if (pagerState.currentPage != tab.ordinal) {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(
+                            page = tab.ordinal,
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                easing = FastOutSlowInEasing
+                            )
+                        )
+                    }
                 }
             }
+        )
+
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            beyondViewportPageCount = 0,
+            key = { page -> SettingsTab.entries[page] }
+        ) { page ->
+            SettingsTabPage(
+                tab = SettingsTab.entries[page],
+                state = state,
+                actions = actions
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsTabPage(
+    tab: SettingsTab,
+    state: SettingsScreenState,
+    actions: SettingsScreenActions
+) {
+    when (tab) {
+        SettingsTab.Privacy -> {
+            PrivacySettingsTab()
+        }
+
+        SettingsTab.Collection -> {
+            CollectionSettingsTab(
+                settings = state.settings,
+                backgroundWorkState = state.backgroundWorkState,
+                onRunNow = actions.onRunNow,
+                onReschedule = actions.onReschedule,
+                callSamplingStatus = state.callSamplingStatus,
+                onSetCallSamplingEnabled = actions.onSetCallSamplingEnabled,
+                onSetVoipCallSamplingEnabled = actions.onSetVoipCallSamplingEnabled,
+                onCallUpload = actions.onCallUpload
+            )
+        }
+
+        SettingsTab.Data -> {
+            DataSettingsTab(
+                exportState = state.exportState,
+                callExportState = state.callExportState,
+                deleteState = state.deleteState,
+                onExport = actions.onExport,
+                onClearExportState = actions.onClearExportState,
+                onExportCalls = actions.onExportCalls,
+                onClearCallExportState = actions.onClearCallExportState,
+                onDelete = actions.onDelete,
+                onClearDeleteState = actions.onClearDeleteState
+            )
         }
     }
 }
@@ -320,13 +334,6 @@ private enum class SettingsTab(
         icon = Icons.Outlined.Code
     )
 }
-
-private val SettingsTabSaver = Saver<SettingsTab, String>(
-    save = { it.name },
-    restore = { saved ->
-        SettingsTab.entries.firstOrNull { it.name == saved } ?: SettingsTab.Privacy
-    }
-)
 
 @Preview(showBackground = true, device = PIXEL_9_PRO)
 @Composable

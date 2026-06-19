@@ -28,6 +28,7 @@ app/release/
 captures/
 
 # Keystores (if applicable)
+keystore.properties
 *.jks
 *.keystore
 
@@ -36,4 +37,4 @@ bin/
 gen/
 
 # Firebase / Google services (only if not meant to be public)
-# google-services.json
+google-services.json
