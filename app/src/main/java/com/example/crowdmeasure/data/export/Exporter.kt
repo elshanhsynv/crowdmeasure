@@ -178,109 +178,11 @@ class Exporter(
                                     })
                                 }
                             })
-                            putOpt("aggregation", c.aggregation?.let { ag ->
-                                putOpt("active", ag.active)
-                                putOpt("secondary_cells", JSONArray().apply {
-                                    ag.secondaryCells.forEach {
-                                        put(JSONObject().apply {
-                                            putOpt("band", it.band)
-                                            putOpt("earfcn", it.earfcn)
-                                            putOpt("nrarfcn", it.nrarfcn)
-                                            putOpt("pci", it.pci)
-                                            putOpt("rsrp", it.rsrp)
-                                            putOpt("rsrq", it.rsrq)
-                                            putOpt("sinr", it.sinr)
-                                            putOpt("bandwidth_mhz", it.bandwidthMhz)
-                                        })
-                                    }
-                                })
-                            })
                         }
                     })
                 }
             })
         }
-
-//        val config = JSONObject().apply {
-//            put("server", m.config.server.apply {
-//                putOpt("server_id", m.config.server.serverId)
-//                putOpt("host", m.config.server.host)
-//                putOpt("ip", m.config.server.ip)
-//                putOpt("distance_km", m.config.server.distanceKm)
-//                putOpt("selection_method", m.config.server.selectionMethod)
-//                putOpt("pretest_latency_ms", m.config.server.pretestLatencyMs)
-//            })
-//            put("protocol", m.config.protocol)
-//            put("download", m.config.download.apply {
-//                putOpt("streams", m.config.download.streams)
-//                putOpt("duration_ms", m.config.download.durationMs)
-//                putOpt("warmup_ms", m.config.download.warmupMs)
-//                putOpt("payload_bytes", m.config.download.payloadBytes)
-//            })
-//            put("upload", m.config.upload.apply {
-//                putOpt("streams", m.config.upload.streams)
-//                putOpt("duration_ms", m.config.upload.durationMs)
-//                putOpt("warmup_ms", m.config.upload.warmupMs)
-//                putOpt("payload_bytes", m.config.upload.payloadBytes)
-//            })
-//            put("latency_probe", m.config.latencyProbe.apply {
-//                putOpt("sample_count", m.config.latencyProbe.sampleCount)
-//                putOpt("interval_ms", m.config.latencyProbe.intervalMs)
-//                putOpt("during_load", m.config.latencyProbe.duringLoad)
-//            })
-//        }
-
-//        val phases = JSONArray().apply {
-//            m.phases.forEach {
-//                put(JSONObject().apply {
-//                    put("type", it.type)
-//                    put("metrics", JSONObject().apply {
-//                        putOpt("duration_ms", it.metrics.durationMs)
-//                        putOpt("throughput_avg_mbps", it.metrics.throughputAvgMbps)
-//                        putOpt("throughput_p95_mbps", it.metrics.throughputP95Mbps)
-//                        putOpt("throughput_std_dev", it.metrics.throughputStdDev)
-//                        putOpt("latency_avg_ms", it.metrics.latencyAvgMs)
-//                        putOpt("latency_p95_ms", it.metrics.latencyP95Ms)
-//                        putOpt("jitter_ms", it.metrics.jitterMs)
-//                        putOpt("packet_loss_pct", it.metrics.packetLossPct)
-//                    })
-//                    putOpt("series", it.series?.let { s ->
-//                        JSONObject().apply {
-//                            putOpt("throughput", JSONArray().apply {
-//                                s.throughput?.forEach {
-//                                    put(JSONObject().apply {
-//                                        putOpt("t_ms", it.tMs)
-//                                        putOpt("mbps", it.mbps)
-//                                    })
-//                                }
-//                                putOpt("latency", JSONArray().apply {
-//                                    s.latency?.forEach {
-//                                        put(JSONObject().apply {
-//                                            putOpt("t_ms", it.tMs)
-//                                            putOpt("rtt_ms", it.rttMs)
-//                                        })
-//                                    }
-//                                })
-//                            })
-//                        }
-//                    })
-//                })
-//            }
-//        }
-//
-//        val summary = JSONObject().apply {
-//            putOpt("downlink_mbps", m.summary.downlinkMbps)
-//            putOpt("uplink_mbps", m.summary.uplinkMbps)
-//            putOpt("latency_idle_ms", m.summary.latencyIdleMs)
-//            putOpt("latency_download_ms", m.summary.latencyDownloadMs)
-//            putOpt("latency_upload_ms", m.summary.uplinkMbps)
-//            putOpt("jitter_ms", m.summary.jitterMs)
-//            putOpt("packet_loss_pct", m.summary.packetLossPct)
-//            putOpt("throughput_stability", m.summary.throughputStability)
-//            putOpt("estimated_web_load_ms", m.summary.estimatedWebLoadMs)
-//            putOpt("estimated_video_start_ms", m.summary.estimatedVideoStartMs)
-//            putOpt("estimated_mos", m.summary.estimatedMos)
-//        }
 
         val perf = JSONObject().apply {
             put("endpoint_id", m.performance.endpointId)
@@ -310,9 +212,6 @@ class Exporter(
             putOpt("meta", meta)
             putOpt("environment", environment)
             putOpt("performance", perf)
-//            putOpt("config", config)
-//            putOpt("phases", phases)
-//            putOpt("summary", summary)
         }
     }
 

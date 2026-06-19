@@ -1,3 +1,5 @@
+Available
+
 # CrowdMeasure SDK
 
 CrowdMeasure is a local-first Android SDK for collecting, storing, observing, exporting, and deleting network measurements. Background collection is an optional module. Version: **0.1.0 Unreleased**.

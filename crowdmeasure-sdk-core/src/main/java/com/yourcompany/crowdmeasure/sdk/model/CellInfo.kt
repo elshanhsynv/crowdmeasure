@@ -16,8 +16,6 @@ data class CellInfo(
 
     val serving: CellRadioSnapshot?,
     val neighbors: List<CellRadioSnapshot> = emptyList(),
-
-    val aggregation: CarrierAggregationInfo?,
 )
 
 @Serializable

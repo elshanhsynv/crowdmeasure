@@ -247,7 +247,6 @@ class CallSamplingRepositoryImplTest {
                 mimoLayers = null
             ),
             neighbors = emptyList(),
-            aggregation = null
         )
 }
 

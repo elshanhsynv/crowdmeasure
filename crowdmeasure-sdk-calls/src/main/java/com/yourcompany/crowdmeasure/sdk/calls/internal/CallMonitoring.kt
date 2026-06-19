@@ -20,29 +20,33 @@ internal class CallPhoneStateReceiver : BroadcastReceiver() {
         when (intent.getStringExtra(TelephonyManager.EXTRA_STATE)) {
             TelephonyManager.EXTRA_STATE_RINGING -> wasRinging = true
             TelephonyManager.EXTRA_STATE_IDLE -> {
-                wasRinging = false; CallSamplingService.stop(context, CallSource.CELLULAR)
+                wasRinging = false
+                cellularStartGeneration++
+                CallSamplingService.stop(context, CallSource.CELLULAR)
             }
 
             TelephonyManager.EXTRA_STATE_OFFHOOK -> {
                 val type = if (wasRinging) CallType.INCOMING else CallType.OUTGOING
                 wasRinging = false
+                val generation = ++cellularStartGeneration
                 val pending = goAsync()
                 CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
                     try {
                         delay(2_000.milliseconds)
                         val rt = CallsRuntime.get() ?: return@launch
+                        if (generation != cellularStartGeneration || !context.isCallSourceActive(CallSource.CELLULAR)) {
+                            rt.settingsStore.recordMissed(CallRunCode.CALL_NOT_ACTIVE)
+                            return@launch
+                        }
                         val settings = rt.settingsStore.settings.first()
                         val requirements = context.requirements()
-                        if (!settings.cellularEnabled) rt.settingsStore.recordMissed(CallRunCode.DISABLED)
-                        else if (!requirements.canStart) rt.settingsStore.recordMissed(requirements.failureCode())
-                        else runCatching {
-                            CallSamplingService.start(
-                                context,
-                                type,
-                                CallSource.CELLULAR
-                            )
+                        when {
+                            !settings.cellularEnabled -> rt.settingsStore.recordMissed(CallRunCode.DISABLED)
+                            !requirements.canStart -> rt.settingsStore.recordMissed(requirements.failureCode())
+                            else -> runCatching {
+                                CallSamplingService.start(context, type, CallSource.CELLULAR)
+                            }.onFailure { rt.settingsStore.recordMissed(it.foregroundFailureCode()) }
                         }
-                            .onFailure { rt.settingsStore.recordMissed(CallRunCode.FOREGROUND_SERVICE_FAILED) }
                     } finally {
                         pending.finish()
                     }
@@ -53,6 +57,7 @@ internal class CallPhoneStateReceiver : BroadcastReceiver() {
 
     private companion object {
         var wasRinging = false
+        var cellularStartGeneration = 0L
     }
 }
 
@@ -63,20 +68,30 @@ internal class VoipCallMonitor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var job: Job? = null
     private var detected = false
+    private var startGeneration = 0L
+
     fun start() {
         if (job?.isActive == true) return
         job = scope.launch {
             settings.setVoipActive(true)
             while (isActive) {
-                val active = context.getSystemService(AudioManager::class.java)?.mode.isVoipMode()
+                val active = context.isCallSourceActive(CallSource.VOIP_GENERIC)
                 if (active && !detected) {
-                    delay(2_000.milliseconds); if (context.getSystemService(AudioManager::class.java)?.mode.isVoipMode()) {
-                        detected = true; requestStart()
+                    val generation = ++startGeneration
+                    delay(2_000.milliseconds)
+                    if (generation == startGeneration && context.isCallSourceActive(CallSource.VOIP_GENERIC)) {
+                        detected = true
+                        requestStart()
                     }
                 }
-                if (!active && detected) {
-                    delay(3_000.milliseconds); if (!context.getSystemService(AudioManager::class.java)?.mode.isVoipMode()) {
-                        detected = false; CallSamplingService.stop(context, CallSource.VOIP_GENERIC)
+                if (!active) {
+                    startGeneration++
+                    if (detected) {
+                        delay(1_000.milliseconds)
+                        if (!context.isCallSourceActive(CallSource.VOIP_GENERIC)) {
+                            detected = false
+                            CallSamplingService.stop(context, CallSource.VOIP_GENERIC)
+                        }
                     }
                 }
                 delay(1_000.milliseconds)
@@ -85,38 +100,51 @@ internal class VoipCallMonitor(
     }
 
     fun stop() {
-        job?.cancel(); job = null; if (detected) CallSamplingService.stop(
-            context,
-            CallSource.VOIP_GENERIC
-        ); detected = false; scope.launch { settings.setVoipActive(false) }
+        job?.cancel()
+        job = null
+        startGeneration++
+        if (detected) CallSamplingService.stop(context, CallSource.VOIP_GENERIC)
+        detected = false
+        scope.launch { settings.setVoipActive(false) }
     }
 
     private suspend fun requestStart() {
+        if (!context.isCallSourceActive(CallSource.VOIP_GENERIC)) {
+            settings.recordMissed(CallRunCode.CALL_NOT_ACTIVE)
+            return
+        }
         val requirements = context.requirements()
-        if (!requirements.canStart) settings.recordMissed(requirements.failureCode()) else runCatching {
-            CallSamplingService.start(
-                context,
-                CallType.UNKNOWN,
-                CallSource.VOIP_GENERIC
-            )
-        }.onFailure { settings.recordMissed(CallRunCode.FOREGROUND_SERVICE_FAILED) }
+        if (!requirements.canStart) {
+            settings.recordMissed(requirements.failureCode())
+        } else {
+            runCatching {
+                CallSamplingService.start(context, CallType.UNKNOWN, CallSource.VOIP_GENERIC)
+            }.onFailure { settings.recordMissed(it.foregroundFailureCode()) }
+        }
     }
 }
 
 private fun Int?.isVoipMode() =
-    this == AudioManager.MODE_IN_COMMUNICATION || (Build.VERSION.SDK_INT >= 33 && this == AudioManager.MODE_COMMUNICATION_REDIRECT)
+    this == AudioManager.MODE_IN_COMMUNICATION ||
+        (Build.VERSION.SDK_INT >= 33 && this == AudioManager.MODE_COMMUNICATION_REDIRECT)
 
 internal class CallSamplingService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var sampling: Job? = null
     private var active: CallSession? = null
+
     override fun onBind(intent: Intent?) = null
+
     override fun onCreate() {
-        super.onCreate(); createChannel()
+        super.onCreate()
+        createChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val rt = CallsRuntime.get() ?: run { stopSelf(); return START_NOT_STICKY }
+        val rt = CallsRuntime.get() ?: run {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         scope.launch {
             when (intent?.action) {
                 ACTION_START -> startSampling(rt, intent.type(), intent.source())
@@ -127,7 +155,8 @@ internal class CallSamplingService : Service() {
     }
 
     override fun onDestroy() {
-        scope.cancel(); super.onDestroy()
+        scope.cancel()
+        super.onDestroy()
     }
 
     private suspend fun startSampling(
@@ -137,19 +166,21 @@ internal class CallSamplingService : Service() {
     ) {
         active?.let { session ->
             if (source == CallSource.VOIP_GENERIC && session.callSource == CallSource.CELLULAR) {
-                rt.store.reclassifySession(
-                    session.sessionId,
-                    CallType.UNKNOWN,
-                    CallSource.VOIP_GENERIC
-                )
-                active =
-                    session.copy(callType = CallType.UNKNOWN, callSource = CallSource.VOIP_GENERIC)
+                rt.store.reclassifySession(session.sessionId, CallType.UNKNOWN, CallSource.VOIP_GENERIC)
+                active = session.copy(callType = CallType.UNKNOWN, callSource = CallSource.VOIP_GENERIC)
             }
+            return
+        }
+        if (!applicationContext.isCallSourceActive(source)) {
+            rt.settingsStore.recordMissed(CallRunCode.CALL_NOT_ACTIVE)
+            stopSelf()
             return
         }
         val requirements = applicationContext.requirements()
         if (!requirements.canStart) {
-            rt.settingsStore.recordMissed(requirements.failureCode()); stopSelf(); return
+            rt.settingsStore.recordMissed(requirements.failureCode())
+            stopSelf()
+            return
         }
         val config = rt.config
         try {
@@ -159,17 +190,32 @@ internal class CallSamplingService : Service() {
                 notification(config),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             )
-        } catch (_: RuntimeException) {
-            rt.settingsStore.recordMissed(CallRunCode.FOREGROUND_SERVICE_FAILED)
+        } catch (error: SecurityException) {
+            rt.settingsStore.recordMissed(CallRunCode.FOREGROUND_SERVICE_PERMISSION_DENIED)
+            stopSelf()
+            return
+        } catch (error: RuntimeException) {
+            rt.settingsStore.recordMissed(error.foregroundFailureCode())
+            stopSelf()
+            return
+        }
+        if (!applicationContext.isCallSourceActive(source)) {
+            rt.settingsStore.recordMissed(CallRunCode.CALL_NOT_ACTIVE)
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
             return
         }
         rt.store.finishActiveSession(System.currentTimeMillis(), "service_restarted")
         rt.store.deleteOlderThan(System.currentTimeMillis() - config.retentionDays * 86_400_000L)
         active = rt.store.startSession(type, source, config.sampleIntervalSeconds)
+        rt.settingsStore.clearMissed()
         sampling = scope.launch {
             while (isActive) {
                 val session = active ?: break
+                if (!applicationContext.isCallSourceActive(session.callSource)) {
+                    finishCurrentSession(rt)
+                    break
+                }
                 val at = System.currentTimeMillis()
                 try {
                     coroutineScope {
@@ -201,13 +247,30 @@ internal class CallSamplingService : Service() {
         }
     }
 
-    private suspend fun stopSampling(rt: InstalledCallsRuntime, source: CallSource) {
+    private suspend fun finishCurrentSession(rt: InstalledCallsRuntime) {
         val session = active ?: return
-        if (source != CallSource.UNKNOWN && source != session.callSource) return
-        sampling?.cancelAndJoin(); sampling = null
+        sampling = null
         rt.store.finishSession(session.sessionId, System.currentTimeMillis(), "call_ended")
         active = null
-        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE); stopSelf()
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    private suspend fun stopSampling(rt: InstalledCallsRuntime, source: CallSource) {
+        val session = active ?: run {
+            sampling?.cancelAndJoin()
+            sampling = null
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return
+        }
+        if (source != CallSource.UNKNOWN && source != session.callSource) return
+        sampling?.cancelAndJoin()
+        sampling = null
+        rt.store.finishSession(session.sessionId, System.currentTimeMillis(), "call_ended")
+        active = null
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private fun createChannel() {
@@ -222,9 +285,13 @@ internal class CallSamplingService : Service() {
     }
 
     private fun notification(config: CallSamplingConfig) =
-        NotificationCompat.Builder(this, CHANNEL).setSmallIcon(config.notificationIconResId)
-            .setContentTitle(config.notificationTitle).setContentText(config.notificationText)
-            .setOngoing(true).setSilent(true).build()
+        NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(config.notificationIconResId)
+            .setContentTitle(config.notificationTitle)
+            .setContentText(config.notificationText)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
 
     companion object {
         private const val CHANNEL = "com.crowdmeasure.sdk.calls.sampling"
@@ -232,21 +299,40 @@ internal class CallSamplingService : Service() {
         private const val ACTION_STOP = "com.crowdmeasure.sdk.calls.STOP"
         private const val EXTRA_TYPE = "type"
         private const val EXTRA_SOURCE = "source"
+
         fun start(context: Context, type: CallType, source: CallSource) =
             ContextCompat.startForegroundService(
                 context,
                 Intent(context, CallSamplingService::class.java).setAction(ACTION_START)
-                    .putExtra(EXTRA_TYPE, type.name).putExtra(EXTRA_SOURCE, source.name)
+                    .putExtra(EXTRA_TYPE, type.name)
+                    .putExtra(EXTRA_SOURCE, source.name)
             )
 
         fun stop(context: Context, source: CallSource) {
             context.startService(
-                Intent(context, CallSamplingService::class.java).setAction(
-                    ACTION_STOP
-                ).putExtra(EXTRA_SOURCE, source.name)
+                Intent(context, CallSamplingService::class.java).setAction(ACTION_STOP)
+                    .putExtra(EXTRA_SOURCE, source.name)
             )
         }
     }
+}
+
+@Suppress("DEPRECATION")
+private fun Context.isCallSourceActive(source: CallSource): Boolean = when (source) {
+    CallSource.CELLULAR -> runCatching {
+        getSystemService(TelephonyManager::class.java)?.callState?.let { it != TelephonyManager.CALL_STATE_IDLE } ?: false
+    }.getOrDefault(false)
+    CallSource.VOIP_GENERIC -> runCatching {
+        getSystemService(AudioManager::class.java)?.mode.isVoipMode()
+    }.getOrDefault(false)
+    else -> true
+}
+
+private fun Throwable.foregroundFailureCode(): CallRunCode = when {
+    this is SecurityException -> CallRunCode.FOREGROUND_SERVICE_PERMISSION_DENIED
+    Build.VERSION.SDK_INT >= 31 && javaClass.name == "android.app.ForegroundServiceStartNotAllowedException" ->
+        CallRunCode.FOREGROUND_SERVICE_START_NOT_ALLOWED
+    else -> CallRunCode.FOREGROUND_SERVICE_FAILED
 }
 
 private fun Intent.type() =

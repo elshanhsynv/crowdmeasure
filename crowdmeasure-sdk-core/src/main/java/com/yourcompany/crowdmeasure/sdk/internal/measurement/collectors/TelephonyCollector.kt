@@ -46,7 +46,6 @@ object TelephonyCollector {
                 rat = null,
                 nrState = NrState.NONE,
                 serving = null,
-                aggregation = null,
             )
 
         val sm = context.getSystemService<SubscriptionManager>()
@@ -108,7 +107,6 @@ object TelephonyCollector {
             nrState = NrState.NONE,
             serving = null,
             neighbors = emptyList(),
-            aggregation = null,
         )
 
         val fineGranted = PlatformChecks.hasFineLocation(context)
@@ -144,7 +142,6 @@ object TelephonyCollector {
             ?: infos.firstOrNull()
 
         val parsedServing = candidate?.let { parseCell(it) }
-        val aggregation = candidate?.let { buildAggregation(infos, it) }
         val neighbors = infos
             .filterNot { it.isRegistered }
             .mapNotNull { parseCell(it).snapshot }
@@ -160,7 +157,6 @@ object TelephonyCollector {
             nrState = nrState,
             serving = parsedServing?.snapshot,
             neighbors = neighbors,
-            aggregation = aggregation,
         )
     }
 
@@ -658,23 +654,6 @@ object TelephonyCollector {
             in 438..511 -> 750                 // GSM 750
             else -> null
         }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
-    private fun buildAggregation(
-        infos: List<AndroidCellInfo>,
-        serving: AndroidCellInfo,
-    ): CarrierAggregationInfo? {
-        val secondaries = infos
-            .filter { it !== serving }
-            .filter { it is CellInfoLte || it is CellInfoNr }
-            .mapNotNull { toSecondaryCell(it) }
-
-        if (secondaries.isEmpty()) return null
-        return CarrierAggregationInfo(
-            active = null,
-            secondaryCells = secondaries,
-        )
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)

@@ -54,6 +54,11 @@ internal class CallsSettingsStore(context: Context, preferencesName: String) {
         it[Keys.missedAt] = System.currentTimeMillis(); it[Keys.missedCode] = code.name
     }
 
+    suspend fun clearMissed() = dataStore.edit {
+        it.remove(Keys.missedAt)
+        it.remove(Keys.missedCode)
+    }
+
     suspend fun setVoipActive(active: Boolean) =
         dataStore.edit { it[Keys.voipActive] = active }
 }

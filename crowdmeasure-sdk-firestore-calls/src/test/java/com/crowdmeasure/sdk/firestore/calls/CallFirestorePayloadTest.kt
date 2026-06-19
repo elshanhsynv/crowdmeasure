@@ -16,7 +16,7 @@ class CallFirestorePayloadTest {
                 sessionId = "session",
                 sampledAtUtcMs = 1_000,
                 elapsedMs = 100,
-                cell = CellInfo(rat = "LTE", nrState = NrState.NONE, serving = null, aggregation = null),
+                cell = CellInfo(rat = "LTE", nrState = NrState.NONE, serving = null),
                 rat = "LTE",
                 nrState = "NONE",
                 dbm = null,
