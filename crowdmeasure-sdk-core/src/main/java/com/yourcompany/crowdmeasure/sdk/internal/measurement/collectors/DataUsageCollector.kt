@@ -1,6 +1,5 @@
 package com.crowdmeasure.sdk.internal.measurement.collectors
 
-import android.content.Context
 import android.net.TrafficStats
 import com.crowdmeasure.sdk.model.DataUsageInfo
 
@@ -9,30 +8,44 @@ internal object DataUsageCollector {
     private var lastTxBytes: Long? = null
     private var lastTimeMs: Long? = null
 
-    suspend fun collect(context: Context): DataUsageInfo? {
-        val now = System.currentTimeMillis()
+    @Synchronized
+    fun collect(): DataUsageInfo? {
+        val now = android.os.SystemClock.elapsedRealtime()
         val rxBytes = TrafficStats.getTotalRxBytes()
         val txBytes = TrafficStats.getTotalTxBytes()
-        if (rxBytes == TrafficStats.UNSUPPORTED.toLong() ||
+
+        if (
+            rxBytes == TrafficStats.UNSUPPORTED.toLong() ||
             txBytes == TrafficStats.UNSUPPORTED.toLong()
-        ) return null
+        ) {
+            return null
+        }
 
         val previousRx = lastRxBytes
         val previousTx = lastTxBytes
         val previousTime = lastTimeMs
+
         lastRxBytes = rxBytes
         lastTxBytes = txBytes
         lastTimeMs = now
+
         if (previousRx == null || previousTx == null || previousTime == null) {
-            return DataUsageInfo(0.0, 0.0)
+            return DataUsageInfo(0.0, 0.0, 0.0, 0.0)
         }
+
         val seconds = (now - previousTime) / 1_000.0
-        if (seconds <= 0 || rxBytes < previousRx || txBytes < previousTx) {
-            return DataUsageInfo(0.0, 0.0)
+        val rxDelta = rxBytes - previousRx
+        val txDelta = txBytes - previousTx
+
+        if (seconds <= 0.0 || rxDelta < 0 || txDelta < 0) {
+            return DataUsageInfo(0.0, 0.0, 0.0, 0.0)
         }
+
         return DataUsageInfo(
-            dlKbps = ((rxBytes - previousRx) * 8.0 / 1024.0) / seconds,
-            ulKbps = ((txBytes - previousTx) * 8.0 / 1024.0) / seconds,
+            dlMB = rxDelta / 1_000_000.0,
+            ulMB = txDelta / 1_000_000.0,
+            dlKbps = rxDelta * 8.0 / 1_000.0 / seconds,
+            ulKbps = txDelta * 8.0 / 1_000.0 / seconds,
         )
     }
 }

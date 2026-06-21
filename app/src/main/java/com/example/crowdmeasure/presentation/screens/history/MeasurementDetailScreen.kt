@@ -526,17 +526,17 @@ private fun PerformanceSection(
                 )
             )
 
-            PerformanceGroup(
-                title = "Throughput",
-                chips = listOf(
-                    "Down" to performance.down,
-                    "Up" to performance.up,
-                    "Down P95" to performance.downP95,
-                    "Up P95" to performance.upP95,
-                    "Down StdDev" to performance.downStdDev,
-                    "Up StdDev" to performance.upStdDev
-                )
-            )
+//            PerformanceGroup(
+//                title = "Throughput",
+//                chips = listOf(
+//                    "Down" to performance.down,
+//                    "Up" to performance.up,
+//                    "Down P95" to performance.downP95,
+//                    "Up P95" to performance.upP95,
+//                    "Down StdDev" to performance.downStdDev,
+//                    "Up StdDev" to performance.upStdDev
+//                )
+//            )
         }
     }
 }

@@ -10,6 +10,7 @@ import com.example.crowdmeasure.domain.usecase.RunMeasurementUseCase
 import com.crowdmeasure.sdk.upload.MeasurementUploadClient
 import com.crowdmeasure.sdk.upload.MeasurementUploadResult
 import com.example.crowdmeasure.presentation.util.AppPermissions
+import com.example.crowdmeasure.presentation.util.AppLog
 import com.example.crowdmeasure.presentation.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -75,20 +76,28 @@ class HomeViewModel @Inject constructor(
         if (currentMeasurementJob?.isActive == true) return
 
         currentMeasurementJob = viewModelScope.launch {
+            AppLog.i("Home", "Manual measurement started.")
             measurementState.value = UiState.Loading
 
             val result = runMeasurementUseCase()
 
             result.fold(
                 onSuccess = { measurement ->
+                    AppLog.i("Home", "Manual measurement collected: id=${measurement.meta.measurementId}")
                     // Saving to local DB
                     val saveResult = runCatching {
                         measurementRepository.insert(measurement)
                     }
 
                     measurementState.value = if (saveResult.isSuccess) {
+                        AppLog.i("Home", "Manual measurement stored locally: id=${measurement.meta.measurementId}")
                         UiState.Success(Unit)
                     } else {
+                        AppLog.e(
+                            "Home",
+                            "Manual measurement local save failed.",
+                            saveResult.exceptionOrNull(),
+                        )
                         UiState.Error(
                             message = "Measurement completed but couldn't save to local database.",
                             throwable = saveResult.exceptionOrNull()
@@ -96,8 +105,9 @@ class HomeViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
+                    AppLog.e("Home", "Manual measurement failed: ${error.message}", error)
                     measurementState.value = UiState.Error(
-                        message = "Measurement failed. Check permissions and try again.",
+                        message = error.message ?: "Measurement failed. Check permissions and try again.",
                         throwable = error
                     )
                 }

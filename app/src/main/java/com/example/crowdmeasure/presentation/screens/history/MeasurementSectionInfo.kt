@@ -25,10 +25,10 @@ internal data class MeasurementSectionContent(
     fun matches(query: String): Boolean {
         val normalized = query.trim()
         return normalized.isEmpty() ||
-            title.contains(normalized, ignoreCase = true) ||
-            shortLabel?.contains(normalized, ignoreCase = true) == true ||
-            sensitiveValues.any { it.matches(normalized) } ||
-            metrics.any { it.matches(normalized) }
+                title.contains(normalized, ignoreCase = true) ||
+                shortLabel?.contains(normalized, ignoreCase = true) == true ||
+                sensitiveValues.any { it.matches(normalized) } ||
+                metrics.any { it.matches(normalized) }
     }
 }
 
@@ -41,8 +41,8 @@ internal data class SensitiveValueInfo(
 ) {
     fun matches(query: String) =
         name.contains(query, ignoreCase = true) ||
-            shortLabel?.contains(query, ignoreCase = true) == true ||
-            explanation.contains(query, ignoreCase = true)
+                shortLabel?.contains(query, ignoreCase = true) == true ||
+                explanation.contains(query, ignoreCase = true)
 }
 
 @Immutable
@@ -55,9 +55,9 @@ internal data class MetricDefinition(
 ) {
     fun matches(query: String) =
         name.contains(query, ignoreCase = true) ||
-            shortLabel?.contains(query, ignoreCase = true) == true ||
-            meaning.contains(query, ignoreCase = true) ||
-            searchTerms.any { it.contains(query, ignoreCase = true) }
+                shortLabel?.contains(query, ignoreCase = true) == true ||
+                meaning.contains(query, ignoreCase = true) ||
+                searchTerms.any { it.contains(query, ignoreCase = true) }
 }
 
 internal object MeasurementSectionCatalog {
@@ -89,9 +89,24 @@ internal object MeasurementSectionCatalog {
             meaning = "Describes the device and app environment used to capture the measurement.",
             purpose = "Device hardware, Android versions, and app versions can affect signal reporting and test performance. This context makes comparisons fairer.",
             sensitiveValues = listOf(
-                sensitive("session_id", "Session ID", "Groups related app activity without displaying a direct identity.", "Pseudonymous"),
-                sensitive("user_id", "Hashed user ID", "Associates contributions without displaying a raw account identifier.", "Pseudonymous"),
-                sensitive("device_details", "Device and build details", "May contribute to device fingerprinting when combined.", "Linkable")
+                sensitive(
+                    "session_id",
+                    "Session ID",
+                    "Groups related app activity without displaying a direct identity.",
+                    "Pseudonymous"
+                ),
+                sensitive(
+                    "user_id",
+                    "Hashed user ID",
+                    "Associates contributions without displaying a raw account identifier.",
+                    "Pseudonymous"
+                ),
+                sensitive(
+                    "device_details",
+                    "Device and build details",
+                    "May contribute to device fingerprinting when combined.",
+                    "Linkable"
+                )
             ),
             metrics = definitions(
                 "Device Model" to "The commercial model of the phone or tablet.",
@@ -116,8 +131,18 @@ internal object MeasurementSectionCatalog {
             meaning = "Describes the connection and device conditions present during the test.",
             purpose = "Power-saving modes, connection type, data-saving settings, and location can explain differences in availability and performance.",
             sensitiveValues = listOf(
-                sensitive("location", "Precise location", "Capture coordinates are sensitive and hidden by default.", "Hidden"),
-                sensitive("location_accuracy", "Location accuracy", "Describes the possible radius around the captured location.", "Context")
+                sensitive(
+                    "location",
+                    "Precise location",
+                    "Capture coordinates are sensitive and hidden by default.",
+                    "Hidden"
+                ),
+                sensitive(
+                    "location_accuracy",
+                    "Location accuracy",
+                    "Describes the possible radius around the captured location.",
+                    "Context"
+                )
             ),
             metrics = definitions(
                 "Transport" to "The active connection type, such as Wi-Fi or cellular.",
@@ -144,7 +169,12 @@ internal object MeasurementSectionCatalog {
             meaning = "Describes the local wireless connection used for the measurement.",
             purpose = "Signal quality, radio frequency, and negotiated link rates help explain Wi-Fi performance and coverage.",
             sensitiveValues = listOf(
-                sensitive("bssid_hash", "BSSID hash", "A pseudonymous access-point identifier that can correlate measurements from the same network.", "Pseudonymous")
+                sensitive(
+                    "bssid_hash",
+                    "BSSID hash",
+                    "A pseudonymous access-point identifier that can correlate measurements from the same network.",
+                    "Pseudonymous"
+                )
             ),
             metrics = definitions(
                 "Signal Strength (RSSI)" to "Received Wi-Fi signal power in dBm. Values closer to zero generally indicate a stronger signal.",
@@ -164,10 +194,30 @@ internal object MeasurementSectionCatalog {
             meaning = "Describes the mobile network, SIM configuration, serving cell, and radio signal conditions.",
             purpose = "These values help map carrier coverage, compare radio technologies, and identify areas with weak or unstable mobile service.",
             sensitiveValues = listOf(
-                sensitive("cell_identifiers", "Cell identifiers", "Serving-cell identity and radio details are hidden by default.", "Hidden"),
-                sensitive("subscription_id", "Subscription ID", "An Android identifier that can link measurements from the same subscription.", "Linkable"),
-                sensitive("card_id", "Card ID", "An Android identifier associated with the SIM card.", "Sensitive"),
-                sensitive("sim_slot", "SIM slot details", "Describe which physical or logical SIM supplied the measurement.", "Linkable")
+                sensitive(
+                    "cell_identifiers",
+                    "Cell identifiers",
+                    "Serving-cell identity and radio details are hidden by default.",
+                    "Hidden"
+                ),
+                sensitive(
+                    "subscription_id",
+                    "Subscription ID",
+                    "An Android identifier that can link measurements from the same subscription.",
+                    "Linkable"
+                ),
+                sensitive(
+                    "card_id",
+                    "Card ID",
+                    "An Android identifier associated with the SIM card.",
+                    "Sensitive"
+                ),
+                sensitive(
+                    "sim_slot",
+                    "SIM slot details",
+                    "Describe which physical or logical SIM supplied the measurement.",
+                    "Linkable"
+                )
             ),
             metrics = definitions(
                 "RAT" to "The radio access technology, such as LTE or 5G NR.",
@@ -206,7 +256,12 @@ internal object MeasurementSectionCatalog {
             meaning = "Describes the public internet identity and provider visible during the measurement.",
             purpose = "It helps group results by internet provider and understand which network carried the test traffic.",
             sensitiveValues = listOf(
-                sensitive("public_ip", "Public IP", "Can reveal an approximate location or link activity from the same connection.", "Sensitive")
+                sensitive(
+                    "public_ip",
+                    "Public IP",
+                    "Can reveal an approximate location or link activity from the same connection.",
+                    "Sensitive"
+                )
             ),
             metrics = definitions(
                 "Public IP" to "The internet-facing IP address observed for this connection.",
@@ -220,7 +275,12 @@ internal object MeasurementSectionCatalog {
             meaning = "Measures how quickly and reliably the network reaches a test service and transfers data.",
             purpose = "These metrics show the user-visible quality of a connection and support comparisons across locations, providers, and network types.",
             sensitiveValues = listOf(
-                sensitive("endpoint", "Endpoint identifier", "Hidden by default because it can reveal internal test-routing details.", "Hidden")
+                sensitive(
+                    "endpoint",
+                    "Endpoint identifier",
+                    "Hidden by default because it can reveal internal test-routing details.",
+                    "Hidden"
+                )
             ),
             metrics = definitions(
                 "Endpoint" to "The test service selected for this measurement.",

@@ -52,7 +52,7 @@ class CrowdMeasureSdk private constructor(
                 databaseName = config.databaseName,
                 ipHashSaltProvider = resolvedIpHashSaltProvider,
             )
-            val requirements = SdkRequirementsClient(appContext)
+            val requirements = SdkRequirementsClient(appContext, config.collectors)
 
             return CrowdMeasureSdk(
                 measurements = SdkMeasurementClient(

@@ -7,7 +7,9 @@ import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.ContextCompat
+import com.crowdmeasure.sdk.CollectorConfig
 import com.crowdmeasure.sdk.CrowdMeasureError
+import com.crowdmeasure.sdk.CrowdMeasureLogger
 import com.crowdmeasure.sdk.CrowdMeasureResult
 import com.crowdmeasure.sdk.CrowdMeasureSettings
 import com.crowdmeasure.sdk.CrowdMeasureSettingsStore
@@ -39,24 +41,51 @@ internal class SdkMeasurementClient(
     private val measurementStore: MeasurementStore,
     private val requirementsClient: RequirementsClient,
 ) : MeasurementClient {
-    private val runner = MeasurementRunner(context, settingsStore, config, ipHashSaltProvider, Dispatchers.IO)
+    private val logger = config.logger
+    private val runner = MeasurementRunner(
+        context,
+        settingsStore,
+        config,
+        ipHashSaltProvider,
+        Dispatchers.IO,
+        logger,
+    )
 
     override suspend fun runAndSave(): CrowdMeasureResult<Measurement> {
+        logger.info("Manual measurement requested.")
         val requirements = requirementsClient.evaluateManualMeasurement()
+        logger.info("Measurement requirements: ${requirements.describe()}")
         if (!requirements.supportedAndroidVersion) {
+            logger.warn("Measurement blocked: unsupported Android version.")
             return CrowdMeasureResult.Failure(CrowdMeasureError.UnsupportedAndroidVersion)
         }
+        if (requirements.missingPermissions.isNotEmpty()) {
+            logger.warn(
+                "Measurement blocked: missing permissions " +
+                        requirements.missingPermissions.joinToString(),
+            )
+            return CrowdMeasureResult.Failure(
+                CrowdMeasureError.MissingPermissions(requirements.missingPermissions),
+            )
+        }
+//        if (!requirements.locationServicesEnabled) {
+//            logger.warn("Measurement blocked: location services are disabled.")
+//            return CrowdMeasureResult.Failure(CrowdMeasureError.LocationServicesDisabled)
+//        }
 
         val measurement = runner.runOnce().getOrElse {
             if (it is CancellationException) throw it
+            logger.error("Measurement collection failed.", it)
             return CrowdMeasureResult.Failure(CrowdMeasureError.CollectionFailed(it))
         }
         return try {
             measurementStore.save(measurement)
+            logger.info("Measurement saved: id=${measurement.meta.measurementId}.")
             CrowdMeasureResult.Success(measurement)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
+            logger.error("Measurement persistence failed.", error)
             CrowdMeasureResult.Failure(CrowdMeasureError.PersistenceFailed(error))
         }
     }
@@ -135,20 +164,30 @@ internal class SdkSettingsClient(
 
 internal class SdkRequirementsClient(
     private val context: Context,
+    private val collectors: CollectorConfig,
 ) : RequirementsClient {
     override fun evaluateManualMeasurement(): MeasurementRequirements {
         val missing = buildSet {
-            if (!hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            val needsLocationPermission = collectors.locationEnabled ||
+                    collectors.wifiEnabled ||
+                    collectors.cellularEnabled
+            if (needsLocationPermission && !hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
                 add(Manifest.permission.ACCESS_COARSE_LOCATION)
             }
-            if (!hasPermission(Manifest.permission.READ_PHONE_STATE)) {
+            if (collectors.cellularEnabled && !hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                add(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+            if (collectors.cellularEnabled && !hasPermission(Manifest.permission.READ_PHONE_STATE)) {
                 add(Manifest.permission.READ_PHONE_STATE)
             }
         }
         val locationManager = context.getSystemService(LocationManager::class.java)
+        val needsLocationServices = collectors.locationEnabled ||
+                collectors.wifiEnabled ||
+                collectors.cellularEnabled
         return MeasurementRequirements(
             supportedAndroidVersion = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q,
-            locationServicesEnabled = runCatching {
+            locationServicesEnabled = !needsLocationServices || runCatching {
                 locationManager?.isLocationEnabled == true
             }.getOrDefault(false),
             missingPermissions = missing,
@@ -158,6 +197,23 @@ internal class SdkRequirementsClient(
     private fun hasPermission(permission: String): Boolean =
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 }
+
+private fun CrowdMeasureLogger.debug(message: String) =
+    log(CrowdMeasureLogger.Level.DEBUG, message, null)
+
+private fun CrowdMeasureLogger.info(message: String) =
+    log(CrowdMeasureLogger.Level.INFO, message, null)
+
+private fun CrowdMeasureLogger.warn(message: String) =
+    log(CrowdMeasureLogger.Level.WARN, message, null)
+
+private fun CrowdMeasureLogger.error(message: String, error: Throwable) =
+    log(CrowdMeasureLogger.Level.ERROR, message, error)
+
+private fun MeasurementRequirements.describe(): String =
+    "supportedAndroidVersion=$supportedAndroidVersion, " +
+            "locationServicesEnabled=$locationServicesEnabled, " +
+            "missingPermissions=${missingPermissions.joinToString().ifBlank { "none" }}"
 
 internal class SdkMeasurementQueueClient(
     private val store: MeasurementStore,

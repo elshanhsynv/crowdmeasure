@@ -151,6 +151,8 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
 
     val usagePairs = environment.network.dataUsage?.let { usage ->
         listOf(
+            "DL" to "%.2f MB".format(usage.dlMB),
+            "UL" to "%.2f MB".format(usage.ulMB),
             "DL Rate" to "%.2f Kbps".format(usage.dlKbps),
             "UL Rate" to "%.2f Kbps".format(usage.ulKbps)
         )
@@ -245,12 +247,13 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         serverRegion = performance.serverRegion ?: "—",
         stallsCount = performance.stallsCount?.toString() ?: "—",
         maxStall = performance.maxStallMs?.let { "$it ms" } ?: "—",
-        down = performance.downMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
-        up = performance.upMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
-        downP95 = performance.downP95Mbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
-        downStdDev = performance.downStdDevMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
-        upP95 = performance.upP95Mbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
-        upStdDev = performance.upStdDevMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—")
+//        down = performance.downMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
+//        up = performance.upMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
+//        downP95 = performance.downP95Mbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
+//        downStdDev = performance.downStdDevMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
+//        upP95 = performance.upP95Mbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—",
+//        upStdDev = performance.upStdDevMbps?.let { "${"%.2f".format(it)} Mbps" } ?: "—"
+    )
 
     return MeasurementDetailUi(
         id = meta.measurementId,

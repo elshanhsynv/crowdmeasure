@@ -21,4 +21,31 @@ class CoreHardeningTest {
     fun invalidProbeAttemptsFailFast() {
         PerformanceProbeConfig(attempts = 0)
     }
+
+    @Test
+    fun measurementRequirementsCanRunRequiresPermissionsAndLocationServices() {
+        assertTrue(
+            MeasurementRequirements(
+                supportedAndroidVersion = true,
+                locationServicesEnabled = true,
+                missingPermissions = emptySet(),
+            ).canRun
+        )
+
+        assertTrue(
+            !MeasurementRequirements(
+                supportedAndroidVersion = true,
+                locationServicesEnabled = false,
+                missingPermissions = emptySet(),
+            ).canRun
+        )
+
+        assertTrue(
+            !MeasurementRequirements(
+                supportedAndroidVersion = true,
+                locationServicesEnabled = true,
+                missingPermissions = setOf("android.permission.ACCESS_FINE_LOCATION"),
+            ).canRun
+        )
+    }
 }

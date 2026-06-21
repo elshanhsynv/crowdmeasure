@@ -3,6 +3,7 @@ package com.crowdmeasure.sdk.internal.measurement
 import android.content.Context
 import com.crowdmeasure.sdk.CrowdMeasureSettingsStore
 import com.crowdmeasure.sdk.CrowdMeasureConfig
+import com.crowdmeasure.sdk.CrowdMeasureLogger
 import com.crowdmeasure.sdk.IpHashSaltProvider
 import com.crowdmeasure.sdk.internal.measurement.collectors.DeviceInfoCollector
 import com.crowdmeasure.sdk.internal.measurement.collectors.EnvironmentCollector
@@ -10,7 +11,6 @@ import com.crowdmeasure.sdk.internal.measurement.collectors.PerformanceCollector
 import com.crowdmeasure.sdk.internal.measurement.net.OkHttpClientProvider
 import com.crowdmeasure.sdk.model.Measurement
 import com.crowdmeasure.sdk.model.Meta
-import com.crowdmeasure.sdk.model.TransportType
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -22,28 +22,54 @@ internal class MeasurementRunner(
     private val config: CrowdMeasureConfig,
     private val ipHashSaltProvider: IpHashSaltProvider,
     private val io: CoroutineDispatcher,
+    private val logger: CrowdMeasureLogger,
 ) {
     suspend fun runOnce(): Result<Measurement> = withContext(io) {
         runCatching {
+            logger.debug("Measurement phase started: settings.")
             val settings = settingsStore.settings.first()
-            val http = OkHttpClientProvider().create()
-            val device = DeviceInfoCollector.collect(versionName = hostVersionName())
-            val environment = EnvironmentCollector.collect(context, http, config, ipHashSaltProvider.getSalt())
+            logger.debug("Measurement settings loaded: endpoint=${settings.endpointUrl}.")
 
-            if (settingsStore.collectOnlyOnWifi() &&
-                environment.network.transport != TransportType.WIFI
-            ) {
-                error("Collect only on Wi-Fi is enabled.")
-            }
+            logger.debug("Measurement phase started: HTTP client.")
+            val http = OkHttpClientProvider().create()
+
+            logger.debug("Measurement phase started: device.")
+            val device = DeviceInfoCollector.collect(versionName = hostVersionName())
+            logger.debug(
+                "Device snapshot collected: sdk=${device.androidSdk}, " +
+                        "manufacturer=${device.deviceManufacturer}, model=${device.deviceModel}.",
+            )
+
+            logger.debug("Measurement phase started: environment.")
+            val environment = EnvironmentCollector.collect(context, http, config, ipHashSaltProvider.getSalt())
+            logger.info(
+                "Environment snapshot collected: transport=${environment.network.transport}, " +
+                        "wifi=${environment.network.wifi != null}, " +
+                        "cell=${environment.network.cell != null}, " +
+                        "location=${environment.location != null}.",
+            )
 
             val performance = if (config.collectors.performanceEnabled) {
+                logger.debug("Measurement phase started: performance probe.")
                 PerformanceCollector.run(
                     http,
                     settings.endpointUrl,
                     settings.endpointUrl,
                     config.performanceProbe.attempts,
-                )
-            } else com.crowdmeasure.sdk.model.PerformanceInfo(endpointId = settings.endpointUrl)
+                ).also {
+                    logger.info(
+                        "Performance probe finished: endpoint=${it.endpointId}, " +
+                                "httpLatencyAvgMs=${it.httpLatencyAvgMs}, " +
+                                "jitterMs=${it.jitterMs}, " +
+                                "probes=${it.probesSucceeded}/${it.probesAttempted}.",
+                    )
+                }
+            } else {
+                logger.info("Performance probe skipped: collector disabled.")
+                com.crowdmeasure.sdk.model.PerformanceInfo(endpointId = settings.endpointUrl)
+            }
+
+            logger.debug("Measurement phase started: model assembly.")
             Measurement(
                 meta = Meta(
                     measurementId = UUID.randomUUID().toString(),
@@ -64,7 +90,9 @@ internal class MeasurementRunner(
                 ),
                 environment = environment,
                 performance = performance,
-            )
+            ).also {
+                logger.info("Measurement assembled: id=${it.meta.measurementId}.")
+            }
         }
     }
 
@@ -74,3 +102,9 @@ internal class MeasurementRunner(
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         }.getOrNull().orEmpty()
 }
+
+private fun CrowdMeasureLogger.debug(message: String) =
+    log(CrowdMeasureLogger.Level.DEBUG, message, null)
+
+private fun CrowdMeasureLogger.info(message: String) =
+    log(CrowdMeasureLogger.Level.INFO, message, null)

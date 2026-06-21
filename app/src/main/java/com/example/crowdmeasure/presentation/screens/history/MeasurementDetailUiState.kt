@@ -54,12 +54,12 @@ data class PerformanceUi(
     val serverRegion: String,
     val stallsCount: String,
     val maxStall: String,
-    val down: String,
-    val up: String,
-    val downP95: String,
-    val downStdDev: String,
-    val upP95: String,
-    val upStdDev: String
+//    val down: String,
+//    val up: String,
+//    val downP95: String,
+//    val downStdDev: String,
+//    val upP95: String,
+//    val upStdDev: String
 )
 
 enum class RevealKey {

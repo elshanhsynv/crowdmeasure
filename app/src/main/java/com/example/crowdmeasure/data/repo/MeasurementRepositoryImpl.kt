@@ -5,9 +5,11 @@ import com.example.crowdmeasure.data.db.MeasurementDao
 import com.example.crowdmeasure.data.db.MeasurementEntity
 import com.crowdmeasure.sdk.model.Measurement
 import com.crowdmeasure.sdk.model.RecordState
+import com.crowdmeasure.sdk.CrowdMeasureError
 import com.crowdmeasure.sdk.CrowdMeasureResult
 import com.crowdmeasure.sdk.CrowdMeasureSdk
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
+import com.example.crowdmeasure.presentation.util.AppLog
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -21,10 +23,15 @@ class MeasurementRepositoryImpl(
 
     override suspend fun runSingleMeasurement(): Result<Measurement> = withContext(io) {
         when (val result = sdk.measurements.runAndSave()) {
-            is CrowdMeasureResult.Success -> Result.success(result.value)
-            is CrowdMeasureResult.Failure -> Result.failure(
-                IllegalStateException(result.error.toString())
-            )
+            is CrowdMeasureResult.Success -> {
+                AppLog.i("MeasurementRepo", "Measurement succeeded: id=${result.value.meta.measurementId}")
+                Result.success(result.value)
+            }
+            is CrowdMeasureResult.Failure -> {
+                val exception = result.error.toException()
+                AppLog.e("MeasurementRepo", exception.message.orEmpty(), exception.cause)
+                Result.failure(exception)
+            }
         }
     }
 
@@ -80,3 +87,31 @@ class MeasurementRepositoryImpl(
         dao.getFailedCount()
     }
 }
+
+private fun CrowdMeasureError.toException(): IllegalStateException =
+    when (this) {
+        is CrowdMeasureError.MissingPermissions -> IllegalStateException(
+            "Missing required permissions: ${permissions.joinToString()}",
+        )
+        CrowdMeasureError.LocationServicesDisabled -> IllegalStateException(
+            "Location Services are disabled.",
+        )
+        CrowdMeasureError.UnsupportedAndroidVersion -> IllegalStateException(
+            "Unsupported Android version. Android 10 / API 29 or newer is required.",
+        )
+        is CrowdMeasureError.CollectionFailed -> IllegalStateException(
+            "Measurement collection failed: ${cause.message ?: cause::class.java.simpleName}",
+            cause,
+        )
+        is CrowdMeasureError.PersistenceFailed -> IllegalStateException(
+            "Measurement save failed: ${cause.message ?: cause::class.java.simpleName}",
+            cause,
+        )
+        is CrowdMeasureError.ExportFailed -> IllegalStateException(
+            "Measurement export failed: ${cause.message ?: cause::class.java.simpleName}",
+            cause,
+        )
+        is CrowdMeasureError.InvalidConfiguration -> IllegalStateException(
+            "Invalid SDK configuration: $message",
+        )
+    }

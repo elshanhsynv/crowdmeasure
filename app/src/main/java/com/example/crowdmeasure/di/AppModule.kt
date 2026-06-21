@@ -18,6 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import com.crowdmeasure.sdk.CrowdMeasureConfig
+import com.crowdmeasure.sdk.CrowdMeasureLogger
 import com.crowdmeasure.sdk.CrowdMeasureSdk
 import com.crowdmeasure.sdk.background.BackgroundCollectionClient
 import com.crowdmeasure.sdk.background.CrowdMeasureBackground
@@ -34,6 +35,7 @@ import com.crowdmeasure.sdk.calls.CrowdMeasureCalls
 import com.crowdmeasure.sdk.calls.upload.CallUploadClient
 import com.crowdmeasure.sdk.calls.upload.CallUploadConfig
 import com.crowdmeasure.sdk.calls.upload.CrowdMeasureCallUploads
+import com.example.crowdmeasure.presentation.util.AppLog
 import com.example.crowdmeasure.update.ApkVerifier
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -73,6 +75,14 @@ object AppModule {
             databaseName = "crowdmeasure.db",
             defaultEndpointUrl = AppPreferences.DEFAULT_ENDPOINT,
             defaultRetentionDays = AppPreferences.DEFAULT_RETENTION_DAYS,
+            logger = CrowdMeasureLogger { level, message, error ->
+                when (level) {
+                    CrowdMeasureLogger.Level.DEBUG -> AppLog.d("SDK", message)
+                    CrowdMeasureLogger.Level.INFO -> AppLog.i("SDK", message)
+                    CrowdMeasureLogger.Level.WARN -> AppLog.w("SDK", message, error)
+                    CrowdMeasureLogger.Level.ERROR -> AppLog.e("SDK", message, error)
+                }
+            },
         ),
         measurementStore = AppMeasurementStore(dao),
         settingsStore = AppSdkSettingsStore(prefs),

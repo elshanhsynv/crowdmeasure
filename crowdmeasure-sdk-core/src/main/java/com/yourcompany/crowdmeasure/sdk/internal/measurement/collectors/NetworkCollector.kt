@@ -31,7 +31,7 @@ object NetworkCollector {
             TelephonyCollector.collect(context)
         } else null
 
-        val dataUsage = DataUsageCollector.collect(context)
+        val dataUsage = DataUsageCollector.collect()
 
         val validatedInternet: Boolean?
         val captivePortal: Boolean?

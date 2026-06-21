@@ -39,6 +39,8 @@ data class NetworkEnvironment(
 
 @Serializable
 data class DataUsageInfo(
+    val dlMB: Double,
+    val ulMB: Double,
     val dlKbps: Double,
     val ulKbps: Double,
 )

@@ -82,7 +82,10 @@ data class MeasurementRequirements(
     val locationServicesEnabled: Boolean,
     val missingPermissions: Set<String>,
 ) {
-    val canRun: Boolean get() = supportedAndroidVersion
+    val canRun: Boolean
+        get() = supportedAndroidVersion &&
+//                locationServicesEnabled &&
+                missingPermissions.isEmpty()
 }
 
 interface MeasurementClient {

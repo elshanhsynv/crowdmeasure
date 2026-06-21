@@ -20,12 +20,130 @@ import android.telephony.CellInfo as AndroidCellInfo
 import androidx.annotation.RequiresApi
 import androidx.annotation.WorkerThread
 import androidx.core.content.getSystemService
-import com.crowdmeasure.sdk.model.CarrierAggregationInfo
 import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.CellInfo
 import com.crowdmeasure.sdk.model.CellRadioSnapshot
 import com.crowdmeasure.sdk.model.NrState
-import com.crowdmeasure.sdk.model.SecondaryCell
+
+internal enum class TelephonyRat {
+    LTE,
+    NR,
+    OTHER,
+}
+
+internal data class CellSelectionCandidate(
+    val rat: TelephonyRat,
+    val registered: Boolean,
+    val connectionStatus: Int,
+    val ageMs: Long,
+    val signalDbm: Int,
+)
+
+data class SubscriptionDisplayInfo(
+    val subscriptionId: Int?,
+    val displayInfo: TelephonyDisplayInfo,
+)
+
+internal object TelephonyCollectorLogic {
+    const val MAX_CELL_AGE_MS = 30_000L
+
+    fun deriveNrState(
+        dataNetworkType: Int?,
+        displayNetworkType: Int?,
+        displayOverrideNetworkType: Int?,
+        hasRegisteredNr: Boolean,
+    ): NrState {
+        if (displayOverrideNetworkType?.let(::isNrNsaOverride) == true) {
+            return NrState.NSA
+        }
+
+        if (displayNetworkType == TelephonyManager.NETWORK_TYPE_NR) {
+            return NrState.SA
+        }
+
+        return when (dataNetworkType) {
+            TelephonyManager.NETWORK_TYPE_NR -> NrState.SA
+            TelephonyManager.NETWORK_TYPE_LTE -> if (hasRegisteredNr) NrState.NSA else NrState.NONE
+            else -> NrState.NONE
+        }
+    }
+
+    fun selectServingIndex(
+        nrState: NrState,
+        candidates: List<CellSelectionCandidate>,
+    ): Int? {
+        fun best(items: Iterable<IndexedValue<CellSelectionCandidate>>): Int? {
+            val itemList = items.toList()
+            val fresh = itemList.filter { it.value.ageMs <= MAX_CELL_AGE_MS }.ifEmpty { itemList }
+
+            return fresh.sortedWith(
+                compareByDescending<IndexedValue<CellSelectionCandidate>> {
+                    connectionStatusRank(it.value.connectionStatus)
+                }
+                    .thenByDescending { signalRank(it.value.signalDbm) }
+                    .thenBy { it.value.ageMs }
+                    .thenBy { it.index }
+            ).firstOrNull()?.index
+        }
+
+        val registered = candidates.withIndex().filter { it.value.registered }
+
+        val compatible = registered.filter { (_, cell) ->
+            when (nrState) {
+                NrState.SA -> cell.rat == TelephonyRat.NR
+                NrState.NSA -> cell.rat == TelephonyRat.LTE
+                NrState.NONE -> true
+            }
+        }
+
+        return best(compatible)
+    }
+
+    fun coarseRatName(dataNetworkType: Int?, displayNetworkType: Int?): String? =
+        dataNetworkType?.let(::networkTypeName) ?: displayNetworkType?.let(::networkTypeName)
+
+    fun signalRank(dbm: Int): Int =
+        dbm.validSig() ?: Int.MIN_VALUE
+
+    fun connectionStatusRank(connectionStatus: Int): Int =
+        when (connectionStatus) {
+            AndroidCellInfo.CONNECTION_PRIMARY_SERVING -> 3
+            AndroidCellInfo.CONNECTION_SECONDARY_SERVING -> 2
+            AndroidCellInfo.CONNECTION_UNKNOWN -> 1
+            else -> 0
+        }
+
+    @Suppress("DEPRECATION")
+    fun isNrNsaOverride(overrideNetworkType: Int): Boolean =
+        overrideNetworkType == TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA ||
+                overrideNetworkType == TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA_MMWAVE
+
+    private fun Int.validSig(): Int? =
+        takeIf { it != Int.MAX_VALUE && it != Int.MIN_VALUE }
+
+    @Suppress("DEPRECATION")
+    private fun networkTypeName(type: Int): String? = when (type) {
+        TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
+        TelephonyManager.NETWORK_TYPE_NR -> "NR"
+        TelephonyManager.NETWORK_TYPE_HSPAP -> "HSPAP"
+        TelephonyManager.NETWORK_TYPE_HSPA -> "HSPA"
+        TelephonyManager.NETWORK_TYPE_UMTS -> "UMTS"
+        TelephonyManager.NETWORK_TYPE_EDGE -> "EDGE"
+        TelephonyManager.NETWORK_TYPE_GPRS -> "GPRS"
+        TelephonyManager.NETWORK_TYPE_CDMA -> "CDMA"
+        TelephonyManager.NETWORK_TYPE_EVDO_0 -> "EVDO_0"
+        TelephonyManager.NETWORK_TYPE_EVDO_A -> "EVDO_A"
+        TelephonyManager.NETWORK_TYPE_EVDO_B -> "EVDO_B"
+        TelephonyManager.NETWORK_TYPE_1xRTT -> "1xRTT"
+        TelephonyManager.NETWORK_TYPE_EHRPD -> "EHRPD"
+        TelephonyManager.NETWORK_TYPE_IDEN -> "IDEN"
+        TelephonyManager.NETWORK_TYPE_GSM -> "GSM"
+        TelephonyManager.NETWORK_TYPE_TD_SCDMA -> "TD-SCDMA"
+        TelephonyManager.NETWORK_TYPE_IWLAN -> "IWLAN"
+        TelephonyManager.NETWORK_TYPE_UNKNOWN -> null
+        else -> null
+    }
+}
 
 /**
  * Collects a telephony snapshot supporting all active RATs:
@@ -39,7 +157,11 @@ object TelephonyCollector {
     @WorkerThread
     @RequiresApi(Build.VERSION_CODES.Q)
     @SuppressLint("MissingPermission")
-    fun collect(context: Context): CellInfo {
+    fun collect(
+        context: Context,
+        cachedDisplayInfo: TelephonyDisplayInfo? = null,
+        cachedSubscriptionDisplayInfo: SubscriptionDisplayInfo? = null,
+    ): CellInfo {
         val tm = context.getSystemService<TelephonyManager>()
             ?: return CellInfo(
                 simCarriers = emptyList(),
@@ -49,52 +171,38 @@ object TelephonyCollector {
             )
 
         val sm = context.getSystemService<SubscriptionManager>()
-
-        val op = tm.networkOperator.orEmpty()
         val phoneGranted = PlatformChecks.hasPhoneState(context)
 
-        val dataType: Int? = if (phoneGranted) {
-            try {
-                tm.dataNetworkType
-            } catch (e: SecurityException) {
-                null
-            }
-        } else null
-
-        val voiceType: Int? = if (phoneGranted) {
-            try {
-                tm.voiceNetworkType
-            } catch (e: SecurityException) {
-                null
-            }
-        } else null
-
-        val serviceState = if (phoneGranted) {
-            try {
-                tm.serviceState
-            } catch (e: SecurityException) {
-                null
-            }
-        } else null
-
-        val duplexModeString: String = when (serviceState?.duplexMode) {
-            ServiceState.DUPLEX_MODE_FDD -> "FDD"
-            ServiceState.DUPLEX_MODE_TDD -> "TDD"
-            else -> ""
-        }
-
-        val carrier = CarrierInfo(
-            carrierName = safe { tm.networkOperatorName },
-            mcc = op.takeIf { it.length >= 3 }?.substring(0, 3),
-            mnc = op.takeIf { it.length >= 5 }?.substring(3),
-            simOperatorId = tm.simOperator,
-            simOperatorName = tm.simOperatorName,
-            countryIso = safe { tm.simCountryIso },
-            duplexMode = duplexModeString
-        )
         val simCarriers = collectSimCarriers(tm, sm, phoneGranted)
-        val collectedCarrier = simCarriers.collectedCarrier() ?: carrier
+        val selectedCarrier = simCarriers.collectedCarrier()
+        val targetTm = selectedCarrier?.subscriptionId
+            ?.let { safe { tm.createForSubscriptionId(it) } }
+            ?: tm
+
+        val serviceState = if (phoneGranted) safe { targetTm.serviceState } else null
+        val fallbackCarrier = targetTm.toCarrierInfo(serviceState)
+        val collectedCarrier = selectedCarrier ?: fallbackCarrier
         val collectedSimCarriers = simCarriers.ifEmpty { listOf(collectedCarrier) }
+
+        val dataType: Int? = if (phoneGranted) safe { targetTm.dataNetworkType } else null
+
+        val voiceType: Int? = if (phoneGranted) safe { targetTm.voiceNetworkType } else null
+
+        val displayInfo = cachedSubscriptionDisplayInfo
+            ?.takeIf { it.subscriptionId == collectedCarrier.subscriptionId }
+            ?.displayInfo
+            ?: cachedDisplayInfo.takeIf {
+                cachedSubscriptionDisplayInfo == null && collectedCarrier.subscriptionId == null
+            }
+        val coarseNrState = deriveNrState(
+            displayInfo = displayInfo,
+            dataNetworkType = dataType,
+            infos = emptyList(),
+        )
+        val coarseRat = TelephonyCollectorLogic.coarseRatName(
+            dataNetworkType = dataType,
+            displayNetworkType = displayInfo?.networkType,
+        )
 
         val base = CellInfo(
             simCarriers = collectedSimCarriers,
@@ -102,9 +210,9 @@ object TelephonyCollector {
             collectedSimSlotIndex = collectedCarrier.simSlotIndex,
             dataNetworkType = dataType?.let(::networkTypeName),
             voiceNetworkType = voiceType?.let(::networkTypeName),
-            roaming = safe { tm.isNetworkRoaming },
-            rat = null,
-            nrState = NrState.NONE,
+            roaming = safe { targetTm.isNetworkRoaming },
+            rat = coarseRat,
+            nrState = coarseNrState,
             serving = null,
             neighbors = emptyList(),
         )
@@ -114,36 +222,25 @@ object TelephonyCollector {
         if (!fineGranted || !locationOn) return base
 
         val infos: List<AndroidCellInfo> = try {
-            tm.allCellInfo.orEmpty()
+            targetTm.allCellInfo.orEmpty()
         } catch (_: SecurityException) {
             return base
-        } catch (_: Throwable) {
+        } catch (_: RuntimeException) {
             return base
         }
 
-        val nrState = deriveNrState(context, tm, dataType, infos)
+        val nrState = deriveNrState(
+            displayInfo = displayInfo,
+            dataNetworkType = dataType,
+            infos = infos,
+        )
 
-        // Serving cell selection order:
-        //  1. Registered cell (most authoritative — the OS has confirmed it)
-        //  2. Best NR cell by dbm when NR is active (avoids reporting LTE when on 5G SA)
-        //  3. Best LTE cell by dbm
-        //  4. Best NR cell (fallback if no LTE either)
-        //  5. First available cell (last resort)
-        val registered = infos.firstOrNull { it.isRegistered }
-        val bestNr = infos.filterIsInstance<CellInfoNr>()
-            .maxByOrNull { it.cellSignalStrength.dbm }
-        val bestLte = infos.filterIsInstance<CellInfoLte>()
-            .maxByOrNull { it.cellSignalStrength.dbm }
-
-        val candidate = registered
-            ?: (if (nrState != NrState.NONE) bestNr else null)
-            ?: bestLte
-            ?: bestNr
-            ?: infos.firstOrNull()
+        val candidate = selectServingCell(infos, nrState)
 
         val parsedServing = candidate?.let { parseCell(it) }
         val neighbors = infos
             .filterNot { it.isRegistered }
+            .filter { it.ageMs() <= TelephonyCollectorLogic.MAX_CELL_AGE_MS }
             .mapNotNull { parseCell(it).snapshot }
 
         return CellInfo(
@@ -152,8 +249,8 @@ object TelephonyCollector {
             collectedSimSlotIndex = collectedCarrier.simSlotIndex,
             dataNetworkType = dataType?.let(::networkTypeName),
             voiceNetworkType = voiceType?.let(::networkTypeName),
-            roaming = safe { tm.isNetworkRoaming },
-            rat = parsedServing?.rat,
+            roaming = safe { targetTm.isNetworkRoaming },
+            rat = parsedServing?.rat ?: coarseRat,
             nrState = nrState,
             serving = parsedServing?.snapshot,
             neighbors = neighbors,
@@ -164,7 +261,7 @@ object TelephonyCollector {
         block()
     } catch (_: SecurityException) {
         null
-    } catch (_: Throwable) {
+    } catch (_: RuntimeException) {
         null
     }
 
@@ -177,9 +274,14 @@ object TelephonyCollector {
     ): List<CarrierInfo> {
         if (!phoneGranted || sm == null) return emptyList()
 
-        val defaultDataSubId = safe { SubscriptionManager.getDefaultDataSubscriptionId() }.validSubId()
-        val defaultVoiceSubId = safe { SubscriptionManager.getDefaultVoiceSubscriptionId() }.validSubId()
-        val defaultSmsSubId = safe { SubscriptionManager.getDefaultSmsSubscriptionId() }.validSubId()
+        val defaultDataSubId =
+            safe { SubscriptionManager.getDefaultDataSubscriptionId() }.validSubId()
+        val defaultVoiceSubId =
+            safe { SubscriptionManager.getDefaultVoiceSubscriptionId() }.validSubId()
+        val defaultSmsSubId =
+            safe { SubscriptionManager.getDefaultSmsSubscriptionId() }.validSubId()
+        // Opportunistic hidden/API-version-dependent signal; carrier selection falls
+        // back to default data SIM when this is unavailable.
         val activeDataSubId = reflectStaticInt(
             SubscriptionManager::class.java,
             "getActiveDataSubscriptionId",
@@ -256,22 +358,32 @@ object TelephonyCollector {
             ?: firstOrNull { it.simSlotIndex != null }
             ?: firstOrNull()
 
+    private fun TelephonyManager.toCarrierInfo(serviceState: ServiceState?): CarrierInfo {
+        val op = safe { networkOperator }.orEmpty()
+        return CarrierInfo(
+            carrierName = safe { networkOperatorName },
+            mcc = op.takeIf { it.length >= 3 }?.substring(0, 3),
+            mnc = op.takeIf { it.length >= 5 }?.substring(3),
+            simOperatorId = safe { simOperator },
+            simOperatorName = safe { simOperatorName },
+            countryIso = safe { simCountryIso },
+            duplexMode = duplexModeString(serviceState),
+        )
+    }
+
     private fun serviceStateDuplexMode(tm: TelephonyManager, phoneGranted: Boolean): String {
         if (!phoneGranted) return ""
-        val serviceState = try {
-            tm.serviceState
-        } catch (_: SecurityException) {
-            null
-        } catch (_: Throwable) {
-            null
-        }
+        val serviceState = safe { tm.serviceState }
 
-        return when (serviceState?.duplexMode) {
+        return duplexModeString(serviceState)
+    }
+
+    private fun duplexModeString(serviceState: ServiceState?): String =
+        when (serviceState?.duplexMode) {
             ServiceState.DUPLEX_MODE_FDD -> "FDD"
             ServiceState.DUPLEX_MODE_TDD -> "TDD"
             else -> ""
         }
-    }
 
     private fun String?.takeIfNotBlank(): String? =
         takeIf { !it.isNullOrBlank() }
@@ -291,6 +403,9 @@ object TelephonyCollector {
     private fun Int.validSig(): Int? =
         takeIf { it != Int.MAX_VALUE && it != Int.MIN_VALUE }
 
+    private fun signalRank(dbm: Int): Int =
+        TelephonyCollectorLogic.signalRank(dbm)
+
     @Suppress("DEPRECATION")
     private fun AndroidCellInfo.ageMs(): Long =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -301,58 +416,57 @@ object TelephonyCollector {
 
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun deriveNrState(
-        context: Context,
-        tm: TelephonyManager,
+        displayInfo: TelephonyDisplayInfo?,
         dataNetworkType: Int?,
         infos: List<AndroidCellInfo>,
     ): NrState {
-        // Tier 1: TelephonyDisplayInfo (API 30+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val displayInfo = safe { getDisplayInfo(tm) }
-            if (displayInfo != null) {
-                return when (displayInfo.overrideNetworkType) {
-                    TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA,
-                    TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA_MMWAVE -> NrState.NSA
-
-                    TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_ADVANCED -> NrState.SA
-
-                    else -> when (displayInfo.networkType) {
-                        TelephonyManager.NETWORK_TYPE_NR -> NrState.SA
-                        else -> NrState.NONE
-                    }
-                }
-            }
-        }
-
-        val hasNrCell = infos.any { it is CellInfoNr }
-        return when (dataNetworkType) {
-            TelephonyManager.NETWORK_TYPE_NR -> if (hasNrCell) NrState.NSA else NrState.SA
-            TelephonyManager.NETWORK_TYPE_LTE -> if (hasNrCell) NrState.NSA else NrState.NONE
-            else -> if (hasNrCell) NrState.NSA else NrState.NONE
-        }
+        val hasRegisteredNr = infos.any { it is CellInfoNr && it.isRegistered }
+        return TelephonyCollectorLogic.deriveNrState(
+            dataNetworkType = dataNetworkType,
+            displayNetworkType = displayInfo?.networkType,
+            displayOverrideNetworkType = displayInfo?.overrideNetworkType,
+            hasRegisteredNr = hasRegisteredNr,
+        )
     }
-
-    /**
-     * Reads the last-known [TelephonyDisplayInfo] from the TelephonyManager's
-     * cached field. This is the only synchronous option for a one-shot collector.
-     *
-     * The cleaner alternative is maintaining a persistent
-     * `TelephonyCallback.DisplayInfoListener` in a long-lived scope and passing
-     * the cached value to [collect].
-     */
-    @RequiresApi(Build.VERSION_CODES.R)
-    private fun getDisplayInfo(tm: TelephonyManager): TelephonyDisplayInfo? =
-        runCatching {
-            TelephonyManager::class.java
-                .getDeclaredField("mTelephonyDisplayInfo")
-                .also { it.isAccessible = true }
-                .get(tm) as? TelephonyDisplayInfo
-        }.getOrNull()
 
     private data class Parsed(
         val snapshot: CellRadioSnapshot?,
         val rat: String?,
     )
+
+    private fun selectServingCell(
+        infos: List<AndroidCellInfo>,
+        nrState: NrState,
+    ): AndroidCellInfo? {
+        val candidates = infos.map { info ->
+            CellSelectionCandidate(
+                rat = info.telephonyRat(),
+                registered = info.isRegistered,
+                connectionStatus = info.cellConnectionStatus,
+                ageMs = info.ageMs(),
+                signalDbm = info.signalDbm(),
+            )
+        }
+        val index = TelephonyCollectorLogic.selectServingIndex(nrState, candidates)
+        return index?.let(infos::getOrNull)
+    }
+
+    private fun AndroidCellInfo.telephonyRat(): TelephonyRat =
+        when (this) {
+            is CellInfoLte -> TelephonyRat.LTE
+            is CellInfoNr -> TelephonyRat.NR
+            else -> TelephonyRat.OTHER
+        }
+
+    private fun AndroidCellInfo.signalDbm(): Int =
+        when (this) {
+            is CellInfoLte -> cellSignalStrength.dbm
+            is CellInfoNr -> cellSignalStrength.dbm
+            is CellInfoWcdma -> cellSignalStrength.dbm
+            is CellInfoTdscdma -> cellSignalStrength.dbm
+            is CellInfoGsm -> cellSignalStrength.dbm
+            else -> Int.MIN_VALUE
+        }
 
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun parseCell(ci: AndroidCellInfo): Parsed = try {
@@ -362,9 +476,12 @@ object TelephonyCollector {
             is CellInfoWcdma -> parseWcdma(ci)
             is CellInfoTdscdma -> parseTdscdma(ci)
             is CellInfoGsm -> parseGsm(ci)
+            // CDMA/EVDO cell identity parsing is intentionally unsupported.
             else -> Parsed(null, ci.javaClass.simpleName)
         }
-    } catch (_: Throwable) {
+    } catch (_: SecurityException) {
+        Parsed(null, ci.javaClass.simpleName)
+    } catch (_: RuntimeException) {
         Parsed(null, ci.javaClass.simpleName)
     }
 
@@ -430,9 +547,10 @@ object TelephonyCollector {
             id?.bands?.firstOrNull()
         } else null
 
-        // NR CQI is @hide; try known method names defensively
-        val nrCqi: Int? = (reflectInt(sig, "getCsiCqiReport")
-            ?: reflectInt(sig, "getCqi"))?.validSig()
+        // NR CQI is exposed inconsistently across API/OEM builds; keep it best-effort.
+        val nrCqi: Int? = reflectIntList(sig, "getCsiCqiReport")
+            ?.firstNotNullOfOrNull { it.validSig() }
+            ?: reflectInt(sig, "getCqi")?.validSig()
 
         // CSI-RSRP / CSI-RSRQ available from API 31 (S)
         val csiRsrpDbm: Int?
@@ -648,7 +766,7 @@ object TelephonyCollector {
         return when (arfcn) {
             in 1..124, 0, in 955..1023 -> 900  // P-GSM, E-GSM, R-GSM 900
             in 128..251 -> 850                 // GSM 850
-            in 512..885 -> 1800                // DCS 1800 (Note: 512..810 overlaps with PCS 1900)
+            in 512..885 -> null                // Ambiguous: DCS 1800 or PCS 1900 by region
             in 259..293 -> 450                 // GSM 450
             in 306..340 -> 480                 // GSM 480
             in 438..511 -> 750                 // GSM 750
@@ -656,59 +774,25 @@ object TelephonyCollector {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
-    private fun toSecondaryCell(ci: AndroidCellInfo): SecondaryCell? = try {
-        when (ci) {
-            is CellInfoLte -> {
-                val id = ci.cellIdentity
-                val s = ci.cellSignalStrength
-                val bwMhz = id.bandwidth.takeIf { it != Int.MAX_VALUE && it > 0 }?.let { it / 1000 }
-                SecondaryCell(
-                    band = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) id.bands.firstOrNull() else null,
-                    earfcn = id.earfcn.validId(),
-                    nrarfcn = null,
-                    pci = id.pci.validId(),
-                    rsrp = s.rsrp.validSig(),
-                    rsrq = s.rsrq.validSig(),
-                    sinr = s.rssnr.validSig(),
-                    asuLevel = s.asuLevel.validSig(),
-                    dbm = s.dbm.validSig(),
-                    bandwidthMhz = bwMhz,
-                )
-            }
-
-            is CellInfoNr -> {
-                val id = ci.cellIdentity as? CellIdentityNr
-                val s = ci.cellSignalStrength as? CellSignalStrengthNr
-                SecondaryCell(
-                    band = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) id?.bands?.firstOrNull() else null,
-                    earfcn = null,
-                    nrarfcn = id?.nrarfcn?.validId(),
-                    pci = id?.pci?.validId(),
-                    rsrp = s?.ssRsrp?.validSig(),
-                    rsrq = s?.ssRsrq?.validSig(),
-                    sinr = s?.ssSinr?.validSig(),
-                    asuLevel = s?.asuLevel?.validSig(),
-                    dbm = s?.dbm?.validSig(),
-                    bandwidthMhz = null,
-                )
-            }
-
-            else -> null
-        }
-    } catch (_: Throwable) {
-        null
-    }
-
     private fun reflectInt(obj: Any?, methodName: String): Int? = runCatching {
         if (obj == null) return null
         obj.javaClass.getMethod(methodName).invoke(obj) as? Int
+    }.getOrNull()
+
+    private fun reflectIntList(obj: Any?, methodName: String): List<Int>? = runCatching {
+        if (obj == null) return null
+        when (val value = obj.javaClass.getMethod(methodName).invoke(obj)) {
+            is IntArray -> value.toList()
+            is List<*> -> value.filterIsInstance<Int>()
+            else -> null
+        }
     }.getOrNull()
 
     private fun reflectStaticInt(clazz: Class<*>, methodName: String): Int? = runCatching {
         clazz.getMethod(methodName).invoke(null) as? Int
     }.getOrNull()
 
+    @Suppress("DEPRECATION")
     private fun networkTypeName(type: Int): String? = when (type) {
         TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
         TelephonyManager.NETWORK_TYPE_NR -> "NR"
