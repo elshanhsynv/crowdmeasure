@@ -4,7 +4,6 @@ import android.content.Context
 import com.crowdmeasure.sdk.CrowdMeasureSettingsStore
 import com.crowdmeasure.sdk.CrowdMeasureConfig
 import com.crowdmeasure.sdk.CrowdMeasureLogger
-import com.crowdmeasure.sdk.IpHashSaltProvider
 import com.crowdmeasure.sdk.internal.measurement.collectors.DeviceInfoCollector
 import com.crowdmeasure.sdk.internal.measurement.collectors.EnvironmentCollector
 import com.crowdmeasure.sdk.internal.measurement.collectors.PerformanceCollector
@@ -20,7 +19,6 @@ internal class MeasurementRunner(
     private val context: Context,
     private val settingsStore: CrowdMeasureSettingsStore,
     private val config: CrowdMeasureConfig,
-    private val ipHashSaltProvider: IpHashSaltProvider,
     private val io: CoroutineDispatcher,
     private val logger: CrowdMeasureLogger,
 ) {
@@ -41,7 +39,7 @@ internal class MeasurementRunner(
             )
 
             logger.debug("Measurement phase started: environment.")
-            val environment = EnvironmentCollector.collect(context, http, config, ipHashSaltProvider.getSalt())
+            val environment = EnvironmentCollector.collect(context, http, config)
             logger.info(
                 "Environment snapshot collected: transport=${environment.network.transport}, " +
                         "wifi=${environment.network.wifi != null}, " +

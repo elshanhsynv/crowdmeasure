@@ -29,7 +29,6 @@ class DefaultStorageInstrumentedTest {
         val store = DefaultMeasurementStore.create(
             context = context,
             databaseName = databaseName,
-            ipHashSaltProvider = { "test-salt" },
         )
         val sdk = CrowdMeasureSdk.create(context, measurementStore = store)
 

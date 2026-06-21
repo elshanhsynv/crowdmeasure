@@ -3,7 +3,6 @@ package com.crowdmeasure.sdk
 import android.content.Context
 import com.crowdmeasure.sdk.internal.DefaultCrowdMeasureSettingsStore
 import com.crowdmeasure.sdk.internal.DefaultMeasurementStore
-import com.crowdmeasure.sdk.internal.DefaultIpHashSaltProvider
 import com.crowdmeasure.sdk.internal.SdkDataClient
 import com.crowdmeasure.sdk.internal.SdkMeasurementClient
 import com.crowdmeasure.sdk.internal.SdkRequirementsClient
@@ -39,8 +38,6 @@ class CrowdMeasureSdk private constructor(
                 "defaultRetentionDays must be between 1 and 90"
             }
             val appContext = context.applicationContext
-            val resolvedIpHashSaltProvider = config.ipHashSaltProvider
-                ?: DefaultIpHashSaltProvider(appContext, "${config.preferencesName}_privacy")
             val resolvedSettingsStore = settingsStore ?: DefaultCrowdMeasureSettingsStore(
                 context = appContext,
                 preferencesName = config.preferencesName,
@@ -50,7 +47,6 @@ class CrowdMeasureSdk private constructor(
             val resolvedMeasurementStore = measurementStore ?: DefaultMeasurementStore.create(
                 context = appContext,
                 databaseName = config.databaseName,
-                ipHashSaltProvider = resolvedIpHashSaltProvider,
             )
             val requirements = SdkRequirementsClient(appContext, config.collectors)
 
@@ -58,7 +54,6 @@ class CrowdMeasureSdk private constructor(
                 measurements = SdkMeasurementClient(
                     context = appContext,
                     config = config,
-                    ipHashSaltProvider = resolvedIpHashSaltProvider,
                     settingsStore = resolvedSettingsStore,
                     measurementStore = resolvedMeasurementStore,
                     requirementsClient = requirements,

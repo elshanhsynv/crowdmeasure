@@ -179,7 +179,7 @@ object TelephonyCollector {
             ?.let { safe { tm.createForSubscriptionId(it) } }
             ?: tm
 
-        val serviceState = if (phoneGranted) safe { targetTm.serviceState } else null
+        val serviceState = serviceStateOrNull(targetTm, phoneGranted)
         val fallbackCarrier = targetTm.toCarrierInfo(serviceState)
         val collectedCarrier = selectedCarrier ?: fallbackCarrier
         val collectedSimCarriers = simCarriers.ifEmpty { listOf(collectedCarrier) }
@@ -201,7 +201,7 @@ object TelephonyCollector {
         )
         val coarseRat = TelephonyCollectorLogic.coarseRatName(
             dataNetworkType = dataType,
-            displayNetworkType = displayInfo?.networkType,
+            displayNetworkType = displayInfo.networkTypeOrNull(),
         )
 
         val base = CellInfo(
@@ -372,11 +372,12 @@ object TelephonyCollector {
     }
 
     private fun serviceStateDuplexMode(tm: TelephonyManager, phoneGranted: Boolean): String {
-        if (!phoneGranted) return ""
-        val serviceState = safe { tm.serviceState }
-
-        return duplexModeString(serviceState)
+        return duplexModeString(serviceStateOrNull(tm, phoneGranted))
     }
+
+    @SuppressLint("MissingPermission")
+    private fun serviceStateOrNull(tm: TelephonyManager, phoneGranted: Boolean): ServiceState? =
+        if (phoneGranted) safe { tm.serviceState } else null
 
     private fun duplexModeString(serviceState: ServiceState?): String =
         when (serviceState?.duplexMode) {
@@ -423,11 +424,17 @@ object TelephonyCollector {
         val hasRegisteredNr = infos.any { it is CellInfoNr && it.isRegistered }
         return TelephonyCollectorLogic.deriveNrState(
             dataNetworkType = dataNetworkType,
-            displayNetworkType = displayInfo?.networkType,
-            displayOverrideNetworkType = displayInfo?.overrideNetworkType,
+            displayNetworkType = displayInfo.networkTypeOrNull(),
+            displayOverrideNetworkType = displayInfo.overrideNetworkTypeOrNull(),
             hasRegisteredNr = hasRegisteredNr,
         )
     }
+
+    private fun TelephonyDisplayInfo?.networkTypeOrNull(): Int? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) this?.networkType else null
+
+    private fun TelephonyDisplayInfo?.overrideNetworkTypeOrNull(): Int? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) this?.overrideNetworkType else null
 
     private data class Parsed(
         val snapshot: CellRadioSnapshot?,

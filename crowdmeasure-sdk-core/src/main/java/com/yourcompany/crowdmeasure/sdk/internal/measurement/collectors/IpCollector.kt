@@ -7,7 +7,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.IOException
-import java.security.MessageDigest
 
 /**
  * Resolves the device's current public IP address and basic ISP metadata via
@@ -19,7 +18,7 @@ import java.security.MessageDigest
  *  - No API key required for low-volume use; add a token for production quotas.
  *  - Response is small (~200 bytes); no tracking beyond IP.
  *
- * The raw IP is **never stored** — only a truncated SHA-256 hash is returned.
+ * The raw IP is stored in the legacy serialized `publicIp` field.
  *
  * ### Fallback
  * If ipinfo.io is unavailable, falls back to `https://api64.ipify.org?format=json`
@@ -38,13 +37,13 @@ object IpCollector {
      * Safe to call from any worker thread; suspends for up to [TIMEOUT_MS] ms.
      */
     @WorkerThread
-    suspend fun collect(okHttp: OkHttpClient, salt: String): IpInfo =
+    suspend fun collect(okHttp: OkHttpClient): IpInfo =
         withTimeoutOrNull(TIMEOUT_MS) {
-            tryPrimary(okHttp, salt) ?: tryFallback(okHttp, salt)
+            tryPrimary(okHttp) ?: tryFallback(okHttp)
         } ?: IpInfo()
 
 
-    private fun tryPrimary(okHttp: OkHttpClient, salt: String): IpInfo? = runCatching {
+    private fun tryPrimary(okHttp: OkHttpClient): IpInfo? = runCatching {
         val body = get(okHttp, PRIMARY_URL) ?: return null
         val json = JSONObject(body)
 
@@ -56,17 +55,17 @@ object IpCollector {
         val ispName = org?.substringAfter(' ', "")?.ifBlank { null }
 
         IpInfo(
-            publicIpHash = hashIp(rawIp, salt),
+            publicIp = rawIp,
             ispName = ispName,
             asn = asn,
         )
     }.getOrNull()
 
-    private fun tryFallback(okHttp: OkHttpClient, salt: String): IpInfo? = runCatching {
+    private fun tryFallback(okHttp: OkHttpClient): IpInfo? = runCatching {
         val body = get(okHttp, FALLBACK_URL) ?: return null
         val json = JSONObject(body)
         val rawIp = json.optString("ip").ifBlank { null } ?: return null
-        IpInfo(publicIpHash = hashIp(rawIp, salt))
+        IpInfo(publicIp = rawIp)
     }.getOrNull()
 
     private fun get(okHttp: OkHttpClient, url: String): String? {
@@ -85,13 +84,13 @@ object IpCollector {
         }
     }
 
-    /**
-     * Returns the first 16 hex characters (64 bits) of SHA-256(ip + salt).
-     * Sufficient for session/ISP correlation without reversing the raw address.
-     */
-    internal fun hashIp(ip: String, salt: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        return digest.digest((salt + ip).toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02x".format(it) }
-    }
+//    /**
+//     * Privacy-preserving alternative kept for future use.
+//     * Returns SHA-256(salt + ip) as hex.
+//     */
+//    internal fun hashIp(ip: String, salt: String): String {
+//        val digest = MessageDigest.getInstance("SHA-256")
+//        return digest.digest((salt + ip).toByteArray(Charsets.UTF_8))
+//            .joinToString("") { "%02x".format(it) }
+//    }
 }

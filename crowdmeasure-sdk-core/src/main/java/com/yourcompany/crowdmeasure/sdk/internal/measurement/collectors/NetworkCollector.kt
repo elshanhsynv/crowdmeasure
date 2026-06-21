@@ -16,12 +16,12 @@ import okhttp3.OkHttpClient
 object NetworkCollector {
 
     @RequiresApi(Build.VERSION_CODES.Q)
-    suspend fun collect(context: Context, okHttp: OkHttpClient, config: CrowdMeasureConfig, ipHashSalt: String): NetworkEnvironment {
+    suspend fun collect(context: Context, okHttp: OkHttpClient, config: CrowdMeasureConfig): NetworkEnvironment {
         val cm = context.getSystemService<ConnectivityManager>()
         val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
         val transport = caps.toTransportType()
-        val ip = if (config.collectors.publicIpEnabled && config.publicIpPolicy == PublicIpPolicy.HASHED) {
-            IpCollector.collect(okHttp, ipHashSalt)
+        val ip = if (config.collectors.publicIpEnabled && config.publicIpPolicy == PublicIpPolicy.RAW) {
+            IpCollector.collect(okHttp)
         } else IpInfo()
 
         val wifi = if (config.collectors.wifiEnabled && transport == TransportType.WIFI) {

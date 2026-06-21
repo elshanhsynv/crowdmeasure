@@ -12,12 +12,12 @@ object EnvironmentCollector {
 
     @RequiresApi(Build.VERSION_CODES.Q)
     @WorkerThread
-    suspend fun collect(context: Context, okHttp: OkHttpClient, config: CrowdMeasureConfig, ipHashSalt: String): EnvironmentInfo {
+    suspend fun collect(context: Context, okHttp: OkHttpClient, config: CrowdMeasureConfig): EnvironmentInfo {
         val location = if (config.collectors.locationEnabled && PlatformChecks.hasCoarseLocation(context)) {
             LocationCollector.tryGetCoarseOneShot(context)
         } else null
 
-        val networkCollector = NetworkCollector.collect(context, okHttp, config, ipHashSalt)
+        val networkCollector = NetworkCollector.collect(context, okHttp, config)
         val diagnosticsCollector = DiagnosticsCollector.collect(context)
 
 

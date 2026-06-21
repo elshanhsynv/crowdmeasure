@@ -14,7 +14,6 @@ import com.crowdmeasure.sdk.CrowdMeasureResult
 import com.crowdmeasure.sdk.CrowdMeasureSettings
 import com.crowdmeasure.sdk.CrowdMeasureSettingsStore
 import com.crowdmeasure.sdk.CrowdMeasureConfig
-import com.crowdmeasure.sdk.IpHashSaltProvider
 import com.crowdmeasure.sdk.DataClient
 import com.crowdmeasure.sdk.MeasurementClient
 import com.crowdmeasure.sdk.MeasurementRequirements
@@ -36,7 +35,6 @@ import kotlinx.coroutines.CancellationException
 internal class SdkMeasurementClient(
     context: Context,
     config: CrowdMeasureConfig,
-    ipHashSaltProvider: IpHashSaltProvider,
     private val settingsStore: CrowdMeasureSettingsStore,
     private val measurementStore: MeasurementStore,
     private val requirementsClient: RequirementsClient,
@@ -46,7 +44,6 @@ internal class SdkMeasurementClient(
         context,
         settingsStore,
         config,
-        ipHashSaltProvider,
         Dispatchers.IO,
         logger,
     )

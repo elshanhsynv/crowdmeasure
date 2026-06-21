@@ -11,7 +11,7 @@ Available
 - Added independent call-upload controls and partial measurement/call upload outcomes.
 - Replaced SDK-global Timber installation with a no-op-by-default host logger.
 - Added configurable collector and probe policies and removed unused throughput configuration.
-- Raw public IP values are now sanitized to per-install salted hashes while preserving the serialized `publicIp` field name.
+- Public IP collection now stores the raw public IP again while preserving the serialized `publicIp` field name.
 - Added Maven Local publication, sample-host Maven switching, dependency checks, and aggregate `sdkCheck`.
 - Added core manual measurement, storage, settings, requirements, export, deletion, and retention APIs.
 - Added optional WorkManager-based background collection and retention cleanup.

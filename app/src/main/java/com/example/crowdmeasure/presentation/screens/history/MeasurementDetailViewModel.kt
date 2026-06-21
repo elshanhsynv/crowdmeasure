@@ -227,7 +227,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     // IP info
     val ipUi = environment.network.ip.let { i ->
         buildList {
-            add("Public IP hash" to i.publicIpHash.toString())
+            add("Public IP" to i.publicIp.toString())
             add("ISP" to i.ispName.toString())
             add("ASN" to i.asn.toString())
         }.takeIf { it.isNotEmpty() }

@@ -12,10 +12,9 @@ data class CrowdMeasureConfig(
     val defaultEndpointUrl: String = "https://www.google.com/",
     val defaultRetentionDays: Int = 7,
     val collectors: CollectorConfig = CollectorConfig(),
-    val publicIpPolicy: PublicIpPolicy = PublicIpPolicy.HASHED,
+    val publicIpPolicy: PublicIpPolicy = PublicIpPolicy.RAW,
     val performanceProbe: PerformanceProbeConfig = PerformanceProbeConfig(),
     val logger: CrowdMeasureLogger = CrowdMeasureLogger.NONE,
-    val ipHashSaltProvider: IpHashSaltProvider? = null,
 )
 
 data class CollectorConfig(
@@ -36,11 +35,7 @@ data class PerformanceProbeConfig(
     }
 }
 
-enum class PublicIpPolicy { HASHED, DISABLED }
-
-fun interface IpHashSaltProvider {
-    suspend fun getSalt(): String
-}
+enum class PublicIpPolicy { RAW, DISABLED }
 
 fun interface CrowdMeasureLogger {
     fun log(level: Level, message: String, error: Throwable?)

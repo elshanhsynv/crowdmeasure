@@ -165,7 +165,7 @@ val protocol: ProtocolType = ProtocolType.UNKNOWN
 
 @Serializable
 data class IpInfo(
-val publicIpHash: String? = null,
+val publicIp: String? = null,
 val ispName: String? = null,
 val asn: Int? = null,
 )

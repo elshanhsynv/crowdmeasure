@@ -11,7 +11,7 @@ val sdk = CrowdMeasureSdk.create(
         defaultEndpointUrl = "https://www.google.com/",
         defaultRetentionDays = 7,
         collectors = CollectorConfig(),
-        publicIpPolicy = PublicIpPolicy.HASHED,
+        publicIpPolicy = PublicIpPolicy.RAW,
         logger = CrowdMeasureLogger.NONE,
     ),
 )

@@ -6,8 +6,7 @@ import kotlinx.serialization.SerialName
 /**
  * Public-network identity snapshot derived from an IP-geolocation lookup.
  *
- * [publicIpHash] — a per-install salted SHA-256 hash of the raw public IP.
- *   Provides enough entropy for session correlation without exposing the IP itself.
+ * [publicIp] — public IP address returned by the lookup service.
  *
  * [ispName] — carrier/ISP name as reported by the lookup service (e.g. "AS1234 Vodafone").
  *
@@ -18,7 +17,7 @@ import kotlinx.serialization.SerialName
 @Serializable
 data class IpInfo(
     @SerialName("publicIp")
-    val publicIpHash: String? = null,
+    val publicIp: String? = null,
     val ispName: String? = null,
     val asn: Int? = null,
 )
