@@ -4,12 +4,16 @@ import android.net.TrafficStats
 import com.crowdmeasure.sdk.model.DataUsageInfo
 
 internal object DataUsageCollector {
-    private var lastRxBytes: Long? = null
-    private var lastTxBytes: Long? = null
-    private var lastTimeMs: Long? = null
+    private data class State(
+        val lastRxBytes: Long,
+        val lastTxBytes: Long,
+        val lastTimeMs: Long,
+    )
+
+    private val states = mutableMapOf<String, State>()
 
     @Synchronized
-    fun collect(): DataUsageInfo? {
+    fun collect(scope: String = "default"): DataUsageInfo? {
         val now = android.os.SystemClock.elapsedRealtime()
         val rxBytes = TrafficStats.getTotalRxBytes()
         val txBytes = TrafficStats.getTotalTxBytes()
@@ -21,21 +25,14 @@ internal object DataUsageCollector {
             return null
         }
 
-        val previousRx = lastRxBytes
-        val previousTx = lastTxBytes
-        val previousTime = lastTimeMs
-
-        lastRxBytes = rxBytes
-        lastTxBytes = txBytes
-        lastTimeMs = now
-
-        if (previousRx == null || previousTx == null || previousTime == null) {
+        val previous = states.put(scope, State(rxBytes, txBytes, now))
+        if (previous == null) {
             return DataUsageInfo(0.0, 0.0, 0.0, 0.0)
         }
 
-        val seconds = (now - previousTime) / 1_000.0
-        val rxDelta = rxBytes - previousRx
-        val txDelta = txBytes - previousTx
+        val seconds = (now - previous.lastTimeMs) / 1_000.0
+        val rxDelta = rxBytes - previous.lastRxBytes
+        val txDelta = txBytes - previous.lastTxBytes
 
         if (seconds <= 0.0 || rxDelta < 0 || txDelta < 0) {
             return DataUsageInfo(0.0, 0.0, 0.0, 0.0)

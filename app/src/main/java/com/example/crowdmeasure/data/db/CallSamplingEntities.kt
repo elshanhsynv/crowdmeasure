@@ -18,7 +18,8 @@ data class CallSessionEntity(
     val sampleIntervalSeconds: Int,
     val sampleCount: Int,
     val endReason: String?,
-    val uploadState: String
+    val uploadState: String,
+    val carriersJson: String?
 )
 
 @Entity(

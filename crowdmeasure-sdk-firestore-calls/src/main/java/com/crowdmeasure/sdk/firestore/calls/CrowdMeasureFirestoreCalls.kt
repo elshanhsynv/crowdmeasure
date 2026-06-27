@@ -63,6 +63,7 @@ internal object CallFirestorePayload {
             "sample_interval_seconds" to item.session.sampleIntervalSeconds,
             "sample_count" to item.session.sampleCount,
             "end_reason" to item.session.endReason,
+            "sim_carriers" to json.parseToJsonElement(json.encodeToString(item.session.simCarriers)).toFirestoreValue(),
             "uploaded_at" to uploadedAt,
         )
 
@@ -84,6 +85,14 @@ internal object CallFirestorePayload {
                 "lat" to it.lat,
                 "lon" to it.lon,
                 "accuracyMeters" to it.accuracyMeters,
+            )
+        },
+        "data_usage" to value.dataUsage?.let {
+            mapOf(
+                "dl_mb" to it.dlMB,
+                "ul_mb" to it.ulMB,
+                "dl_kbps" to it.dlKbps,
+                "ul_kbps" to it.ulKbps,
             )
         },
         "cell" to json.parseToJsonElement(json.encodeToString(value.cell)).toFirestoreValue(),

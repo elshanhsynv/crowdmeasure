@@ -226,6 +226,9 @@ class Exporter(
         put("sample_interval_seconds", session.sampleIntervalSeconds)
         put("sample_count", session.sampleCount)
         putOpt("end_reason", session.endReason)
+        put("sim_carriers", JSONArray().apply {
+            session.simCarriers.forEach { put(carrierToJson(it)) }
+        })
         put("samples", JSONArray().apply {
             samples.forEach { put(callSampleToJson(it)) }
         })
@@ -252,13 +255,16 @@ class Exporter(
                 put("accuracy_meters", it.accuracyMeters)
             }
         })
-        putOpt("collected_subscription_id", sample.cell.collectedSubscriptionId)
-        putOpt("collected_sim_slot_index", sample.cell.collectedSimSlotIndex)
-        put("sim_carriers", JSONArray().apply {
-            sample.cell.simCarriers.forEach {
-                put(carrierToJson(it))
+        putOpt("data_usage", sample.dataUsage?.let { usage ->
+            JSONObject().apply {
+                put("dl_mb", usage.dlMB)
+                put("ul_mb", usage.ulMB)
+                put("dl_kbps", usage.dlKbps)
+                put("ul_kbps", usage.ulKbps)
             }
         })
+        putOpt("collected_subscription_id", sample.cell.collectedSubscriptionId)
+        putOpt("collected_sim_slot_index", sample.cell.collectedSimSlotIndex)
         putOpt("data_network_type", sample.cell.dataNetworkType)
         putOpt("voice_network_type", sample.cell.voiceNetworkType)
         putOpt("roaming", sample.cell.roaming)

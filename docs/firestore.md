@@ -21,4 +21,4 @@ The host owns Firebase initialization and configuration. The provider preserves 
 
 Firebase network and retryable Firestore failures become transient upload errors. Other Firebase failures become backend rejections.
 
-`CrowdMeasureFirestoreCalls.create(firestore)` preserves the existing `calls/{sessionId}` documents and `samples/{sampleId}` subcollection contract. New call samples include an optional `location` map with `lat`, `lon`, and `accuracyMeters`.
+`CrowdMeasureFirestoreCalls.create(firestore)` writes `calls/{sessionId}` documents and `samples/{sampleId}` subcollection records. Call documents include session-level `sim_carriers`. New call samples include optional `location` and `data_usage` maps.

@@ -4,6 +4,7 @@ Available
 
 ## 0.1.0 Unreleased
 
+- Added per-sample data-usage snapshots to call sampling and moved stable carrier/SIM metadata to call sessions.
 - Added optional location snapshots to cellular and generic VoIP call samples without changing existing database schemas.
 - Adopted permanent namespace `com.crowdmeasure.sdk` and Maven group `com.crowdmeasure`.
 - Split provider contracts, WorkManager runtimes, and Firestore measurement/call implementations into dependency-minimal artifacts.
@@ -23,4 +24,4 @@ Available
 - Migrated the CrowdMeasure app's measurement uploads to the SDK.
 - Added optional cellular and generic VoIP call sampling, call storage, history, export, deletion, and independent call-upload scheduling.
 - Added Firestore call uploads while preserving the existing call/session document contract.
-- Migrated the CrowdMeasure app's call runtime to the SDK while preserving its version-4 shared database.
+- Migrated the CrowdMeasure app's call runtime to the SDK while preserving and migrating its shared database.

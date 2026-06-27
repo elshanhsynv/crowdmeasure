@@ -3,13 +3,18 @@ package com.crowdmeasure.sdk.calls.internal
 import android.content.Context
 import androidx.room.*
 import com.crowdmeasure.sdk.calls.*
+import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import java.util.UUID
 
 @Entity(tableName = "call_sessions", indices = [Index("startedAtUtcMs")])
@@ -23,6 +28,7 @@ internal data class SessionEntity(
     val sampleCount: Int,
     val endReason: String?,
     val uploadState: String,
+    val carriersJson: String?,
 )
 
 @Entity(
@@ -84,9 +90,14 @@ internal interface CallsDao {
     @Query("UPDATE call_sessions SET sampleCount = sampleCount + 1 WHERE sessionId = :id")
     suspend fun increment(id: String)
 
+    @Query("UPDATE call_sessions SET carriersJson = :carriersJson WHERE sessionId = :id AND (carriersJson IS NULL OR carriersJson = '')")
+    suspend fun setCarriersIfEmpty(id: String, carriersJson: String)
+
     @Transaction
-    suspend fun insertAndIncrement(entity: SampleEntity) {
-        insertSample(entity); increment(entity.sessionId)
+    suspend fun insertAndIncrement(entity: SampleEntity, carriersJson: String?) {
+        insertSample(entity)
+        if (!carriersJson.isNullOrBlank()) setCarriersIfEmpty(entity.sessionId, carriersJson)
+        increment(entity.sessionId)
     }
 
     @Query("UPDATE call_sessions SET endedAtUtcMs=:ended, endReason=:reason WHERE sessionId=:id AND endedAtUtcMs IS NULL")
@@ -108,7 +119,7 @@ internal interface CallsDao {
     suspend fun clear()
 }
 
-@Database(entities = [SessionEntity::class, SampleEntity::class], version = 1, exportSchema = true)
+@Database(entities = [SessionEntity::class, SampleEntity::class], version = 2, exportSchema = true)
 internal abstract class CallsDatabase : RoomDatabase() {
     abstract fun dao(): CallsDao
 }
@@ -117,6 +128,7 @@ internal abstract class CallsDatabase : RoomDatabase() {
 internal data class StoredCallSample(
     val cell: CellInfo,
     val location: Location? = null,
+    val dataUsage: DataUsageInfo? = null,
 )
 
 internal class DefaultCallStore private constructor(private val dao: CallsDao) : CallStore {
@@ -144,7 +156,8 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
             intervalSeconds,
             0,
             null,
-            CallUploadState.PENDING.name
+            CallUploadState.PENDING.name,
+            null,
         )
         dao.insertSession(entity)
         return entity.domain()
@@ -156,15 +169,20 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
         elapsedMs: Long,
         cellInfo: CellInfo,
         location: Location?,
+        dataUsage: DataUsageInfo?,
     ) {
         val serving = cellInfo.serving
+        val carriersJson = encodeCarriers(cellInfo.simCarriers)
         dao.insertAndIncrement(
             SampleEntity(
                 0,
                 sessionId,
                 sampledAtUtcMs,
                 elapsedMs,
-                json.encodeToString(StoredCallSample.serializer(), StoredCallSample(cellInfo, location)),
+                json.encodeToString(
+                    StoredCallSample.serializer(),
+                    StoredCallSample(cellInfo.withoutCarriers(), location, dataUsage)
+                ),
                 cellInfo.rat,
                 cellInfo.nrState.name,
                 serving?.dbm,
@@ -174,7 +192,8 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
                 serving?.pci,
                 serving?.tac,
                 serving?.band
-            )
+            ),
+            carriersJson,
         )
     }
 
@@ -194,23 +213,26 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
         dao.observeSessions(limit).combine(dao.recentSamples(limit)) { sessions, samples ->
             val latest = samples.mapNotNull { it.domainOrNull() }.groupBy { it.sessionId }
                 .mapValues { it.value.maxByOrNull(CallCellSample::sampledAtUtcMs) }
-            sessions.map { it.domain(latest[it.sessionId]) }
+            val sampleCarriers = samples.mapNotNull { it.carriersOrNull() }.toMap()
+            sessions.map { it.domain(latest[it.sessionId], sampleCarriers[it.sessionId]) }
         }
 
     override fun observeSamples(sessionId: String) =
         dao.observeSamples(sessionId).map { list -> list.mapNotNull { it.domainOrNull() } }
 
     override suspend fun getRecentSessions(limit: Int) = dao.sessions(limit).map { session ->
+        val samples = dao.samples(session.sessionId)
         CallSessionExport(
-            session.domain(),
-            dao.samples(session.sessionId).mapNotNull { it.domainOrNull() })
+            session.domain(fallbackCarriers = samples.firstCarriersOrNull()),
+            samples.mapNotNull { it.domainOrNull() })
     }
 
     override suspend fun getUploadCandidates(limit: Int) = dao.uploadCandidates(limit)
         .map { session ->
+            val samples = dao.samples(session.sessionId)
             CallSessionExport(
-                session.domain(),
-                dao.samples(session.sessionId).mapNotNull { it.domainOrNull() })
+                session.domain(fallbackCarriers = samples.firstCarriersOrNull()),
+                samples.mapNotNull { it.domainOrNull() })
         }
 
     override suspend fun markUploaded(sessionIds: List<String>) {
@@ -224,7 +246,10 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
     override suspend fun deleteOlderThan(cutoffUtcMs: Long) = dao.prune(cutoffUtcMs)
     override suspend fun deleteAll() = dao.clear()
 
-    private fun SessionEntity.domain(latest: CallCellSample? = null) = CallSession(
+    private fun SessionEntity.domain(
+        latest: CallCellSample? = null,
+        fallbackCarriers: List<CarrierInfo>? = null,
+    ) = CallSession(
         sessionId,
         startedAtUtcMs,
         endedAtUtcMs,
@@ -234,6 +259,7 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
         sampleCount,
         endReason,
         enum(uploadState, CallUploadState.PENDING),
+        decodeCarriers(carriersJson).ifEmpty { fallbackCarriers.orEmpty() },
         latest
     )
 
@@ -244,7 +270,7 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
             sessionId,
             sampledAtUtcMs,
             elapsedMs,
-            stored.cell,
+            stored.cell.withoutCarriers(),
             rat,
             nrState,
             dbm,
@@ -255,8 +281,15 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
             tac,
             band,
             stored.location,
+            stored.dataUsage,
         )
     }.getOrNull()
+
+    private fun SampleEntity.carriersOrNull(): Pair<String, List<CarrierInfo>>? =
+        decodeStoredSample(cellJson).cell.simCarriers.takeIf { it.isNotEmpty() }?.let { sessionId to it }
+
+    private fun List<SampleEntity>.firstCarriersOrNull(): List<CarrierInfo>? =
+        firstNotNullOfOrNull { it.carriersOrNull()?.second }
 
     private fun decodeStoredSample(value: String): StoredCallSample =
         runCatching { json.decodeFromString(StoredCallSample.serializer(), value) }
@@ -264,12 +297,33 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
                 StoredCallSample(json.decodeFromString(CellInfo.serializer(), value))
             }
 
+    private fun encodeCarriers(value: List<CarrierInfo>): String? =
+        value.takeIf { it.isNotEmpty() }?.let {
+            json.encodeToString(ListSerializer(CarrierInfo.serializer()), it)
+        }
+
+    private fun decodeCarriers(value: String?): List<CarrierInfo> =
+        value?.takeIf { it.isNotBlank() }?.let {
+            runCatching { json.decodeFromString(ListSerializer(CarrierInfo.serializer()), it) }.getOrNull()
+        }.orEmpty()
+
+    private fun CellInfo.withoutCarriers(): CellInfo = copy(simCarriers = emptyList())
+
     private inline fun <reified T : Enum<T>> enum(value: String, fallback: T) =
         runCatching { enumValueOf<T>(value) }.getOrDefault(fallback)
 
     companion object {
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE call_sessions ADD COLUMN carriersJson TEXT")
+            }
+        }
+
         fun create(context: Context, name: String): CallStore = DefaultCallStore(
-            Room.databaseBuilder(context, CallsDatabase::class.java, name).build().dao()
+            Room.databaseBuilder(context, CallsDatabase::class.java, name)
+                .addMigrations(MIGRATION_1_2)
+                .build()
+                .dao()
         )
     }
 }

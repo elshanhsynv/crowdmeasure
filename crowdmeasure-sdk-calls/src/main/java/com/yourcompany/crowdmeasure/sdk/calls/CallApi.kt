@@ -2,6 +2,8 @@ package com.crowdmeasure.sdk.calls
 
 import android.net.Uri
 import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.CarrierInfo
+import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
 import kotlinx.coroutines.flow.Flow
 
@@ -70,6 +72,7 @@ data class CallSession(
     val sampleCount: Int,
     val endReason: String?,
     val uploadState: CallUploadState = CallUploadState.PENDING,
+    val simCarriers: List<CarrierInfo> = emptyList(),
     val latestSample: CallCellSample? = null,
 )
 
@@ -89,6 +92,7 @@ data class CallCellSample(
     val tac: Int?,
     val band: Int?,
     val location: Location? = null,
+    val dataUsage: DataUsageInfo? = null,
 )
 
 data class CallSessionExport(val session: CallSession, val samples: List<CallCellSample>)
@@ -150,6 +154,7 @@ interface CallStore {
         elapsedMs: Long,
         cellInfo: CellInfo,
         location: Location? = null,
+        dataUsage: DataUsageInfo? = null,
     )
 
     suspend fun finishSession(sessionId: String, endedAtUtcMs: Long, endReason: String)

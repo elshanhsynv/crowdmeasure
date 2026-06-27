@@ -66,6 +66,11 @@ object Migrations {
                     "ALTER TABLE call_sessions ADD COLUMN uploadState TEXT NOT NULL DEFAULT 'PENDING'"
                 )
             }
+        },
+        object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE call_sessions ADD COLUMN carriersJson TEXT")
+            }
         }
     )
 }

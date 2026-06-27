@@ -229,12 +229,14 @@ internal class CallSamplingService : Service() {
                                 null
                             }
                         }
+                        val dataUsage = async { rt.sdk.dataUsage.collect() }
                         rt.store.insertSample(
                             session.sessionId,
                             at,
                             at - session.startedAtUtcMs,
                             cell.await(),
                             location.await(),
+                            dataUsage.await(),
                         )
                     }
                 } catch (error: CancellationException) {

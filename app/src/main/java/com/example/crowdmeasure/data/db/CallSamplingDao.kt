@@ -54,6 +54,9 @@ interface CallSamplingDao {
     @Query("UPDATE call_sessions SET sampleCount = sampleCount + 1 WHERE sessionId = :sessionId")
     suspend fun incrementSampleCount(sessionId: String)
 
+    @Query("UPDATE call_sessions SET carriersJson = :carriersJson WHERE sessionId = :sessionId AND (carriersJson IS NULL OR carriersJson = '')")
+    suspend fun setCarriersIfEmpty(sessionId: String, carriersJson: String)
+
     @Query(
         "UPDATE call_sessions SET endedAtUtcMs = :endedAtUtcMs, endReason = :endReason " +
             "WHERE sessionId = :sessionId AND endedAtUtcMs IS NULL"
@@ -82,8 +85,9 @@ interface CallSamplingDao {
     suspend fun clearSessions()
 
     @Transaction
-    suspend fun insertSampleAndIncrement(entity: CallCellSampleEntity) {
+    suspend fun insertSampleAndIncrement(entity: CallCellSampleEntity, carriersJson: String?) {
         insertSample(entity)
+        if (!carriersJson.isNullOrBlank()) setCarriersIfEmpty(entity.sessionId, carriersJson)
         incrementSampleCount(entity.sessionId)
     }
 }

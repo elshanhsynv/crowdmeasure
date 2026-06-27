@@ -1,0 +1,255 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 5,
+    "identityHash": "b63bafdb4bc79cdd0d540ad94f6b7c26",
+    "entities": [
+      {
+        "tableName": "measurements",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`measurementId` TEXT NOT NULL, `timestampUtcMs` INTEGER NOT NULL, `transport` TEXT NOT NULL, `json` TEXT NOT NULL, `recordState` TEXT NOT NULL, PRIMARY KEY(`measurementId`))",
+        "fields": [
+          {
+            "fieldPath": "measurementId",
+            "columnName": "measurementId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestampUtcMs",
+            "columnName": "timestampUtcMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transport",
+            "columnName": "transport",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "json",
+            "columnName": "json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recordState",
+            "columnName": "recordState",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "measurementId"
+          ]
+        }
+      },
+      {
+        "tableName": "call_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sessionId` TEXT NOT NULL, `startedAtUtcMs` INTEGER NOT NULL, `endedAtUtcMs` INTEGER, `callType` TEXT NOT NULL, `callSource` TEXT NOT NULL, `sampleIntervalSeconds` INTEGER NOT NULL, `sampleCount` INTEGER NOT NULL, `endReason` TEXT, `uploadState` TEXT NOT NULL, `carriersJson` TEXT, PRIMARY KEY(`sessionId`))",
+        "fields": [
+          {
+            "fieldPath": "sessionId",
+            "columnName": "sessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAtUtcMs",
+            "columnName": "startedAtUtcMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endedAtUtcMs",
+            "columnName": "endedAtUtcMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "callType",
+            "columnName": "callType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "callSource",
+            "columnName": "callSource",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sampleIntervalSeconds",
+            "columnName": "sampleIntervalSeconds",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sampleCount",
+            "columnName": "sampleCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endReason",
+            "columnName": "endReason",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "uploadState",
+            "columnName": "uploadState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carriersJson",
+            "columnName": "carriersJson",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "sessionId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_call_sessions_startedAtUtcMs",
+            "unique": false,
+            "columnNames": [
+              "startedAtUtcMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_call_sessions_startedAtUtcMs` ON `${TABLE_NAME}` (`startedAtUtcMs`)"
+          }
+        ]
+      },
+      {
+        "tableName": "call_cell_samples",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` TEXT NOT NULL, `sampledAtUtcMs` INTEGER NOT NULL, `elapsedMs` INTEGER NOT NULL, `cellJson` TEXT NOT NULL, `rat` TEXT, `nrState` TEXT, `dbm` INTEGER, `rsrpDbm` INTEGER, `rsrqDb` INTEGER, `sinrDb` INTEGER, `pci` INTEGER, `tac` INTEGER, `band` INTEGER, FOREIGN KEY(`sessionId`) REFERENCES `call_sessions`(`sessionId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "sessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sampledAtUtcMs",
+            "columnName": "sampledAtUtcMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "elapsedMs",
+            "columnName": "elapsedMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cellJson",
+            "columnName": "cellJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rat",
+            "columnName": "rat",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nrState",
+            "columnName": "nrState",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "dbm",
+            "columnName": "dbm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rsrpDbm",
+            "columnName": "rsrpDbm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rsrqDb",
+            "columnName": "rsrqDb",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sinrDb",
+            "columnName": "sinrDb",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "pci",
+            "columnName": "pci",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "tac",
+            "columnName": "tac",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "band",
+            "columnName": "band",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_call_cell_samples_sessionId",
+            "unique": false,
+            "columnNames": [
+              "sessionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_call_cell_samples_sessionId` ON `${TABLE_NAME}` (`sessionId`)"
+          },
+          {
+            "name": "index_call_cell_samples_sampledAtUtcMs",
+            "unique": false,
+            "columnNames": [
+              "sampledAtUtcMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_call_cell_samples_sampledAtUtcMs` ON `${TABLE_NAME}` (`sampledAtUtcMs`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "call_sessions",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "sessionId"
+            ],
+            "referencedColumns": [
+              "sessionId"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b63bafdb4bc79cdd0d540ad94f6b7c26')"
+    ]
+  }
+}

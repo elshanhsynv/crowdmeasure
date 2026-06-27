@@ -8,6 +8,7 @@ import com.crowdmeasure.sdk.internal.SdkMeasurementClient
 import com.crowdmeasure.sdk.internal.SdkRequirementsClient
 import com.crowdmeasure.sdk.internal.SdkMeasurementQueueClient
 import com.crowdmeasure.sdk.internal.SdkSettingsClient
+import com.crowdmeasure.sdk.internal.measurement.collectors.DataUsageCollector
 import com.crowdmeasure.sdk.internal.measurement.collectors.LocationCollector
 import com.crowdmeasure.sdk.internal.measurement.collectors.TelephonyCollector
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,7 @@ class CrowdMeasureSdk private constructor(
     val queue: MeasurementQueueClient,
     val cellular: CellularSnapshotClient,
     val location: LocationSnapshotClient,
+    val dataUsage: DataUsageSnapshotClient,
 ) {
     companion object {
         fun create(
@@ -67,6 +69,9 @@ class CrowdMeasureSdk private constructor(
                 },
                 location = LocationSnapshotClient {
                     withContext(Dispatchers.IO) { LocationCollector.tryGetCoarseOneShot(appContext) }
+                },
+                dataUsage = DataUsageSnapshotClient {
+                    withContext(Dispatchers.IO) { DataUsageCollector.collect(scope = "calls") }
                 },
             )
         }

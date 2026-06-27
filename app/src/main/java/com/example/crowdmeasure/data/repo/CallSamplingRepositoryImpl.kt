@@ -9,7 +9,9 @@ import com.example.crowdmeasure.domain.model.CallSession
 import com.example.crowdmeasure.domain.model.CallSessionExport
 import com.example.crowdmeasure.domain.model.CallSource
 import com.example.crowdmeasure.domain.model.CallType
+import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
 import com.crowdmeasure.sdk.calls.CallStore
 import com.crowdmeasure.sdk.calls.CallUploadState
@@ -20,12 +22,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import java.util.UUID
 
 @Serializable
 private data class StoredCallSample(
     val cell: CellInfo,
     val location: Location? = null,
+    val dataUsage: DataUsageInfo? = null,
 )
 
 class CallSamplingRepositoryImpl(
@@ -63,7 +67,8 @@ class CallSamplingRepositoryImpl(
             sampleIntervalSeconds = intervalSeconds,
             sampleCount = 0,
             endReason = null,
-            uploadState = "PENDING"
+            uploadState = "PENDING",
+            carriersJson = null,
         )
         dao.insertSession(entity)
         entity.toDomain(latestSample = null)
@@ -75,14 +80,18 @@ class CallSamplingRepositoryImpl(
         elapsedMs: Long,
         cellInfo: CellInfo,
         location: Location?,
+        dataUsage: DataUsageInfo?,
     ) = withContext(io) {
         val serving = cellInfo.serving
+        val carriersJson = encodeCarriers(cellInfo.simCarriers)
         dao.insertSampleAndIncrement(
             CallCellSampleEntity(
                 sessionId = sessionId,
                 sampledAtUtcMs = sampledAtUtcMs,
                 elapsedMs = elapsedMs,
-                cellJson = Converters.json.encodeToString(StoredCallSample(cellInfo, location)),
+                cellJson = Converters.json.encodeToString(
+                    StoredCallSample(cellInfo.withoutCarriers(), location, dataUsage)
+                ),
                 rat = cellInfo.rat,
                 nrState = cellInfo.nrState.name,
                 dbm = serving?.dbm,
@@ -92,7 +101,8 @@ class CallSamplingRepositoryImpl(
                 pci = serving?.pci,
                 tac = serving?.tac,
                 band = serving?.band
-            )
+            ),
+            carriersJson,
         )
     }
 
@@ -125,9 +135,13 @@ class CallSamplingRepositoryImpl(
                 .mapNotNull { it.toDomainOrNull() }
                 .groupBy { it.sessionId }
                 .mapValues { (_, sessionSamples) -> sessionSamples.maxByOrNull { it.sampledAtUtcMs } }
+            val carriersBySession = samples.mapNotNull { it.carriersOrNull() }.toMap()
 
             sessions.map { session ->
-                session.toDomain(latestSample = latestBySession[session.sessionId])
+                session.toDomain(
+                    latestSample = latestBySession[session.sessionId],
+                    fallbackCarriers = carriersBySession[session.sessionId],
+                )
             }
         }
 
@@ -140,9 +154,13 @@ class CallSamplingRepositoryImpl(
 
     suspend fun getRecentSessionsForExport(limit: Int): List<CallSessionExport> = withContext(io) {
         dao.getRecentSessions(limit).map { session ->
+            val samples = dao.getSamples(session.sessionId)
             CallSessionExport(
-                session = session.toDomain(latestSample = null),
-                samples = dao.getSamples(session.sessionId).mapNotNull { it.toDomainOrNull() }
+                session = session.toDomain(
+                    latestSample = null,
+                    fallbackCarriers = samples.firstCarriersOrNull(),
+                ),
+                samples = samples.mapNotNull { it.toDomainOrNull() }
             )
         }
     }
@@ -152,9 +170,13 @@ class CallSamplingRepositoryImpl(
 
     override suspend fun getUploadCandidates(limit: Int): List<CallSessionExport> = withContext(io) {
         dao.getUploadCandidates(limit).map { session ->
+            val samples = dao.getSamples(session.sessionId)
             CallSessionExport(
-                session.toDomain(latestSample = null),
-                dao.getSamples(session.sessionId).mapNotNull { it.toDomainOrNull() },
+                session.toDomain(
+                    latestSample = null,
+                    fallbackCarriers = samples.firstCarriersOrNull(),
+                ),
+                samples.mapNotNull { it.toDomainOrNull() },
             )
         }
     }
@@ -177,7 +199,10 @@ class CallSamplingRepositoryImpl(
 
     override suspend fun deleteAll() = clearCallSamplingData()
 
-    private fun CallSessionEntity.toDomain(latestSample: CallCellSample?): CallSession =
+    private fun CallSessionEntity.toDomain(
+        latestSample: CallCellSample?,
+        fallbackCarriers: List<CarrierInfo>? = null,
+    ): CallSession =
         CallSession(
             sessionId = sessionId,
             startedAtUtcMs = startedAtUtcMs,
@@ -188,6 +213,7 @@ class CallSamplingRepositoryImpl(
             sampleCount = sampleCount,
             endReason = endReason,
             uploadState = runCatching { CallUploadState.valueOf(uploadState) }.getOrDefault(CallUploadState.PENDING),
+            simCarriers = decodeCarriers(carriersJson).ifEmpty { fallbackCarriers.orEmpty() },
             latestSample = latestSample
         )
 
@@ -199,7 +225,7 @@ class CallSamplingRepositoryImpl(
                 sessionId = sessionId,
                 sampledAtUtcMs = sampledAtUtcMs,
                 elapsedMs = elapsedMs,
-                cell = stored.cell,
+                cell = stored.cell.withoutCarriers(),
                 rat = rat,
                 nrState = nrState,
                 dbm = dbm,
@@ -210,12 +236,33 @@ class CallSamplingRepositoryImpl(
                 tac = tac,
                 band = band,
                 location = stored.location,
+                dataUsage = stored.dataUsage,
             )
         }.getOrNull()
+
+    private fun CallCellSampleEntity.carriersOrNull(): Pair<String, List<CarrierInfo>>? =
+        decodeStoredSample(cellJson).cell.simCarriers.takeIf { it.isNotEmpty() }?.let { sessionId to it }
+
+    private fun List<CallCellSampleEntity>.firstCarriersOrNull(): List<CarrierInfo>? =
+        firstNotNullOfOrNull { it.carriersOrNull()?.second }
 
     private fun decodeStoredSample(value: String): StoredCallSample =
         runCatching { Converters.json.decodeFromString(StoredCallSample.serializer(), value) }
             .getOrElse {
                 StoredCallSample(Converters.json.decodeFromString(CellInfo.serializer(), value))
             }
+
+    private fun encodeCarriers(value: List<CarrierInfo>): String? =
+        value.takeIf { it.isNotEmpty() }?.let {
+            Converters.json.encodeToString(ListSerializer(CarrierInfo.serializer()), it)
+        }
+
+    private fun decodeCarriers(value: String?): List<CarrierInfo> =
+        value?.takeIf { it.isNotBlank() }?.let {
+            runCatching {
+                Converters.json.decodeFromString(ListSerializer(CarrierInfo.serializer()), it)
+            }.getOrNull()
+        }.orEmpty()
+
+    private fun CellInfo.withoutCarriers(): CellInfo = copy(simCarriers = emptyList())
 }
