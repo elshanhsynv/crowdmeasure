@@ -17,6 +17,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.crowdmeasure.presentation.screens.callsampling.CallSessionsScreen
+import com.example.crowdmeasure.presentation.screens.callsampling.CallSessionsTopBarActions
+import com.example.crowdmeasure.presentation.screens.callsampling.CallSessionsViewModel
 import com.example.crowdmeasure.presentation.screens.history.HistoryScreen
 import com.example.crowdmeasure.presentation.screens.history.HistoryTopBarActions
 import com.example.crowdmeasure.presentation.screens.history.HistoryViewModel
@@ -42,6 +44,7 @@ fun AppNav() {
     val historyViewModel = hiltViewModel<HistoryViewModel>()
     val historyUiState by historyViewModel.uiState.collectAsStateWithLifecycle()
     var historySearchVisible by rememberSaveable { mutableStateOf(false) }
+    val callSessionsViewModel = hiltViewModel<CallSessionsViewModel>()
 
     AppShellScaffold(
         navController = navController,
@@ -52,6 +55,13 @@ fun AppNav() {
                     searchVisible = historySearchVisible,
                     onToggleSearch = { historySearchVisible = !historySearchVisible },
                     onFilterSelected = historyViewModel::setTransportFilter
+                )
+            }
+            if (route == Routes.CALL_SESSIONS) {
+                CallSessionsTopBarActions(
+                    onClear = {
+                        callSessionsViewModel.clearData()
+                    }
                 )
             }
         }
