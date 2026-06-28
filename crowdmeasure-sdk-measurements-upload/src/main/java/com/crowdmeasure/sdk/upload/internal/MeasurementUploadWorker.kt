@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.crowdmeasure.sdk.upload.MeasurementUploadConfig
 import com.crowdmeasure.sdk.upload.MeasurementUploadError
 import com.crowdmeasure.sdk.upload.MeasurementUploadResult
 import com.crowdmeasure.sdk.upload.UploadRun
@@ -17,7 +18,7 @@ internal class MeasurementUploadWorker(
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val config =
-            UploadRuntime.get()?.config ?: com.crowdmeasure.sdk.upload.MeasurementUploadConfig()
+            UploadRuntime.get()?.config ?: MeasurementUploadConfig()
         val store = UploadStore(applicationContext, config)
         if (!store.settings.first().enabled) {
             store.record(

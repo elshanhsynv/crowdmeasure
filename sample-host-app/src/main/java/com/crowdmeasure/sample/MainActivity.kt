@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sample
+package com.crowdmeasure.sample
 
 import android.Manifest
 import android.annotation.SuppressLint

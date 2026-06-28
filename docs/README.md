@@ -10,8 +10,8 @@ CrowdMeasure is a local-first Android SDK for collecting, storing, observing, ex
 |---|---|---|
 | Manual measurements, local storage, settings, export, deletion | Available | `:crowdmeasure-sdk-core` |
 | Scheduled measurements and retention cleanup | Available | `:crowdmeasure-sdk-background` |
-| Measurement uploader contracts | Available | `crowdmeasure-upload-api` |
-| Measurement upload queue and scheduling | Available | `crowdmeasure-upload` |
+| Measurement uploader contracts | Available | `crowdmeasure-measurements-upload-api` |
+| Measurement upload queue and scheduling | Available | `crowdmeasure-measurements-upload` |
 | Firestore measurement uploads | Available | `crowdmeasure-firestore-measurements` |
 | Cellular and generic VoIP call sampling and local data | Available | `crowdmeasure-calls` |
 | Call upload scheduling | Available | `crowdmeasure-calls-upload` |

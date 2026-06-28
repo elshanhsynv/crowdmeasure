@@ -14,7 +14,7 @@ android {
 }
 
 dependencies {
-    api(project(":crowdmeasure-sdk-upload-api"))
+    api(project(":crowdmeasure-sdk-measurements-upload-api"))
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)

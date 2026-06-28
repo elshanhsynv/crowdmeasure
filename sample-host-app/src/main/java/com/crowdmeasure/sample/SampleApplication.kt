@@ -1,4 +1,4 @@
-package com.yourcompany.crowdmeasure.sample
+package com.crowdmeasure.sample
 
 import android.app.Application
 import com.crowdmeasure.sdk.CrowdMeasureConfig

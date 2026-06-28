@@ -8,8 +8,8 @@ The SDK supports Android API 29+. Use local modules during development or the `0
 dependencies {
     implementation(project(":crowdmeasure-sdk-core"))
     implementation(project(":crowdmeasure-sdk-background")) // optional
-    implementation(project(":crowdmeasure-sdk-upload")) // optional
-    implementation(project(":crowdmeasure-sdk-upload-api")) // uploader providers only
+    implementation(project(":crowdmeasure-sdk-measurements-upload")) // optional measurement uploads
+    implementation(project(":crowdmeasure-sdk-measurements-upload-api")) // measurement uploader providers only
     implementation(project(":crowdmeasure-sdk-firestore-measurements")) // optional
     implementation(project(":crowdmeasure-sdk-calls")) // optional
     implementation(project(":crowdmeasure-sdk-calls-upload")) // optional

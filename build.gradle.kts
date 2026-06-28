@@ -17,8 +17,8 @@ plugins {
 val sdkProjects = setOf(
     "crowdmeasure-sdk-core",
     "crowdmeasure-sdk-background",
-    "crowdmeasure-sdk-upload-api",
-    "crowdmeasure-sdk-upload",
+    "crowdmeasure-sdk-measurements-upload-api",
+    "crowdmeasure-sdk-measurements-upload",
     "crowdmeasure-sdk-calls",
     "crowdmeasure-sdk-calls-upload",
     "crowdmeasure-sdk-firestore-measurements",
@@ -87,7 +87,7 @@ tasks.register("apiCheck") {
 val sdkBoundaryFiles = mapOf(
     "crowdmeasure-sdk-core" to file("crowdmeasure-sdk-core/build.gradle.kts"),
     "crowdmeasure-sdk-calls" to file("crowdmeasure-sdk-calls/build.gradle.kts"),
-    "crowdmeasure-sdk-upload-api" to file("crowdmeasure-sdk-upload-api/build.gradle.kts"),
+    "crowdmeasure-sdk-measurements-upload-api" to file("crowdmeasure-sdk-measurements-upload-api/build.gradle.kts"),
     "crowdmeasure-sdk-firestore-measurements" to file("crowdmeasure-sdk-firestore-measurements/build.gradle.kts"),
     "crowdmeasure-sdk-firestore-calls" to file("crowdmeasure-sdk-firestore-calls/build.gradle.kts"),
 )
@@ -99,9 +99,9 @@ tasks.register("verifySdkDependencyBoundaries") {
         val forbidden = mapOf(
             "crowdmeasure-sdk-core" to listOf("work-runtime", "firebase", "hilt", "compose", "crashlytics"),
             "crowdmeasure-sdk-calls" to listOf("work-runtime", "firebase", "hilt", "compose", "crashlytics"),
-            "crowdmeasure-sdk-upload-api" to listOf("work-runtime", "firebase", "hilt", "compose", "crashlytics"),
+            "crowdmeasure-sdk-measurements-upload-api" to listOf("work-runtime", "firebase", "hilt", "compose", "crashlytics"),
             "crowdmeasure-sdk-firestore-measurements" to listOf("crowdmeasure-sdk-calls", "work-runtime"),
-            "crowdmeasure-sdk-firestore-calls" to listOf("crowdmeasure-sdk-upload", "work-runtime"),
+            "crowdmeasure-sdk-firestore-calls" to listOf("crowdmeasure-sdk-measurements-upload", "work-runtime"),
         )
         forbidden.forEach { (projectName, terms) ->
             val buildFile = sdkBoundaryFiles.getValue(projectName).readText()

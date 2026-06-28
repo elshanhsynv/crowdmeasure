@@ -97,7 +97,7 @@ ksp {
 dependencies {
     implementation(project(":crowdmeasure-sdk-core"))
     implementation(project(":crowdmeasure-sdk-background"))
-    implementation(project(":crowdmeasure-sdk-upload"))
+    implementation(project(":crowdmeasure-sdk-measurements-upload"))
     implementation(project(":crowdmeasure-sdk-firestore-measurements"))
     implementation(project(":crowdmeasure-sdk-firestore-calls"))
     implementation(project(":crowdmeasure-sdk-calls"))

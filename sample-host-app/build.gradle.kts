@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    namespace = "com.yourcompany.crowdmeasure.sample"
+    namespace = "com.crowdmeasure.sample"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.yourcompany.crowdmeasure.sample"
+        applicationId = "com.crowdmeasure.sample"
         minSdk = 29
         targetSdk = 36
         versionCode = 1
@@ -29,7 +29,7 @@ dependencies {
 
     implementation(sdk("core"))
     implementation(sdk("background"))
-    implementation(sdk("upload"))
+    implementation(sdk("measurements-upload"))
     implementation(sdk("firestore-measurements"))
     implementation(sdk("firestore-calls"))
     implementation(sdk("calls"))

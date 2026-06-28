@@ -18,7 +18,7 @@ android {
 
 dependencies {
     api(project(":crowdmeasure-sdk-core"))
-    api(project(":crowdmeasure-sdk-upload-api"))
+    api(project(":crowdmeasure-sdk-measurements-upload-api"))
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)

@@ -1,4 +1,4 @@
-# CrowdMeasure Upload SDK
+# CrowdMeasure Measurements Upload SDK
 
 Optional backend-neutral measurement upload queue and scheduling.
 
