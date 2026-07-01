@@ -16,7 +16,7 @@ class AppPreferences(private val context: Context) {
         const val DEFAULT_ENDPOINT = "https://www.google.com/"
         const val DEFAULT_RETENTION_DAYS = 7
         const val DEFAULT_AUTORUN_MINUTES = 20
-        const val DEFAULT_COLLECT_ONLY_ON_WIFI = true
+        const val DEFAULT_COLLECT_ONLY_ON_WIFI = false
         const val DEFAULT_AUTO_RUN_ENABLED = true
         const val DEFAULT_FIRESTORE_UPLOADS_ENABLED = true
         const val DEFAULT_CALL_SAMPLING_ENABLED = true

@@ -56,6 +56,16 @@ Rules:
 
 ## Release Steps
 
+Use the helper script from the private repo root:
+
+```powershell
+.\scripts\release-update.ps1 -ReleaseNotes "Bug fixes and background scheduling fix."
+```
+
+The script builds the signed release APK, stages it as `app-v<versionCode>.apk`, computes SHA-256, updates the public repo `latest.json`, optionally uploads the APK with GitHub CLI, then commits and pushes `latest.json`.
+
+Manual flow:
+
 1. In the private app repo, increase `versionCode` and `versionName` in `app/build.gradle.kts`.
 2. Build a signed release APK.
 3. Rename the APK with the version code, for example `app-v4.apk`.

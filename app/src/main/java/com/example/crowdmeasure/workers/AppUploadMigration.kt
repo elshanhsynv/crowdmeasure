@@ -20,7 +20,7 @@ class AppUploadMigration @Inject constructor(
         WorkManager.getInstance(context).cancelUniqueWork("upload_pending_measurements")
         val settings = preferences.settingsFirst()
         val result = if (settings.firestoreUploadsEnabled) {
-            uploads.enable(intervalMinutes = 60, wifiOnly = true)
+            uploads.enable(intervalMinutes = 60, wifiOnly = false)
         } else {
             uploads.disable()
         }

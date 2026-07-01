@@ -13,7 +13,7 @@ val uploads = CrowdMeasureUploads.install(
         preferencesName = "crowdmeasure_sdk_upload",
         defaultBatchSize = 50,
         defaultIntervalMinutes = 60,
-        defaultWifiOnly = true,
+        defaultWifiOnly = false,
     ),
 )
 ```
@@ -23,7 +23,7 @@ compatibility with existing SDK installations. Repeated equivalent installation 
 conflicting installation fails with `IllegalStateException`. Enable uploads explicitly:
 
 ```kotlin
-uploads.enable(intervalMinutes = 60, wifiOnly = true)
+uploads.enable(intervalMinutes = 60, wifiOnly = false)
 uploads.enqueueUploadNow()
 uploads.uploadNow()
 uploads.disable()
