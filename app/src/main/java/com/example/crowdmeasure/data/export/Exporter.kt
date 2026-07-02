@@ -118,7 +118,7 @@ class Exporter(
                     putOpt("wifi", net.wifi?.let { w ->
                         JSONObject().apply {
                             putOpt("bssid_hash", w.bssidHash)
-                            putOpt("ssid_hash", w.ssidHash)
+                            putOpt("ssid", w.ssid)
                             put("standard", w.standard)
                             putOpt("frequency_mhz", w.frequencyMhz)
                             putOpt("channel_width_mhz", w.channelWidthMhz)

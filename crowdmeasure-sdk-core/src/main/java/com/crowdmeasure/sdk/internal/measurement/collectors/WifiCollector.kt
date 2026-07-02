@@ -10,6 +10,7 @@ import android.net.wifi.ScanResult
 import android.net.wifi.WifiInfo as AndroidWifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.util.Log
 import androidx.annotation.WorkerThread
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
@@ -31,11 +32,21 @@ object WifiCollector {
         val frequencyMhz = wifiInfo?.frequency?.takeIf { it > 0 }
         val channelWidthMhz = channelWidthMhz(wifiInfo)
 
+        Log.d("Wifi", "SSID=${wifiInfo?.ssid}")
+        Log.d("Wifi", "BSSID=${wifiInfo?.bssid}")
+        Log.d("Wifi", "NetworkId=${wifiInfo?.networkId}")
+        Log.d("Wifi", "Frequency=${wifiInfo?.frequency}")
+        Log.d("Wifi", "TransportInfo=${wifiInfo}")
+
+        val ssid = wifiInfo?.ssid
+            ?.takeUnless { it == WifiManager.UNKNOWN_SSID }
+            ?.removeSurrounding("\"")
+
         return WifiInfo(
             bssidHash = wifiInfo?.bssid
                 ?.takeIf { it.isNotBlank() && it !in BSSID_PLACEHOLDER_VALUES }
                 ?.let { hashBssid(it) },
-            ssidHash = wifiInfo?.ssid,
+            ssid = ssid,
             standard = deriveStandard(wifiInfo, frequencyMhz, channelWidthMhz),
             frequencyMhz = frequencyMhz,
             channelWidthMhz = channelWidthMhz,
@@ -47,17 +58,22 @@ object WifiCollector {
     }
 
     private fun resolveWifiInfo(context: Context): AndroidWifiInfo? {
-        // API 31+: preferred path via NetworkCapabilities.transportInfo
+        val wifiManager = context.getSystemService(WifiManager::class.java)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val cm = context.getSystemService<ConnectivityManager>()
-            val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
-            val info = caps?.transportInfo as? AndroidWifiInfo
-            if (info != null) return info
+            val cm = context.getSystemService(ConnectivityManager::class.java)
+            val info = cm.getNetworkCapabilities(cm.activeNetwork)
+                ?.transportInfo as? AndroidWifiInfo
+
+            if (info != null &&
+                info.ssid != WifiManager.UNKNOWN_SSID &&
+                info.bssid != "02:00:00:00:00:00") {
+                return info
+            }
         }
 
-        // API < 31 (and fallback): getConnectionInfo
         @Suppress("DEPRECATION")
-        return context.applicationContext.getSystemService<WifiManager>()?.connectionInfo
+        return wifiManager?.connectionInfo
     }
 
     private fun resolveScanResult(context: Context, bssid: String?): ScanResult? {

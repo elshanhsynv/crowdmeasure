@@ -121,7 +121,6 @@ internal object MeasurementSectionCatalog {
                 "Build ID" to "The identifier for the installed Android software build.",
                 "App Version" to "The CrowdMeasure version that captured the result.",
                 "Session ID" to "A pseudonymous identifier grouping related app activity.",
-//                "User ID" to "A hashed identifier used to associate contributions without displaying a raw account identifier."
             )
         ),
         content(
@@ -160,7 +159,7 @@ internal object MeasurementSectionCatalog {
                 "Data Saver" to "Whether Android's data-saving mode was active.",
                 "Thermal State" to "The device's reported heat or thermal-throttling state.",
                 "Memory Usage" to "The percentage of memory in use during capture.",
-                "Location" to "The capture coordinates and their estimated accuracy radius."
+                "Location" to "The capture coordinates and their estimated accuracy radius.",
             )
         ),
         content(
@@ -184,6 +183,7 @@ internal object MeasurementSectionCatalog {
                 "Frequency" to "The Wi-Fi radio frequency in MHz.",
                 "Channel Width" to "The width of the Wi-Fi radio channel in MHz.",
                 "Wi-Fi Standard" to "The Wi-Fi generation reported by Android.",
+                "SSID" to "The Wi-Fi access point name.",
                 "BSSID Hash" to "A hashed identifier representing the connected Wi-Fi access point."
             )
         ),

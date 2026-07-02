@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class WifiInfo(
     val bssidHash: String?,
-    val ssidHash: String?,
+    val ssid: String?,
 
     val standard: WifiStandard,
     val frequencyMhz: Int?,

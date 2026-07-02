@@ -172,6 +172,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
             w.frequencyMhz?.let { add("Frequency" to "$it MHz") }
             w.channelWidthMhz?.let { add("Channel Width" to "$it MHz") }
             add("Wi-Fi Standard" to w.standard.name)
+            w.ssid?.let { add("SSID" to it) }
             w.bssidHash?.let { add("BSSID Hash" to it) }
         }.takeIf { it.isNotEmpty() }
     }
