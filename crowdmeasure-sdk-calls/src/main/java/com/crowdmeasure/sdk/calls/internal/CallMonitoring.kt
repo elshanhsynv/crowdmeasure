@@ -124,6 +124,99 @@ internal class VoipCallMonitor(
     }
 }
 
+internal class CallSampler(
+    private val context: Context,
+    private val sdk: com.crowdmeasure.sdk.CrowdMeasureSdk,
+    private val config: CallSamplingConfig,
+    private val store: CallStore,
+    private val settings: CallsSettingsStore,
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var sampling: Job? = null
+    private var active: CallSession? = null
+
+    suspend fun start(type: CallType, source: CallSource) {
+        active?.let { session ->
+            if (source == CallSource.VOIP_GENERIC && session.callSource == CallSource.CELLULAR) {
+                store.reclassifySession(session.sessionId, CallType.UNKNOWN, CallSource.VOIP_GENERIC)
+                active = session.copy(callType = CallType.UNKNOWN, callSource = CallSource.VOIP_GENERIC)
+            }
+            return
+        }
+        if (!context.isCallSourceActive(source)) {
+            settings.recordMissed(CallRunCode.CALL_NOT_ACTIVE)
+            return
+        }
+        val requirements = context.requirements()
+        if (!requirements.canStart) {
+            settings.recordMissed(requirements.failureCode())
+            return
+        }
+        store.finishActiveSession(System.currentTimeMillis(), "service_restarted")
+        store.deleteOlderThan(System.currentTimeMillis() - config.retentionDays * 86_400_000L)
+        active = store.startSession(type, source, config.sampleIntervalSeconds)
+        settings.clearMissed()
+        sampling = scope.launch {
+            while (isActive) {
+                val session = active ?: break
+                if (!context.isCallSourceActive(session.callSource)) {
+                    finishCurrent()
+                    break
+                }
+                val at = System.currentTimeMillis()
+                try {
+                    coroutineScope {
+                        val cell = async { sdk.cellular.collect() }
+                        val location = async {
+                            try {
+                                sdk.location.collect()
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (_: Exception) {
+                                null
+                            }
+                        }
+                        val dataUsage = async { sdk.dataUsage.collect() }
+                        store.insertSample(
+                            session.sessionId,
+                            at,
+                            at - session.startedAtUtcMs,
+                            cell.await(),
+                            location.await(),
+                            dataUsage.await(),
+                        )
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    settings.recordMissed(CallRunCode.PERSISTENCE_FAILED)
+                }
+                delay((config.sampleIntervalSeconds * 1_000L).milliseconds)
+            }
+        }
+    }
+
+    suspend fun stop(source: CallSource) {
+        val session = active ?: run {
+            sampling?.cancelAndJoin()
+            sampling = null
+            return
+        }
+        if (source != CallSource.UNKNOWN && source != session.callSource) return
+        sampling?.cancelAndJoin()
+        sampling = null
+        store.finishSession(session.sessionId, System.currentTimeMillis(), "call_ended")
+        active = null
+    }
+
+    private suspend fun finishCurrent() {
+        val session = active ?: return
+        sampling = null
+        store.finishSession(session.sessionId, System.currentTimeMillis(), "call_ended")
+        active = null
+    }
+}
+
 private fun Int?.isVoipMode() =
     this == AudioManager.MODE_IN_COMMUNICATION ||
         (Build.VERSION.SDK_INT >= 33 && this == AudioManager.MODE_COMMUNICATION_REDIRECT)
@@ -303,18 +396,18 @@ internal class CallSamplingService : Service() {
         private const val EXTRA_SOURCE = "source"
 
         fun start(context: Context, type: CallType, source: CallSource) =
-            ContextCompat.startForegroundService(
-                context,
-                Intent(context, CallSamplingService::class.java).setAction(ACTION_START)
-                    .putExtra(EXTRA_TYPE, type.name)
-                    .putExtra(EXTRA_SOURCE, source.name)
-            )
+            CallsRuntime.get()?.let { rt ->
+                CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+                    rt.sampler.start(type, source)
+                }
+            } ?: Unit
 
         fun stop(context: Context, source: CallSource) {
-            context.startService(
-                Intent(context, CallSamplingService::class.java).setAction(ACTION_STOP)
-                    .putExtra(EXTRA_SOURCE, source.name)
-            )
+            CallsRuntime.get()?.let { rt ->
+                CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+                    rt.sampler.stop(source)
+                }
+            }
         }
     }
 }

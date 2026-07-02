@@ -18,14 +18,16 @@ object CrowdMeasureCalls {
         val appContext = context.applicationContext
         val settings = CallsSettingsStore(appContext, config.preferencesName)
         val monitor = VoipCallMonitor(appContext, settings)
+        val resolvedStore = callStore ?: DefaultCallStore.create(appContext, config.databaseName)
         CallsRuntime.install(
             InstalledCallsRuntime(
                 appContext,
                 sdk,
                 config,
-                callStore ?: DefaultCallStore.create(appContext, config.databaseName),
+                resolvedStore,
                 settings,
                 monitor,
+                CallSampler(appContext, sdk, config, resolvedStore, settings),
             )
         )
         return CallSamplingClientImpl(appContext)

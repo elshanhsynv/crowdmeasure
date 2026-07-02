@@ -70,6 +70,7 @@ internal data class InstalledCallsRuntime(
     val store: CallStore,
     val settingsStore: CallsSettingsStore,
     val monitor: VoipCallMonitor,
+    val sampler: CallSampler,
 )
 
 internal object CallsRuntime {
