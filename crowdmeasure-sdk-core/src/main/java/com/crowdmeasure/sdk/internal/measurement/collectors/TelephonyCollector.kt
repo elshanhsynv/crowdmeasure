@@ -16,6 +16,7 @@ import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
+import android.util.Log
 import android.telephony.CellInfo as AndroidCellInfo
 import androidx.annotation.RequiresApi
 import androidx.annotation.WorkerThread
@@ -45,7 +46,7 @@ data class SubscriptionDisplayInfo(
 )
 
 internal object TelephonyCollectorLogic {
-    const val MAX_CELL_AGE_MS = 30_000L
+    const val MAX_CELL_AGE_MS = 60_000L // 5 minutes
 
     fun deriveNrState(
         dataNetworkType: Int?,
@@ -229,6 +230,17 @@ object TelephonyCollector {
             return base
         }
 
+//        infos.forEach {
+//            Log.d(
+//                "TelephonyCollector",
+//                "type=${it.javaClass.simpleName} " +
+//                        "id=${it.cellIdentity} " +
+//                        "registered=${it.isRegistered} " +
+//                        "connection=${it.cellConnectionStatus} " +
+//                        "age=${it.ageMs()}"
+//            )
+//        }
+
         val nrState = deriveNrState(
             displayInfo = displayInfo,
             dataNetworkType = dataType,
@@ -240,8 +252,10 @@ object TelephonyCollector {
         val parsedServing = candidate?.let { parseCell(it) }
         val neighbors = infos
             .filterNot { it.isRegistered }
-            .filter { it.ageMs() <= TelephonyCollectorLogic.MAX_CELL_AGE_MS }
+//            .filter { it.ageMs() <= TelephonyCollectorLogic.MAX_CELL_AGE_MS }
             .mapNotNull { parseCell(it).snapshot }
+
+//        Log.d("TelephonyCollector", "neighbors: $neighbors" + "\n" + "size: ${neighbors.size}")
 
         return CellInfo(
             simCarriers = collectedSimCarriers,
