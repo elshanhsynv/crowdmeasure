@@ -2,7 +2,6 @@ package com.example.crowdmeasure.presentation.screens.home
 
 import androidx.compose.runtime.Immutable
 import com.crowdmeasure.sdk.model.CellInfo
-import com.crowdmeasure.sdk.model.DeviceEnvironment
 import com.crowdmeasure.sdk.model.EnvironmentInfo
 import com.crowdmeasure.sdk.model.Meta
 import com.crowdmeasure.sdk.model.PerformanceInfo

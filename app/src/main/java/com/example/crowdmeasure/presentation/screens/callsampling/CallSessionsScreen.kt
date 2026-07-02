@@ -82,6 +82,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.domain.model.CallCellSample
 import com.example.crowdmeasure.domain.model.CallSession
 import com.example.crowdmeasure.presentation.screens.callsampling.Metric
+import com.example.crowdmeasure.presentation.ui.components.input.AppSearchBar
 import com.example.crowdmeasure.presentation.ui.components.states.AppEmptyState
 import java.time.Instant
 import java.time.ZoneId
@@ -157,11 +158,9 @@ fun CallSessionsScreen(
             }
         } else {
             item(key = "search") {
-                CompactSearch(
+                AppSearchBar(
                     query = query,
                     onQueryChange = { query = it },
-                    showFilters = showFilters,
-                    onToggleFilters = { showFilters = !showFilters },
                     onClear = { showClearDialog = true }
                 )
             }
@@ -286,63 +285,6 @@ fun CallSessionsTopBarActions(
                 TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
             }
         )
-    }
-}
-
-@Composable
-private fun CompactSearch(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    showFilters: Boolean,
-    onToggleFilters: () -> Unit,
-    onClear: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier
-                .weight(1f)
-                .height(56.dp),
-            textStyle = MaterialTheme.typography.bodyMedium,
-            shape = MaterialTheme.shapes.large,
-            singleLine = true,
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-            },
-            placeholder = {
-                Text(
-                    text = "Search sessions...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        )
-
-//        IconButton(onClick = onToggleFilters) {
-//            Icon(
-//                imageVector = Icons.Filled.FilterList,
-//                contentDescription = if (showFilters) "Hide filters" else "Show filters",
-//                tint = if (showFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-//            )
-//        }
-
-//        IconButton(onClick = onClear) {
-//            Icon(
-//                imageVector = Icons.Filled.DeleteOutline,
-//                contentDescription = "Clear call data",
-//                tint = MaterialTheme.colorScheme.onSurfaceVariant
-//            )
-//        }
     }
 }
 

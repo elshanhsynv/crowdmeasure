@@ -6,9 +6,8 @@ object ChromeResolver {
     fun resolve(destination: NavDestination?): ChromeConfig {
         val route = destination?.route ?: return defaultChrome()
 
-        return when {
-            // Top-level destinations with bottom bar
-            route == Routes.HOME -> ChromeConfig(
+        return when (route) {
+            Routes.HOME -> ChromeConfig(
                 title = "CrowdMeasure",
                 showTopBar = true,
                 showBottomBar = true,
@@ -16,7 +15,7 @@ object ChromeResolver {
                 topBarElevated = false
             )
 
-            route == Routes.HISTORY -> ChromeConfig(
+            Routes.HISTORY -> ChromeConfig(
                 title = "CrowdMeasure",
                 showTopBar = true,
                 showBottomBar = true,
@@ -24,7 +23,7 @@ object ChromeResolver {
                 topBarElevated = false
             )
 
-            route == Routes.SETTINGS -> ChromeConfig(
+            Routes.SETTINGS -> ChromeConfig(
                 title = "CrowdMeasure",
                 showTopBar = true,
                 showBottomBar = true,
@@ -32,7 +31,7 @@ object ChromeResolver {
                 topBarElevated = false
             )
 
-            route == Routes.DETAIL_PATTERN -> ChromeConfig(
+            Routes.DETAIL_PATTERN -> ChromeConfig(
                 title = "Measurement Details",
                 showTopBar = true,
                 showBottomBar = false,
@@ -40,7 +39,7 @@ object ChromeResolver {
                 topBarElevated = true
             )
 
-            route == Routes.CALL_SESSIONS -> ChromeConfig(
+            Routes.CALL_SESSIONS -> ChromeConfig(
                 title = "Call Sessions",
                 showTopBar = true,
                 showBottomBar = false,

@@ -10,14 +10,13 @@ import com.crowdmeasure.sdk.calls.CallSamplingClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ConsentGateViewModel @Inject constructor(
-    private val userSessionRepository: UserSessionRepository,
+    userSessionRepository: UserSessionRepository,
     private val setConsentGateDismissedUseCase: SetConsentGateDismissedUseCase,
     private val background: BackgroundCollectionClient,
     private val calls: CallSamplingClient,
@@ -35,12 +34,6 @@ class ConsentGateViewModel @Inject constructor(
         viewModelScope.launch {
             setConsentGateDismissedUseCase(true)
             rescheduleBackgroundWork()
-        }
-    }
-
-    fun dismissGate() {
-        viewModelScope.launch {
-            setConsentGateDismissedUseCase(true)
         }
     }
 

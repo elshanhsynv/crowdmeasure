@@ -22,7 +22,7 @@ import javax.inject.Inject
  * Features:
  * - Load single measurement by ID
  * - Privacy-conscious reveal system for sensitive data
- * - Organized sections (header, context, wifi, cell, performance)
+ * - Organized sections (header, context, WI-FI, cell, performance)
  * - Formatted display values
  *
  * Privacy Design:
@@ -98,13 +98,6 @@ class MeasurementDetailViewModel @Inject constructor(
             }
             state.copy(revealed = newRevealed)
         }
-    }
-
-    /**
-     * Hide all sensitive data.
-     */
-    fun hideAllSensitive() {
-        _uiState.update { it.copy(revealed = emptySet()) }
     }
 }
 

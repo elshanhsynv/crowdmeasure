@@ -71,6 +71,5 @@ data class HistoryItemUi(
     val endpointIdOrHost: String? = null
 ) {
     val isWifi: Boolean
-        get() = transportText.contains("wifi", ignoreCase = true) ||
-                transportText.contains("wlan", ignoreCase = true)
+        get() = transportText.contains("wifi", ignoreCase = true)
 }

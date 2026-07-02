@@ -135,18 +135,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun clearMeasurementMessage() {
-        if (measurementState.value is UiState.Success || measurementState.value is UiState.Error) {
-            measurementState.value = UiState.Idle
-        }
-    }
-
-    fun clearUploadMessage() {
-        if (uploadState.value is UiState.Success || uploadState.value is UiState.Error) {
-            uploadState.value = UiState.Idle
-        }
-    }
-
     override fun onCleared() {
         super.onCleared()
         currentMeasurementJob?.cancel()

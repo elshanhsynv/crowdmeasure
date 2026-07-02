@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,7 +20,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.crowdmeasure.presentation.ui.components.buttons.PrimaryButton
 
 /**
  * @param title Short, punchy text (e.g., "No measurements found").
@@ -87,7 +87,11 @@ private fun AppEmptyStatePreview() {
         description = "Try adjusting your filters.",
         icon = Icons.Outlined.Inbox,
         action = {
-            PrimaryButton(text = "Refresh", onClick = {})
+            Button(onClick = {}) {
+                Text(
+                    "Try again"
+                )
+            }
         }
     )
 }

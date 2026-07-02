@@ -27,12 +27,12 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
@@ -53,7 +53,7 @@ class HistoryViewModel @Inject constructor(
 
     @OptIn(FlowPreview::class)
     private val appliedQuery: StateFlow<String?> = queryText
-        .debounce(350)
+        .debounce(350.milliseconds)
         .map { it.trim().takeIf(String::isNotBlank) }
         .distinctUntilChanged()
         .stateIn(
@@ -189,7 +189,7 @@ class HistoryViewModel @Inject constructor(
             if (score <= 0) null else item to score
         }
             .sortedWith(compareByDescending<Pair<HistoryItemUi, Int>> { it.second }
-                // stable-ish tie break: newer first if you ever add timestamp; otherwise timeText
+                // stable-ish tie-break: newer first if you ever add timestamp; otherwise timeText
                 .thenByDescending { it.first.timeText })
             .map { it.first }
     }

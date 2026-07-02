@@ -325,9 +325,6 @@ internal object MeasurementSectionCatalog {
 
     operator fun get(section: MeasurementSection): MeasurementSectionContent =
         checkNotNull(bySection[section]) { "Missing information for $section" }
-
-    fun search(query: String): List<MeasurementSectionContent> =
-        all.filter { it.matches(query) }
 }
 
 private fun content(

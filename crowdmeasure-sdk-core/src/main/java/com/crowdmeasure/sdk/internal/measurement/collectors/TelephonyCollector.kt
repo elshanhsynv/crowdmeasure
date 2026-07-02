@@ -230,16 +230,20 @@ object TelephonyCollector {
             return base
         }
 
-//        infos.forEach {
-//            Log.d(
-//                "TelephonyCollector",
-//                "type=${it.javaClass.simpleName} " +
-//                        "id=${it.cellIdentity} " +
-//                        "registered=${it.isRegistered} " +
-//                        "connection=${it.cellConnectionStatus} " +
-//                        "age=${it.ageMs()}"
-//            )
-//        }
+        infos.forEach { cell ->
+            Log.d(
+                "CM",
+                """
+type=${cell.javaClass.simpleName}
+registered=${cell.isRegistered}
+connection=${cell.cellConnectionStatus}
+age=${cell.ageMs()}
+dbm=${cell.signalDbm()}
+identity=${cell.cellIdentity}
+signal=${cell.cellSignalStrength}
+        """.trimIndent()
+            )
+        }
 
         val nrState = deriveNrState(
             displayInfo = displayInfo,
@@ -256,6 +260,23 @@ object TelephonyCollector {
             .mapNotNull { parseCell(it).snapshot }
 
 //        Log.d("TelephonyCollector", "neighbors: $neighbors" + "\n" + "size: ${neighbors.size}")
+
+        Log.d("CM", "dataNetworkType=$dataType")
+        Log.d("CM", "nrState=$nrState")
+        Log.d("CM", "serving=${parsedServing?.rat}")
+
+        // status bar
+        Log.d("CM", "display.networkType=${displayInfo?.networkType}")
+        Log.d("CM", "display.override=${displayInfo?.overrideNetworkType}")
+
+        Log.d("CM", targetTm.serviceState?.toString().orEmpty())
+
+        Log.d(
+            "CM",
+            "NSA because: override=${displayInfo?.overrideNetworkType}, " +
+                    "dataType=${targetTm.dataNetworkType}, " +
+                    "registeredNr=${infos.any { it is CellInfoNr && it.isRegistered }}"
+        )
 
         return CellInfo(
             simCarriers = collectedSimCarriers,
