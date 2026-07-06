@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "measurementId": "meas-20250706-001",
+    "timestampUtcMs": 1751895619113,
+    "appVersion": "1.0.0",
+    "androidRelease": "15",
+    "androidSdk": 35,
+    "deviceModel": "Google Pixel 9",
+    "brand": "Google",
+    "deviceManufacturer": "Google",
+    "deviceOS": "Android",
+    "buildID": "AP3A.240705.005",
+    "hardware": "husky",
+    "chipset": "Google Tensor G4",
+    "chipsetManufacturer": "Google",
+    "sessionId": "sess-20250706-001",
+    "userIdHash": "hash-user-001"
+  },
+  "environment": {
+    "location": {
+      "lat": 37.7749,
+      "lon": -122.4194,
+      "accuracyMeters": 15.5
+    },
+    "network": {
+      "transport": "WIFI",
+      "ip": {
+        "publicIp": "203.0.113.45",
+        "ispName": "AS16509 Amazon.com Inc.",
+        "asn": 16509
+      },
+      "validatedInternet": true,
+      "captivePortal": false,
+      "vpn": false,
+      "metered": false,
+      "wifi": {
+        "bssidHash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+        "ssid": "HomeNetwork",
+        "standard": "WIFI_6",
+        "frequencyMhz": 5180,
+        "channelWidthMhz": 80,
+        "rssiDbm": -45,
+        "linkSpeedMbps": 150,
+        "txLinkSpeedMbps": 148,
+        "rxLinkSpeedMbps": 152
+      },
+      "cell": null,
+      "dataUsage": {
+        "dlMB": 245.67,
+        "ulMB": 18.93,
+        "dlKbps": 450.5,
+        "ulKbps": 35.2
+      }
+    },
+    "device": {
+      "batteryPct": 85,
+      "charging": false,
+      "batterySaver": false,
+      "screenOn": true,
+      "dozeMode": false,
+      "dataSaver": false,
+      "thermalState": "NORMAL",
+      "cpuUsagePct": 22.5,
+      "memoryUsagePct": 61.3
+    }
+  },
+  "performance": {
+    "endpointId": "endpoint-speedtest-1",
+    "dnsMs": 45,
+    "connectMs": 128,
+    "tlsMs": 89,
+    "ttfbAvgMs": 215,
+    "ttfbP95Ms": 340,
+    "httpLatencyAvgMs": 250,
+    "httpLatencyP95Ms": 380,
+    "jitterMs": 35,
+    "probeFailurePct": 2.5,
+    "probesAttempted": 40,
+    "probesSucceeded": 39,
+    "probesFailed": 1,
+    "stallsCount": 0,
+    "maxStallMs": null,
+    "httpStatus": 200,
+    "serverRegion": "us-west-1",
+    "firstResponseBodyStarted": true,
+    "protocol": "HTTP2",
+    "testPayloadBytes": 1048576,
+    "downMbps": 95.5,
+    "upMbps": 12.3,
+    "downP95Mbps": 88.2,
+    "downStdDevMbps": 8.4,
+    "upP95Mbps": 10.8,
+    "upStdDevMbps": 1.2
+  }
+}

@@ -46,32 +46,6 @@ class Exporter(
         }
     }
 
-    suspend fun exportCallSessionsToJson(
-        sessions: List<CallSessionExport>,
-        filePrefix: String = "crowdmeasure_call_sessions",
-    ): Result<Uri> = withContext(Dispatchers.IO) {
-        runCatching {
-            val dir = File(context.cacheDir, "exports").apply { mkdirs() }
-            val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val file = File(dir, "${filePrefix}_$ts.json")
-
-            val root = JSONObject().apply {
-                put("schema_version", 1)
-                put("exported_at_utc_ms", System.currentTimeMillis())
-                put("session_count", sessions.size)
-                put("sessions", JSONArray().apply {
-                    sessions.forEach { put(callSessionToJson(it.session, it.samples)) }
-                })
-            }
-
-            file.writeText(root.toString(2))
-
-            FileProvider.getUriForFile(
-                context, "${context.packageName}.fileprovider", file
-            )
-        }
-    }
-
     private fun measurementToJson(m: Measurement): JSONObject {
         val meta = JSONObject().apply {
             putOpt("measurement_id", m.meta.measurementId)
