@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class TransportType { WIFI, CELL, OTHER, NONE }
+enum class TransportType { WIFI, CELL, OTHER, NONE, MIXED }
 
 @Serializable
 enum class RecordState { PENDING, UPLOADED, FAILED }

@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -254,6 +255,7 @@ class SettingsViewModel @Inject constructor(
                         message = "Call export failed. Try again.",
                         throwable = error
                     )
+                    Timber.e(error, "Call export failed")
                 }
             )
         }

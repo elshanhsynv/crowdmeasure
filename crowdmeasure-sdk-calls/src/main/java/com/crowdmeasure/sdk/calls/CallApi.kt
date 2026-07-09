@@ -5,8 +5,11 @@ import com.crowdmeasure.sdk.model.CellInfo
 import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
+import com.crowdmeasure.sdk.model.TransportType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class CallSamplingConfig(
     val databaseName: String = "crowdmeasure_calls.db",
     val preferencesName: String = "crowdmeasure_sdk_calls",
@@ -18,6 +21,7 @@ data class CallSamplingConfig(
     val retentionDays: Int = 7,
 )
 
+@Serializable
 data class CallSamplingSettings(
     val cellularEnabled: Boolean = DEFAULT_CELLULAR_ENABLED,
     val voipEnabled: Boolean = DEFAULT_VOIP_ENABLED,
@@ -28,6 +32,7 @@ data class CallSamplingSettings(
     }
 }
 
+@Serializable
 data class CallSamplingRequirements(
     val supportedAndroidVersion: Boolean,
     val phoneStateGranted: Boolean,
@@ -42,7 +47,10 @@ data class CallSamplingRequirements(
                 backgroundLocationGranted && locationServicesEnabled && notificationGranted
 }
 
+@Serializable
 data class MissedCallStart(val atUtcMs: Long, val code: CallRunCode)
+
+@Serializable
 data class CallSamplingStatus(
     val settings: CallSamplingSettings,
     val requirements: CallSamplingRequirements,
@@ -51,9 +59,16 @@ data class CallSamplingStatus(
     val lastMissedStart: MissedCallStart?,
 )
 
+@Serializable
 enum class CallType { INCOMING, OUTGOING, UNKNOWN }
+
+@Serializable
 enum class CallSource { CELLULAR, WHATSAPP_VOICE, WHATSAPP_VIDEO, WHATSAPP_UNKNOWN, VOIP_GENERIC, UNKNOWN }
+
+@Serializable
 enum class CallUploadState { PENDING, UPLOADED, FAILED }
+
+@Serializable
 enum class CallRunCode {
     OK, DISABLED, NOT_INSTALLED, MISSING_PHONE_STATE, MISSING_FINE_LOCATION,
     MISSING_BACKGROUND_LOCATION, LOCATION_SERVICES_DISABLED, MISSING_NOTIFICATIONS,
@@ -62,6 +77,7 @@ enum class CallRunCode {
     SERIALIZATION_FAILED, PERSISTENCE_FAILED, INVALID_CONFIGURATION, UNEXPECTED_ERROR
 }
 
+@Serializable
 data class CallSession(
     val sessionId: String,
     val startedAtUtcMs: Long,
@@ -74,8 +90,10 @@ data class CallSession(
     val uploadState: CallUploadState = CallUploadState.PENDING,
     val simCarriers: List<CarrierInfo> = emptyList(),
     val latestSample: CallCellSample? = null,
+    val transportType: TransportType? = null
 )
 
+@Serializable
 data class CallCellSample(
     val id: Long,
     val sessionId: String,
@@ -93,9 +111,13 @@ data class CallCellSample(
     val band: Int?,
     val location: Location? = null,
     val dataUsage: DataUsageInfo? = null,
+    val transportType: TransportType? = null,
 )
 
+@Serializable
 data class CallSessionExport(val session: CallSession, val samples: List<CallCellSample>)
+
+@Serializable
 data class CallUploadItem(
     val session: CallSession,
     val samples: List<CallCellSample>,
@@ -103,6 +125,7 @@ data class CallUploadItem(
     val deviceModel: String
 )
 
+@Serializable
 data class CallUploadBatchResult(
     val uploadedSessionIds: Set<String> = emptySet(),
     val retryableSessionIds: Set<String> = emptySet(),
@@ -145,7 +168,8 @@ interface CallStore {
     suspend fun startSession(
         callType: CallType,
         callSource: CallSource,
-        intervalSeconds: Int
+        intervalSeconds: Int,
+        transportType: TransportType? = null
     ): CallSession
 
     suspend fun insertSample(
@@ -155,6 +179,7 @@ interface CallStore {
         cellInfo: CellInfo,
         location: Location? = null,
         dataUsage: DataUsageInfo? = null,
+        transportType: TransportType? = null
     )
 
     suspend fun finishSession(sessionId: String, endedAtUtcMs: Long, endReason: String)

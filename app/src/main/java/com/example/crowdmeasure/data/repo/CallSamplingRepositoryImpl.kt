@@ -13,6 +13,7 @@ import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.CellInfo
 import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
+import com.crowdmeasure.sdk.model.TransportType
 import com.crowdmeasure.sdk.calls.CallStore
 import com.crowdmeasure.sdk.calls.CallUploadState
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,6 +31,7 @@ private data class StoredCallSample(
     val cell: CellInfo,
     val location: Location? = null,
     val dataUsage: DataUsageInfo? = null,
+    val transportType: TransportType? = null,
 )
 
 class CallSamplingRepositoryImpl(
@@ -44,7 +46,8 @@ class CallSamplingRepositoryImpl(
     override suspend fun startSession(
         callType: CallType,
         callSource: CallSource,
-        intervalSeconds: Int
+        intervalSeconds: Int,
+        transportType: TransportType?
     ): CallSession = withContext(io) {
         val active = dao.getActiveSession()
         if (active != null) {
@@ -81,6 +84,7 @@ class CallSamplingRepositoryImpl(
         cellInfo: CellInfo,
         location: Location?,
         dataUsage: DataUsageInfo?,
+        transportType: TransportType?,
     ) = withContext(io) {
         val serving = cellInfo.serving
         val carriersJson = encodeCarriers(cellInfo.simCarriers)
@@ -90,7 +94,7 @@ class CallSamplingRepositoryImpl(
                 sampledAtUtcMs = sampledAtUtcMs,
                 elapsedMs = elapsedMs,
                 cellJson = Converters.json.encodeToString(
-                    StoredCallSample(cellInfo.withoutCarriers(), location, dataUsage)
+                    StoredCallSample(cellInfo.withoutCarriers(), location, dataUsage, transportType)
                 ),
                 rat = cellInfo.rat,
                 nrState = cellInfo.nrState.name,
@@ -131,9 +135,8 @@ class CallSamplingRepositoryImpl(
 
     fun observeRecentSessions(limit: Int = 50): Flow<List<CallSession>> =
         dao.observeRecentSessions(limit).combine(dao.observeRecentSamples(limit)) { sessions, samples ->
-            val latestBySession = samples
-                .mapNotNull { it.toDomainOrNull() }
-                .groupBy { it.sessionId }
+            val samplesBySession = samples.mapNotNull { it.toDomainOrNull() }.groupBy { it.sessionId }
+            val latestBySession = samplesBySession
                 .mapValues { (_, sessionSamples) -> sessionSamples.maxByOrNull { it.sampledAtUtcMs } }
             val carriersBySession = samples.mapNotNull { it.carriersOrNull() }.toMap()
 
@@ -141,6 +144,7 @@ class CallSamplingRepositoryImpl(
                 session.toDomain(
                     latestSample = latestBySession[session.sessionId],
                     fallbackCarriers = carriersBySession[session.sessionId],
+                    transportType = samplesBySession[session.sessionId].sessionTransport(),
                 )
             }
         }
@@ -155,12 +159,14 @@ class CallSamplingRepositoryImpl(
     suspend fun getRecentSessionsForExport(limit: Int): List<CallSessionExport> = withContext(io) {
         dao.getRecentSessions(limit).map { session ->
             val samples = dao.getSamples(session.sessionId)
+            val domainSamples = samples.mapNotNull { it.toDomainOrNull() }
             CallSessionExport(
                 session = session.toDomain(
-                    latestSample = null,
+                    latestSample = domainSamples.maxByOrNull { it.sampledAtUtcMs },
                     fallbackCarriers = samples.firstCarriersOrNull(),
+                    transportType = domainSamples.sessionTransport(),
                 ),
-                samples = samples.mapNotNull { it.toDomainOrNull() }
+                samples = domainSamples,
             )
         }
     }
@@ -171,12 +177,14 @@ class CallSamplingRepositoryImpl(
     override suspend fun getUploadCandidates(limit: Int): List<CallSessionExport> = withContext(io) {
         dao.getUploadCandidates(limit).map { session ->
             val samples = dao.getSamples(session.sessionId)
+            val domainSamples = samples.mapNotNull { it.toDomainOrNull() }
             CallSessionExport(
                 session.toDomain(
-                    latestSample = null,
+                    latestSample = domainSamples.maxByOrNull { it.sampledAtUtcMs },
                     fallbackCarriers = samples.firstCarriersOrNull(),
+                    transportType = domainSamples.sessionTransport(),
                 ),
-                samples.mapNotNull { it.toDomainOrNull() },
+                domainSamples,
             )
         }
     }
@@ -202,6 +210,7 @@ class CallSamplingRepositoryImpl(
     private fun CallSessionEntity.toDomain(
         latestSample: CallCellSample?,
         fallbackCarriers: List<CarrierInfo>? = null,
+        transportType: TransportType? = null,
     ): CallSession =
         CallSession(
             sessionId = sessionId,
@@ -214,7 +223,8 @@ class CallSamplingRepositoryImpl(
             endReason = endReason,
             uploadState = runCatching { CallUploadState.valueOf(uploadState) }.getOrDefault(CallUploadState.PENDING),
             simCarriers = decodeCarriers(carriersJson).ifEmpty { fallbackCarriers.orEmpty() },
-            latestSample = latestSample
+            latestSample = latestSample,
+            transportType = transportType ?: latestSample?.transportType,
         )
 
     private fun CallCellSampleEntity.toDomainOrNull(): CallCellSample? =
@@ -237,6 +247,7 @@ class CallSamplingRepositoryImpl(
                 band = band,
                 location = stored.location,
                 dataUsage = stored.dataUsage,
+                transportType = stored.transportType,
             )
         }.getOrNull()
 
@@ -245,6 +256,16 @@ class CallSamplingRepositoryImpl(
 
     private fun List<CallCellSampleEntity>.firstCarriersOrNull(): List<CarrierInfo>? =
         firstNotNullOfOrNull { it.carriersOrNull()?.second }
+
+    private fun List<CallCellSample>?.sessionTransport(): TransportType? {
+        val real = this.orEmpty().mapNotNull { it.transportType }.filter { it != TransportType.NONE }.toSet()
+        return when {
+            real.size > 1 -> TransportType.MIXED
+            real.size == 1 -> real.first()
+            this.orEmpty().any { it.transportType == TransportType.NONE } -> TransportType.NONE
+            else -> null
+        }
+    }
 
     private fun decodeStoredSample(value: String): StoredCallSample =
         runCatching { Converters.json.decodeFromString(StoredCallSample.serializer(), value) }

@@ -4,12 +4,15 @@ import android.app.*
 import android.content.*
 import android.content.pm.ServiceInfo
 import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.*
 import android.telephony.TelephonyManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.crowdmeasure.sdk.calls.*
+import com.crowdmeasure.sdk.model.TransportType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlin.time.Duration.Companion.milliseconds
@@ -40,11 +43,17 @@ internal class CallPhoneStateReceiver : BroadcastReceiver() {
                         }
                         val settings = rt.settingsStore.settings.first()
                         val requirements = context.requirements()
+                        val voipActive = context.isCallSourceActive(CallSource.VOIP_GENERIC)
                         when {
-                            !settings.cellularEnabled -> rt.settingsStore.recordMissed(CallRunCode.DISABLED)
+                            voipActive && !settings.voipEnabled -> rt.settingsStore.recordMissed(CallRunCode.DISABLED)
+                            !voipActive && !settings.cellularEnabled -> rt.settingsStore.recordMissed(CallRunCode.DISABLED)
                             !requirements.canStart -> rt.settingsStore.recordMissed(requirements.failureCode())
                             else -> runCatching {
-                                CallSamplingService.start(context, type, CallSource.CELLULAR)
+                                if (voipActive) {
+                                    CallSamplingService.start(context, CallType.UNKNOWN, CallSource.VOIP_GENERIC)
+                                } else {
+                                    CallSamplingService.start(context, type, CallSource.CELLULAR)
+                                }
                             }.onFailure { rt.settingsStore.recordMissed(it.foregroundFailureCode()) }
                         }
                     } finally {
@@ -154,7 +163,7 @@ internal class CallSampler(
         }
         store.finishActiveSession(System.currentTimeMillis(), "service_restarted")
         store.deleteOlderThan(System.currentTimeMillis() - config.retentionDays * 86_400_000L)
-        active = store.startSession(type, source, config.sampleIntervalSeconds)
+        active = store.startSession(type, source, config.sampleIntervalSeconds, context.transportFor(source))
         settings.clearMissed()
         sampling = scope.launch {
             while (isActive) {
@@ -184,6 +193,7 @@ internal class CallSampler(
                             cell.await(),
                             location.await(),
                             dataUsage.await(),
+                            context.transportFor(session.callSource),
                         )
                     }
                 } catch (error: CancellationException) {
@@ -220,6 +230,17 @@ internal class CallSampler(
 private fun Int?.isVoipMode() =
     this == AudioManager.MODE_IN_COMMUNICATION ||
         (Build.VERSION.SDK_INT >= 33 && this == AudioManager.MODE_COMMUNICATION_REDIRECT)
+
+private fun Context.transportFor(source: CallSource): TransportType {
+    if (source == CallSource.CELLULAR) return TransportType.CELL
+    val cm = getSystemService(ConnectivityManager::class.java) ?: return TransportType.NONE
+    val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return TransportType.NONE
+    return when {
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> TransportType.WIFI
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> TransportType.CELL
+        else -> TransportType.OTHER
+    }
+}
 
 internal class CallSamplingService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -300,7 +321,7 @@ internal class CallSamplingService : Service() {
         }
         rt.store.finishActiveSession(System.currentTimeMillis(), "service_restarted")
         rt.store.deleteOlderThan(System.currentTimeMillis() - config.retentionDays * 86_400_000L)
-        active = rt.store.startSession(type, source, config.sampleIntervalSeconds)
+        active = rt.store.startSession(type, source, config.sampleIntervalSeconds, applicationContext.transportFor(source))
         rt.settingsStore.clearMissed()
         sampling = scope.launch {
             while (isActive) {
@@ -330,6 +351,7 @@ internal class CallSamplingService : Service() {
                             cell.await(),
                             location.await(),
                             dataUsage.await(),
+                            applicationContext.transportFor(session.callSource),
                         )
                     }
                 } catch (error: CancellationException) {

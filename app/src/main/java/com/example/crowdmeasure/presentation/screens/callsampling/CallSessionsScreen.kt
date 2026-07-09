@@ -1,5 +1,6 @@
 package com.example.crowdmeasure.presentation.screens.callsampling
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -84,6 +86,7 @@ import com.example.crowdmeasure.domain.model.CallSession
 import com.example.crowdmeasure.presentation.screens.callsampling.Metric
 import com.example.crowdmeasure.presentation.ui.components.input.AppSearchBar
 import com.example.crowdmeasure.presentation.ui.components.states.AppEmptyState
+import timber.log.Timber
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -371,6 +374,12 @@ private fun SessionCard(
 ) {
     val latest = session.latestSample
 
+    Timber.tag("CallSessionsScreen").d("""
+        SessionCard:
+        selected: $selected:
+        transport: ${session.transportType}
+    """.trimIndent())
+
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -471,91 +480,6 @@ private fun DurationPill(text: String) {
 }
 
 @Composable
-private fun MetricChips(
-    sample: CallCellSample?,
-    compact: Boolean
-) {
-    val serving = sample?.cell?.serving
-    val metrics = listOf(
-        Metric("RSSI", serving?.rssiDbm?.toString(), Icons.Filled.SignalCellularAlt),
-        Metric(
-            "RSRP",
-            sample?.rsrpDbm?.toString(),
-            Icons.Filled.SignalCellularAlt,
-            signalColor(sample?.rsrpDbm)
-        ),
-        Metric("RSRQ", sample?.rsrqDb?.toString(), Icons.Filled.CellTower),
-        Metric(
-            "SINR",
-            sample?.sinrDb?.toString(),
-            Icons.Filled.SignalCellularAlt,
-            sinrColor(sample?.sinrDb)
-        ),
-//        Metric("Band", sample?.band?.let { "Band $it" }, Icons.Filled.CellTower)
-    )
-
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        metrics.forEach { metric ->
-            MetricChip(metric = metric, compact = compact)
-        }
-    }
-}
-
-@Composable
-private fun MetricChip(
-    metric: Metric,
-    compact: Boolean
-) {
-    Surface(
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
-        modifier = Modifier.defaultMinSize(
-            minWidth = if (compact) 70.dp else 94.dp,
-            minHeight = if (compact) 38.dp else 62.dp
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(
-                horizontal = if (compact) 10.dp else 12.dp,
-                vertical = if (compact) 7.dp else 10.dp
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = metric.icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(if (compact) 17.dp else 18.dp)
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                if (!compact) {
-                    Text(
-                        text = metric.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Text(
-                    text = metric.value ?: "-",
-                    style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = metric.color ?: MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun SamplesSheet(
     session: CallSession,
     index: Int,
@@ -625,6 +549,7 @@ private fun SamplesSheet(
                             SheetMetric("PCI", sample.pci?.toString()),
                             SheetMetric("TAC", sample.tac?.toString()),
                             SheetMetric("Band", sample.band?.toString()),
+                            SheetMetric("Transport", sample.transportType?.name),
                             SheetMetric("NR", sample.nrState),
                             SheetMetric("Neighbors", sample.cell.neighbors.size.toString()),
                             SheetMetric("RSSI", sample.cell.serving?.rssiDbm?.toString()),
@@ -945,19 +870,3 @@ private fun Double.approxCoordinate(): String = String.format(Locale.US, "%.4f",
 
 private fun Double.oneDecimal(unit: String): String =
     String.format(Locale.US, "%.1f %s", this, unit)
-
-@Composable
-private fun signalColor(value: Int?): Color = when {
-    value == null -> MaterialTheme.colorScheme.onSurface
-    value >= -95 -> MaterialTheme.colorScheme.primary
-    value >= -110 -> MaterialTheme.colorScheme.tertiary
-    else -> MaterialTheme.colorScheme.error
-}
-
-@Composable
-private fun sinrColor(value: Int?): Color = when {
-    value == null -> MaterialTheme.colorScheme.onSurface
-    value >= 10 -> MaterialTheme.colorScheme.primary
-    value >= 0 -> MaterialTheme.colorScheme.tertiary
-    else -> MaterialTheme.colorScheme.error
-}

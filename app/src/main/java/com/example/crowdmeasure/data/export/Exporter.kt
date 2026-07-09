@@ -222,6 +222,7 @@ class Exporter(
         putOpt("pci", sample.pci)
         putOpt("tac", sample.tac)
         putOpt("band", sample.band)
+        putOpt("transport_type", sample.transportType?.name)
         putOpt("location", sample.location?.let {
             JSONObject().apply {
                 put("lat", it.lat)

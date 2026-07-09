@@ -60,6 +60,7 @@ internal object CallFirestorePayload {
             "ended_at_utc_ms" to item.session.endedAtUtcMs,
             "call_type" to item.session.callType.name,
             "call_source" to item.session.callSource.name,
+            "transport_type" to item.session.transportType?.name,
             "sample_interval_seconds" to item.session.sampleIntervalSeconds,
             "sample_count" to item.session.sampleCount,
             "end_reason" to item.session.endReason,
@@ -80,6 +81,7 @@ internal object CallFirestorePayload {
         "pci" to value.pci,
         "tac" to value.tac,
         "band" to value.band,
+        "transport_type" to value.transportType?.name,
         "location" to value.location?.let {
             mapOf(
                 "lat" to it.lat,

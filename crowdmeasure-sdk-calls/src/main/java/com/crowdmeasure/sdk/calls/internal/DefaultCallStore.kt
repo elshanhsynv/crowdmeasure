@@ -7,6 +7,7 @@ import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.CellInfo
 import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
+import com.crowdmeasure.sdk.model.TransportType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -129,6 +130,7 @@ internal data class StoredCallSample(
     val cell: CellInfo,
     val location: Location? = null,
     val dataUsage: DataUsageInfo? = null,
+    val transportType: TransportType? = null,
 )
 
 internal class DefaultCallStore private constructor(private val dao: CallsDao) : CallStore {
@@ -138,7 +140,8 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
     override suspend fun startSession(
         callType: CallType,
         callSource: CallSource,
-        intervalSeconds: Int
+        intervalSeconds: Int,
+        transportType: TransportType?
     ): CallSession {
         dao.active()?.let {
             dao.finish(
@@ -170,6 +173,7 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
         cellInfo: CellInfo,
         location: Location?,
         dataUsage: DataUsageInfo?,
+        transportType: TransportType?,
     ) {
         val serving = cellInfo.serving
         val carriersJson = encodeCarriers(cellInfo.simCarriers)
@@ -181,7 +185,7 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
                 elapsedMs,
                 json.encodeToString(
                     StoredCallSample.serializer(),
-                    StoredCallSample(cellInfo.withoutCarriers(), location, dataUsage)
+                    StoredCallSample(cellInfo.withoutCarriers(), location, dataUsage, transportType)
                 ),
                 cellInfo.rat,
                 cellInfo.nrState.name,
@@ -211,10 +215,16 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
 
     override fun observeSessions(limit: Int) =
         dao.observeSessions(limit).combine(dao.recentSamples(limit)) { sessions, samples ->
-            val latest = samples.mapNotNull { it.domainOrNull() }.groupBy { it.sessionId }
-                .mapValues { it.value.maxByOrNull(CallCellSample::sampledAtUtcMs) }
+            val samplesBySession = samples.mapNotNull { it.domainOrNull() }.groupBy { it.sessionId }
+            val latest = samplesBySession.mapValues { it.value.maxByOrNull(CallCellSample::sampledAtUtcMs) }
             val sampleCarriers = samples.mapNotNull { it.carriersOrNull() }.toMap()
-            sessions.map { it.domain(latest[it.sessionId], sampleCarriers[it.sessionId]) }
+            sessions.map {
+                it.domain(
+                    latest[it.sessionId],
+                    sampleCarriers[it.sessionId],
+                    samplesBySession[it.sessionId].sessionTransport(),
+                )
+            }
         }
 
     override fun observeSamples(sessionId: String) =
@@ -222,17 +232,29 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
 
     override suspend fun getRecentSessions(limit: Int) = dao.sessions(limit).map { session ->
         val samples = dao.samples(session.sessionId)
+        val domainSamples = samples.mapNotNull { it.domainOrNull() }
         CallSessionExport(
-            session.domain(fallbackCarriers = samples.firstCarriersOrNull()),
-            samples.mapNotNull { it.domainOrNull() })
+            session.domain(
+                latest = domainSamples.maxByOrNull(CallCellSample::sampledAtUtcMs),
+                fallbackCarriers = samples.firstCarriersOrNull(),
+                transportType = domainSamples.sessionTransport(),
+            ),
+            domainSamples,
+        )
     }
 
     override suspend fun getUploadCandidates(limit: Int) = dao.uploadCandidates(limit)
         .map { session ->
             val samples = dao.samples(session.sessionId)
+            val domainSamples = samples.mapNotNull { it.domainOrNull() }
             CallSessionExport(
-                session.domain(fallbackCarriers = samples.firstCarriersOrNull()),
-                samples.mapNotNull { it.domainOrNull() })
+                session.domain(
+                    latest = domainSamples.maxByOrNull(CallCellSample::sampledAtUtcMs),
+                    fallbackCarriers = samples.firstCarriersOrNull(),
+                    transportType = domainSamples.sessionTransport(),
+                ),
+                domainSamples,
+            )
         }
 
     override suspend fun markUploaded(sessionIds: List<String>) {
@@ -249,6 +271,7 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
     private fun SessionEntity.domain(
         latest: CallCellSample? = null,
         fallbackCarriers: List<CarrierInfo>? = null,
+        transportType: TransportType? = null,
     ) = CallSession(
         sessionId,
         startedAtUtcMs,
@@ -260,7 +283,8 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
         endReason,
         enum(uploadState, CallUploadState.PENDING),
         decodeCarriers(carriersJson).ifEmpty { fallbackCarriers.orEmpty() },
-        latest
+        latest,
+        transportType ?: latest?.transportType
     )
 
     private fun SampleEntity.domainOrNull() = runCatching {
@@ -282,6 +306,7 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
             band,
             stored.location,
             stored.dataUsage,
+            stored.transportType,
         )
     }.getOrNull()
 
@@ -290,6 +315,16 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
 
     private fun List<SampleEntity>.firstCarriersOrNull(): List<CarrierInfo>? =
         firstNotNullOfOrNull { it.carriersOrNull()?.second }
+
+    private fun List<CallCellSample>?.sessionTransport(): TransportType? {
+        val real = this.orEmpty().mapNotNull { it.transportType }.filter { it != TransportType.NONE }.toSet()
+        return when {
+            real.size > 1 -> TransportType.MIXED
+            real.size == 1 -> real.first()
+            this.orEmpty().any { it.transportType == TransportType.NONE } -> TransportType.NONE
+            else -> null
+        }
+    }
 
     private fun decodeStoredSample(value: String): StoredCallSample =
         runCatching { json.decodeFromString(StoredCallSample.serializer(), value) }

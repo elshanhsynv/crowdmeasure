@@ -569,7 +569,7 @@ private fun MeasurementHistoryCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TransportChip(item.transportText)
+//                    TransportChip(item.transportText)
                     MetricChip(label = "DNS", value = item.dnsText)
                     MetricChip(label = "TTFB", value = item.ttfbText)
                 }

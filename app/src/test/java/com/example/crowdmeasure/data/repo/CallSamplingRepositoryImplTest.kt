@@ -9,6 +9,7 @@ import com.crowdmeasure.sdk.model.CellInfo
 import com.crowdmeasure.sdk.model.CellRadioSnapshot
 import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
+import com.crowdmeasure.sdk.model.TransportType
 import com.example.crowdmeasure.domain.model.CallSource
 import com.example.crowdmeasure.domain.model.CallType
 import com.crowdmeasure.sdk.model.NrState
@@ -95,6 +96,27 @@ class CallSamplingRepositoryImplTest {
         assertEquals(40.4093, samples.single().location?.lat)
         assertEquals(1.0, samples.single().dataUsage?.dlMB)
         assertEquals(emptyList<CarrierInfo>(), samples.single().cell.simCarriers)
+    }
+
+    @Test
+    fun observeRecentSessions_marksMixedTransportWhenSamplesChangeNetwork() = runBlocking {
+        val session = repository.startSession(
+            callType = CallType.UNKNOWN,
+            callSource = CallSource.VOIP_GENERIC,
+            intervalSeconds = 30
+        )
+
+        listOf(TransportType.CELL, TransportType.NONE, TransportType.WIFI).forEachIndexed { index, transport ->
+            repository.insertSample(
+                sessionId = session.sessionId,
+                sampledAtUtcMs = 1_000L + index,
+                elapsedMs = index * 30_000L,
+                cellInfo = testCellInfo(),
+                transportType = transport,
+            )
+        }
+
+        assertEquals(TransportType.MIXED, repository.observeRecentSessions().first().single().transportType)
     }
 
     @Test
