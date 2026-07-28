@@ -3,13 +3,7 @@ package com.example.crowdmeasure.presentation.screens.history
 import androidx.compose.runtime.Immutable
 
 internal enum class MeasurementSection {
-    Summary,
-    Device,
-    NetworkContext,
-    Wifi,
-    Cellular,
-    Ip,
-    Performance
+    Summary, Device, NetworkContext, Wifi, Cellular, Ip, Performance
 }
 
 @Immutable
@@ -24,25 +18,28 @@ internal data class MeasurementSectionContent(
 ) {
     fun matches(query: String): Boolean {
         val normalized = query.trim()
-        return normalized.isEmpty() ||
-                title.contains(normalized, ignoreCase = true) ||
-                shortLabel?.contains(normalized, ignoreCase = true) == true ||
-                sensitiveValues.any { it.matches(normalized) } ||
-                metrics.any { it.matches(normalized) }
+        return normalized.isEmpty() || title.contains(
+            normalized,
+            ignoreCase = true
+        ) || shortLabel?.contains(
+            normalized,
+            ignoreCase = true
+        ) == true || sensitiveValues.any { it.matches(normalized) } || metrics.any {
+            it.matches(
+                normalized
+            )
+        }
     }
 }
 
 @Immutable
 internal data class SensitiveValueInfo(
-    val id: String,
-    val name: String,
-    val explanation: String,
-    val shortLabel: String? = null
+    val id: String, val name: String, val explanation: String, val shortLabel: String? = null
 ) {
-    fun matches(query: String) =
-        name.contains(query, ignoreCase = true) ||
-                shortLabel?.contains(query, ignoreCase = true) == true ||
-                explanation.contains(query, ignoreCase = true)
+    fun matches(query: String) = name.contains(query, ignoreCase = true) || shortLabel?.contains(
+        query,
+        ignoreCase = true
+    ) == true || explanation.contains(query, ignoreCase = true)
 }
 
 @Immutable
@@ -53,11 +50,15 @@ internal data class MetricDefinition(
     val shortLabel: String? = null,
     val searchTerms: List<String> = emptyList()
 ) {
-    fun matches(query: String) =
-        name.contains(query, ignoreCase = true) ||
-                shortLabel?.contains(query, ignoreCase = true) == true ||
-                meaning.contains(query, ignoreCase = true) ||
-                searchTerms.any { it.contains(query, ignoreCase = true) }
+    fun matches(query: String) = name.contains(query, ignoreCase = true) || shortLabel?.contains(
+        query,
+        ignoreCase = true
+    ) == true || meaning.contains(query, ignoreCase = true) || searchTerms.any {
+        it.contains(
+            query,
+            ignoreCase = true
+        )
+    }
 }
 
 internal object MeasurementSectionCatalog {
@@ -81,8 +82,7 @@ internal object MeasurementSectionCatalog {
                 "Measurement ID" to "A unique internal reference used to find this measurement.",
                 "Network icon" to "Indicates whether the measurement used Wi-Fi or a cellular connection."
             )
-        ),
-        content(
+        ), content(
             section = MeasurementSection.Device,
             title = "Device & App",
             shortLabel = "Device",
@@ -94,14 +94,12 @@ internal object MeasurementSectionCatalog {
                     "Session ID",
                     "Groups related app activity without displaying a direct identity.",
                     "Pseudonymous"
-                ),
-                sensitive(
+                ), sensitive(
                     "user_id",
                     "Hashed user ID",
                     "Associates contributions without displaying a raw account identifier.",
                     "Pseudonymous"
-                ),
-                sensitive(
+                ), sensitive(
                     "device_details",
                     "Device and build details",
                     "May contribute to device fingerprinting when combined.",
@@ -122,8 +120,7 @@ internal object MeasurementSectionCatalog {
                 "App Version" to "The CrowdMeasure version that captured the result.",
                 "Session ID" to "A pseudonymous identifier grouping related app activity.",
             )
-        ),
-        content(
+        ), content(
             section = MeasurementSection.NetworkContext,
             title = "Network Context",
             shortLabel = "Context",
@@ -135,8 +132,7 @@ internal object MeasurementSectionCatalog {
                     "Precise location",
                     "Capture coordinates are sensitive and hidden by default.",
                     "Hidden"
-                ),
-                sensitive(
+                ), sensitive(
                     "location_accuracy",
                     "Location accuracy",
                     "Describes the possible radius around the captured location.",
@@ -161,8 +157,7 @@ internal object MeasurementSectionCatalog {
                 "Memory Usage" to "The percentage of memory in use during capture.",
                 "Location" to "The capture coordinates and their estimated accuracy radius.",
             )
-        ),
-        content(
+        ), content(
             section = MeasurementSection.Wifi,
             title = "Wi-Fi",
             meaning = "Describes the local wireless connection used for the measurement.",
@@ -186,8 +181,7 @@ internal object MeasurementSectionCatalog {
                 "SSID" to "The Wi-Fi access point name.",
                 "BSSID Hash" to "A hashed identifier representing the connected Wi-Fi access point."
             )
-        ),
-        content(
+        ), content(
             section = MeasurementSection.Cellular,
             title = "Cellular Network",
             shortLabel = "Cellular",
@@ -199,20 +193,17 @@ internal object MeasurementSectionCatalog {
                     "Cell identifiers",
                     "Serving-cell identity and radio details are hidden by default.",
                     "Hidden"
-                ),
-                sensitive(
+                ), sensitive(
                     "subscription_id",
                     "Subscription ID",
                     "An Android identifier that can link measurements from the same subscription.",
                     "Linkable"
-                ),
-                sensitive(
+                ), sensitive(
                     "card_id",
                     "Card ID",
                     "An Android identifier associated with the SIM card.",
                     "Sensitive"
-                ),
-                sensitive(
+                ), sensitive(
                     "sim_slot",
                     "SIM slot details",
                     "Describe which physical or logical SIM supplied the measurement.",
@@ -248,8 +239,7 @@ internal object MeasurementSectionCatalog {
                 "Collected Here" to "Marks the SIM from which cellular radio values were collected.",
                 "Cell Identifiers" to "A hidden-by-default group containing serving-cell identity, channel, signal, bandwidth, and antenna details."
             )
-        ),
-        content(
+        ), content(
             section = MeasurementSection.Ip,
             title = "IP Information",
             shortLabel = "IP",
@@ -268,8 +258,7 @@ internal object MeasurementSectionCatalog {
                 "ISP" to "The internet service provider associated with the public IP.",
                 "ASN" to "The autonomous system number identifying the network that announces the public IP."
             )
-        ),
-        content(
+        ), content(
             section = MeasurementSection.Performance,
             title = "Performance",
             meaning = "Measures how quickly and reliably the network reaches a test service and transfers data.",
@@ -284,25 +273,30 @@ internal object MeasurementSectionCatalog {
             ),
             metrics = definitions(
                 "Endpoint" to "The test service selected for this measurement.",
-                "Protocol" to "The network protocol used for the performance test.",
-                "HTTP Status" to "The response code returned by the test service.",
-                "Server Region" to "The broad region hosting the selected test service.",
-                "DNS" to "Time needed to resolve a service name to an IP address.",
-                "Connection" to "Time needed to establish the network connection.",
-                "TLS" to "Time needed to establish an encrypted connection.",
-                "TTFB Average" to "Average time until the first response byte arrives.",
-                "HTTP Latency Average" to "Average round-trip time for HTTP probes.",
-                "HTTP Latency P95" to "A high-end latency value; about 95% of probes were this fast or faster.",
-                "Jitter" to "Variation between latency measurements. Lower values indicate more consistent response times.",
-                "Probe Failure %" to "Percentage of test probes that received no successful response.",
-                "Stalls" to "Number of periods where data transfer stopped unexpectedly.",
-                "Max Stall" to "Duration of the longest transfer interruption.",
-                "Down" to "Measured download throughput.",
-                "Up" to "Measured upload throughput.",
-                "Down P95" to "A high-end observed download throughput value.",
-                "Up P95" to "A high-end observed upload throughput value.",
-                "Down StdDev" to "How much download throughput varied during the test.",
-                "Up StdDev" to "How much upload throughput varied during the test."
+                "Protocol" to "The HTTP protocol negotiated for the test connection.",
+                "HTTP Status" to "The HTTP response code returned by the test service.",
+                "Server Region" to "The approximate region or edge location that served the response.",
+                "DNS" to "Time required to resolve the service hostname to an IP address.",
+                "Connection" to "Time required to establish a new TCP connection to the service.",
+                "TLS" to "Time required to complete the TLS handshake for a secure connection.",
+                "TTFB Average" to "Average time from sending the request until the first response byte is received.",
+                "HTTP Latency Average" to "Average time to complete an HTTP probe.",
+                "HTTP Latency P95" to "95th percentile HTTP latency. About 95% of successful probes completed in this time or less.",
+                "Jitter" to "Average variation between consecutive HTTP latency measurements. Lower values indicate more consistent network performance.",
+                "Ping Average" to "Average TCP round-trip latency measured over five connection attempts.",
+                "Ping Min" to "Fastest measured TCP round-trip latency.",
+                "Ping Max" to "Slowest measured TCP round-trip latency.",
+                "Ping Jitter" to "Average variation between consecutive ping measurements. Lower values indicate more consistent network latency.",
+                "Ping Packet Loss" to "Percentage of ping attempts that failed to establish a connection.",
+                "Probe Failure %" to "Percentage of HTTP probes that failed to receive a response.",
+                "Stalls" to "Number of HTTP probes whose latency exceeded the stall threshold.",
+                "Max Stall" to "Longest HTTP latency recorded among stalled probes.",
+                "Down" to "Average measured download throughput.",
+                "Up" to "Average measured upload throughput.",
+                "Down P95" to "95th percentile download throughput.",
+                "Up P95" to "95th percentile upload throughput.",
+                "Down StdDev" to "Variation in download throughput during the test.",
+                "Up StdDev" to "Variation in upload throughput during the test."
             )
         )
     )
@@ -346,27 +340,15 @@ private fun content(
 )
 
 private fun sensitive(
-    id: String,
-    name: String,
-    explanation: String,
-    shortLabel: String? = null
+    id: String, name: String, explanation: String, shortLabel: String? = null
 ) = SensitiveValueInfo(
-    id = id,
-    name = name,
-    explanation = explanation,
-    shortLabel = shortLabel
+    id = id, name = name, explanation = explanation, shortLabel = shortLabel
 )
 
-private fun definitions(vararg entries: Pair<String, String>) =
-    entries.map { (name, meaning) ->
-        MetricDefinition(
-            id = name.toStableId(),
-            name = name,
-            meaning = meaning
-        )
-    }
+private fun definitions(vararg entries: Pair<String, String>) = entries.map { (name, meaning) ->
+    MetricDefinition(
+        id = name.toStableId(), name = name, meaning = meaning
+    )
+}
 
-private fun String.toStableId() =
-    lowercase()
-        .replace(Regex("[^a-z0-9]+"), "_")
-        .trim('_')
+private fun String.toStableId() = lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')

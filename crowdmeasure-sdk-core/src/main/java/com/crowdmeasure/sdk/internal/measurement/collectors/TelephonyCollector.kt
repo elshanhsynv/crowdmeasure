@@ -234,15 +234,15 @@ object TelephonyCollector {
             Log.d(
                 "CM",
                 """
-type=${cell.javaClass.simpleName}
-registered=${cell.isRegistered}
-connection=${cell.cellConnectionStatus}
-age=${cell.ageMs()}
-dbm=${cell.signalDbm()}
-identity=${cell.cellIdentity}
-signal=${cell.cellSignalStrength}
-        """.trimIndent()
-            )
+                type=${cell.javaClass.simpleName}
+                registered=${cell.isRegistered}
+                connection=${cell.cellConnectionStatus}
+                age=${cell.ageMs()}
+                dbm=${cell.signalDbm()}
+                identity=${cell.cellIdentity}
+                signal=${cell.cellSignalStrength}
+                        """.trimIndent()
+                            )
         }
 
         val nrState = deriveNrState(
@@ -259,7 +259,7 @@ signal=${cell.cellSignalStrength}
 //            .filter { it.ageMs() <= TelephonyCollectorLogic.MAX_CELL_AGE_MS }
             .mapNotNull { parseCell(it).snapshot }
 
-//        Log.d("TelephonyCollector", "neighbors: $neighbors" + "\n" + "size: ${neighbors.size}")
+        Log.d("TelephonyCollector", "neighbors: $neighbors" + "\n" + "size: ${neighbors.size}")
 
         Log.d("CM", "dataNetworkType=$dataType")
         Log.d("CM", "nrState=$nrState")

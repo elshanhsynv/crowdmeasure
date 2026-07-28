@@ -1,5 +1,6 @@
 package com.crowdmeasure.sdk.internal.measurement.collectors
 
+import android.util.Log
 import androidx.annotation.WorkerThread
 import com.crowdmeasure.sdk.model.PerformanceInfo
 import com.crowdmeasure.sdk.model.ProtocolType
@@ -18,8 +19,6 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Proxy
-import java.util.concurrent.TimeUnit
-import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToLong
 
@@ -94,6 +93,9 @@ object PerformanceCollector {
             ?: ProtocolType.UNKNOWN
 
         val probeFailurePct = (failures.toDouble() / attempts.toDouble()) * 100.0
+        val ping = PingCollector.run(okHttp, parsedUrl)
+
+        Log.d("PerformanceCollector", "Ping: $ping")
 
         return PerformanceInfo(
             endpointId = endpointId,
@@ -117,6 +119,12 @@ object PerformanceCollector {
             httpLatencyP95Ms = percentile(latencySamples, 0.95),
 
             jitterMs = jitter(latencySamples),
+
+            pingAvgMs = ping.avgMs,
+            pingMinMs = ping.minMs,
+            pingMaxMs = ping.maxMs,
+            pingJitterMs = ping.jitterMs,
+            pingPacketLossPct = ping.packetLossPct,
 
             probeFailurePct = probeFailurePct,
 
@@ -318,13 +326,6 @@ object PerformanceCollector {
         return headers["server"]
     }
 
-    private fun elapsedMs(startNs: Long): Long? {
-        if (startNs <= 0L) return null
-        return TimeUnit.NANOSECONDS
-            .toMillis(System.nanoTime() - startNs)
-            .coerceAtLeast(0L)
-    }
-
     private fun percentile(samples: List<Long>, p: Double): Long? {
         if (samples.isEmpty()) return null
 
@@ -334,18 +335,5 @@ object PerformanceCollector {
             .coerceIn(1, sorted.size) - 1
 
         return sorted[idx]
-    }
-
-    private fun jitter(samples: List<Long>): Long? {
-        if (samples.size < 2) return null
-
-        var sum = 0L
-
-        for (i in 1 until samples.size) {
-            sum += abs(samples[i] - samples[i - 1])
-        }
-
-        return (sum.toDouble() / (samples.size - 1))
-            .roundToLong()
     }
 }

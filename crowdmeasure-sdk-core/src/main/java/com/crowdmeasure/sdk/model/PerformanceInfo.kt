@@ -64,6 +64,31 @@ data class PerformanceInfo(
     val jitterMs: Long? = null,
 
     /**
+     * Average successful TCP connect round-trip latency.
+     */
+    val pingAvgMs: Long? = null,
+
+    /**
+     * Minimum successful TCP connect round-trip latency.
+     */
+    val pingMinMs: Long? = null,
+
+    /**
+     * Maximum successful TCP connect round-trip latency.
+     */
+    val pingMaxMs: Long? = null,
+
+    /**
+     * Average absolute difference between consecutive successful TCP connect samples.
+     */
+    val pingJitterMs: Long? = null,
+
+    /**
+     * Percentage of TCP connect attempts that failed.
+     */
+    val pingPacketLossPct: Double? = null,
+
+    /**
      * Percentage of probes that failed at the application/HTTP client level.
      *
      * This is not raw network packet loss.

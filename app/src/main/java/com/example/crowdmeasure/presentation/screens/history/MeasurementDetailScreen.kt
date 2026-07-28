@@ -519,6 +519,17 @@ private fun PerformanceSection(
             )
 
             PerformanceGroup(
+                title = "Ping",
+                chips = listOf(
+                    "Ping Average (ms)" to performance.pingAvgMs,
+                    "Ping Min (ms)" to performance.pingMinMs,
+                    "Ping Max (ms)" to performance.pingMaxMs,
+                    "Ping Jitter (ms)" to performance.pingJitterMs,
+                    "Ping Packet Loss %" to performance.pingPacketLossPct
+            )
+            )
+
+            PerformanceGroup(
                 title = "Stability",
                 chips = listOf(
                     "Stalls" to performance.stallsCount,
