@@ -1,5 +1,3 @@
-Available
-
 # Background API
 
 - `CrowdMeasureBackground.install(context, sdk, config)` registers the runtime and returns `BackgroundCollectionClient`.
@@ -11,3 +9,5 @@ Available
 - `observeSettings()` and `observeStatus()` expose flows.
 
 Public status types are `BackgroundCollectionSettings`, `BackgroundCollectionStatus`, `BackgroundRun`, `BackgroundWorkState`, `BackgroundRunOutcome`, and `BackgroundRunCode`.
+
+Defaults: `crowdmeasure_sdk_background`, 60-minute interval, Wi-Fi-only off, enabled setting true, interval range 20 minutes to 7 days.

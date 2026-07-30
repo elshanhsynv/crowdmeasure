@@ -1,5 +1,3 @@
-Available
-
 # Data Storage
 
 By default, core stores measurements in the configured Room database and endpoint/retention settings in the configured DataStore preferences file. The background module uses its own `crowdmeasure_sdk_background` DataStore for scheduling settings and last-run status.

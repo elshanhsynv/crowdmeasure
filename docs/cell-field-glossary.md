@@ -128,34 +128,6 @@ CSI measurements come from reference signals sent specifically for channel estim
 
 ---
 
-## SecondaryCell
-
-Fields are a subset of [CellRadioSnapshot] describing additional cells visible during carrier aggregation scanning. Carrier aggregation combines these with the serving cell for higher throughput.
-
-| Field | What it means |
-|---|---|
-| `band` | Frequency band number of this secondary component carrier |
-| `earfcn` | LTE frequency channel (identifies exact LTE frequency) |
-| `nrarfcn` | NR frequency channel |
-| `pci` | Physical Cell ID — distinguishes this cell from neighbors on the same frequency |
-| `rsrp` | Signal strength (dBm) |
-| `rsrq` | Signal quality (dB) |
-| `sinr` | Signal-to-noise (dB) |
-| `asuLevel` | Android's normalized signal unit |
-| `dbm` | Unified signal strength |
-| `bandwidthMhz` | Channel width of this component carrier |
-
----
-
-## CarrierAggregationInfo
-
-| Field | What it means |
-|---|---|
-| `active` | Whether carrier aggregation is currently active. `null` = cannot be determined from the public Android API. Seeing secondary cells in scan results is necessary but not sufficient to confirm active aggregation |
-| `secondaryCells` | List of secondary component carriers seen alongside the serving cell |
-
----
-
 ## Signal Quality Quick Reference
 
 | Metric | Excellent | Good | Fair | Poor |

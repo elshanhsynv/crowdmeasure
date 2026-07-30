@@ -2,7 +2,6 @@ import com.android.build.api.dsl.LibraryExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false
@@ -93,6 +92,7 @@ val sdkBoundaryFiles = mapOf(
 )
 
 tasks.register("verifySdkDependencyBoundaries") {
+    description = ""
     group = "verification"
     inputs.files(sdkBoundaryFiles.values)
     doLast {
@@ -116,14 +116,15 @@ tasks.register("verifySdkDependencyBoundaries") {
 
 val documentationFiles = fileTree("docs") { include("**/*.md") }
 tasks.register("verifyDocumentation") {
+    description = "Validates that documentation pages have normal Markdown headings."
     group = "verification"
     inputs.files(documentationFiles)
     doLast {
         check(documentationFiles.files.any { it.name == "README.md" }) { "docs/README.md is missing" }
         documentationFiles.files.forEach { page ->
-            val first = page.useLines { it.firstOrNull().orEmpty() }
-            check(first.contains("Available") || first.contains("In Progress") || first.contains("Planned")) {
-                "${page.path} must start with an availability status"
+            val first = page.useLines { lines -> lines.firstOrNull { it.isNotBlank() }.orEmpty() }
+            check(first.startsWith("#")) {
+                "${page.path} must start with a Markdown heading"
             }
         }
     }

@@ -1,5 +1,3 @@
-Available
-
 # Permissions
 
 The SDK manifest declares network state, Wi-Fi state, coarse location, and phone-state permissions used by measurement collectors. The SDK never requests permissions or launches permission UI.

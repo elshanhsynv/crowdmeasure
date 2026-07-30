@@ -1,5 +1,3 @@
-Available
-
 # Call Sampling
 
 Add `:crowdmeasure-sdk-calls`, provide a notification icon, and install the runtime:
@@ -20,3 +18,7 @@ Cellular sampling uses phone-state events. Generic VoIP sampling observes Androi
 Call uploads have independent enabled, interval, and Wi-Fi-only settings. Default storage is `crowdmeasure_calls.db`; existing apps can provide a `CallStore`.
 
 The SDK declares permissions but never requests them, opens settings, or presents consent UI. WhatsApp notification-listener detection is not included; legacy WhatsApp source enum values remain readable.
+
+Call sampling defaults: database `crowdmeasure_calls.db`, preferences file `crowdmeasure_sdk_calls`, sample interval `5` seconds, retention `7` days, cellular and VoIP settings `true`, host-provided notification icon required.
+
+Call upload defaults: preferences file `crowdmeasure_sdk_calls_upload`, batch size `50`, interval `60` minutes, Wi-Fi-only `true`, enabled `false`.

@@ -1,5 +1,3 @@
-Available
-
 # Background Collection
 
 Add `:crowdmeasure-sdk-background`, then install it in `Application.onCreate`:
@@ -31,3 +29,5 @@ background.disable()
 Intervals must be between 20 minutes and 7 days. Enabling schedules periodic local measurements and daily retention cleanup. Disabling cancels all SDK-owned background work. Immediate runs respect the configured network constraint.
 
 Workers require the process to install the runtime before execution. Missing installation is recorded as `NOT_INSTALLED`. Work names are namespaced under `com.crowdmeasure.sdk.background`.
+
+Defaults: preferences file `crowdmeasure_sdk_background`, enabled setting `true`, interval `60` minutes, Wi-Fi-only `false`, allowed interval `20` minutes to 7 days. Installing still schedules nothing until `enable()` is called.

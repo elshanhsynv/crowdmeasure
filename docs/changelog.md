@@ -1,5 +1,3 @@
-Available
-
 # Changelog
 
 ## 0.1.0 Unreleased
@@ -25,3 +23,5 @@ Available
 - Added optional cellular and generic VoIP call sampling, call storage, history, export, deletion, and independent call-upload scheduling.
 - Added Firestore call uploads while preserving the existing call/session document contract.
 - Migrated the CrowdMeasure app's call runtime to the SDK while preserving and migrating its shared database.
+- Moved overview/glossary docs under `docs/`, removed status-prefix headers, and added collector documentation including TCP-connect ping metrics.
+- Documented default SDK configuration values and added collector success JSON examples.

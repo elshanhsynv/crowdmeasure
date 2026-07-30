@@ -1,5 +1,3 @@
-Available
-
 # ProGuard and R8
 
 Both SDK modules provide consumer rules. No host rules are currently required for their public APIs. Release builds should still verify measurement collection, Room persistence, export URIs, and WorkManager worker creation after shrinking.

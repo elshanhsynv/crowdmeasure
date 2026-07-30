@@ -1,5 +1,3 @@
-Available
-
 # Calls API
 
 `CrowdMeasureCalls.install(...)` registers the optional calls runtime and schedules or starts nothing.
@@ -13,3 +11,5 @@ Available
 `CallStore`, `CallUploader`, and `CallInstallationIdProvider` are advanced integration contracts for existing storage and backend identity.
 
 All mutating operations return `CallSamplingResult`.
+
+Defaults: calls database `crowdmeasure_calls.db`, calls preferences `crowdmeasure_sdk_calls`, 5-second sample interval, 7-day retention, cellular/VoIP settings true. Call-upload defaults are `crowdmeasure_sdk_calls_upload`, batch size 50, 60-minute interval, Wi-Fi-only on, disabled.

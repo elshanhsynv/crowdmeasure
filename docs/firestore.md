@@ -1,5 +1,3 @@
-Available
-
 # Firestore
 
 The optional Firestore module provides a `MeasurementUploader`:

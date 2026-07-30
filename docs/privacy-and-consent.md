@@ -1,5 +1,3 @@
-Available
-
 # Privacy and Consent
 
 The SDK collects device, network, performance, and optional permission-dependent environment data. Uploads occur only after the host installs an uploader and explicitly enables uploads.

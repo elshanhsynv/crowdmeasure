@@ -1,5 +1,3 @@
-Available
-
 # Error Handling
 
 Core operations return `CrowdMeasureResult.Success` or `CrowdMeasureResult.Failure` with `CrowdMeasureError`, including unsupported Android, collection, persistence, export, and invalid-configuration failures.

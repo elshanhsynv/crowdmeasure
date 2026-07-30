@@ -1,5 +1,3 @@
-Available
-
 # Migration Guide
 
 ## 0.1.0 Unreleased

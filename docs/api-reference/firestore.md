@@ -1,5 +1,3 @@
-Available
-
 # Firestore API
 
 Create the provider using a host-configured Firebase instance:

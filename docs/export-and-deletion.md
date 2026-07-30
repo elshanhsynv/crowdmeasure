@@ -1,5 +1,3 @@
-Available
-
 # Export and Deletion
 
 ```kotlin

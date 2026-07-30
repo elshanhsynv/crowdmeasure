@@ -1,5 +1,3 @@
-Available
-
 # Upload API
 
 - `CrowdMeasureUploads.install(context, sdk, uploader, installationIdProvider, config)` registers the upload runtime without scheduling work.
@@ -13,3 +11,5 @@ Available
 Call uploads use the independent `crowdmeasure-calls-upload` artifact and `CallUploadClient`.
 
 Upload operations return typed `MeasurementUploadResult` values. Supported intervals are 20 minutes through 7 days.
+
+Defaults: `crowdmeasure_sdk_upload`, batch size 50, 60-minute interval, Wi-Fi-only off, upload setting true.
