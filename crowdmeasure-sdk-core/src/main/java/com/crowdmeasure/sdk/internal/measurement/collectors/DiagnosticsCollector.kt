@@ -70,7 +70,7 @@ object DiagnosticsCollector {
         // NOTE: Since Android 8.0 (API 26), Google heavily locked down system metrics.
         // Reading `/proc/stat` to get global system CPU usage is blocked for standard apps.
         // It will throw a Permission Denied exception.
-        // Thus, for a modern Android crowdsourcing app, returning null is standard.
+        // Thus, it is null, sadly.
         return null
     }
 

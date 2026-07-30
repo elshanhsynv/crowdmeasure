@@ -54,6 +54,6 @@ data class DeviceEnvironment(
     val dozeMode: Boolean?,
     val dataSaver: Boolean?,
     val thermalState: String?,   // NORMAL / HOT / THROTTLED
-    val cpuUsagePct: Double?,   // coarse estimate
+    val cpuUsagePct: Double?,   // coarse estimate and it is possibly null. What the hell Google?!
     val memoryUsagePct: Double?,
 )

@@ -128,7 +128,7 @@ data class PerformanceInfo(
      */
     val testPayloadBytes: Long? = null,
 
-    // Throughput
+    // Throughput (Those fields are unused)
     val downMbps: Double? = null,
     val upMbps: Double? = null,
     val downP95Mbps: Double? = null,

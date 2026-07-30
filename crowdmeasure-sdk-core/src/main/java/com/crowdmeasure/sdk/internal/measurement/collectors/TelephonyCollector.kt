@@ -149,9 +149,6 @@ internal object TelephonyCollectorLogic {
 /**
  * Collects a telephony snapshot supporting all active RATs:
  * GSM (2G), WCDMA / TD-SCDMA (3G), LTE (4G), NR (5G).
- *
- * Assumption: minSdk >= Q (29). [RequiresApi] annotations on private
- * functions are present for lint correctness; they are unreachable on < Q.
  */
 object TelephonyCollector {
 
@@ -589,7 +586,7 @@ object TelephonyCollector {
             id?.bands?.firstOrNull()
         } else null
 
-        // NR CQI is exposed inconsistently across API/OEM builds; keep it best-effort.
+        // NR CQI is exposed inconsistently across API/OEM builds; best-effort.
         val nrCqi: Int? = reflectIntList(sig, "getCsiCqiReport")
             ?.firstNotNullOfOrNull { it.validSig() }
             ?: reflectInt(sig, "getCqi")?.validSig()

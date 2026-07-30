@@ -104,9 +104,3 @@ data class SecondaryCell(
     val dbm: Int? = null,
     val bandwidthMhz: Int? = null,
 )
-
-@Serializable
-data class CarrierAggregationInfo(
-    val active: Boolean? = null,
-    val secondaryCells: List<SecondaryCell> = emptyList(),
-)

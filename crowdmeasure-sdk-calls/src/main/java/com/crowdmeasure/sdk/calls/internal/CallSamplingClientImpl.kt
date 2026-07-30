@@ -13,6 +13,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class CallSamplingClientImpl(private val context: Context) : CallSamplingClient {
     private fun runtime() = CallsRuntime.get()
@@ -63,7 +64,7 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
     override fun observeRequirements(): Flow<CallSamplingRequirements> = flow {
         while (true) {
             emit(context.requirements())
-            delay(2_000)
+            delay(2_000.milliseconds)
         }
     }.distinctUntilChanged()
 

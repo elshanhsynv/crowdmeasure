@@ -25,5 +25,5 @@ data class Meta(
 
     // Session grouping
     val sessionId: String?,  // multiple tests in a row
-    val userIdHash: String?, // optional privacy-safe cohorting
+    val userIdHash: String?, // it is unused, just nice to have but why? not sure
 )

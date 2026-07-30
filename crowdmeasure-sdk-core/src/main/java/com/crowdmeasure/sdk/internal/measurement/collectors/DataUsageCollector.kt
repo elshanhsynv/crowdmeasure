@@ -25,10 +25,12 @@ internal object DataUsageCollector {
             return null
         }
 
-        val previous = states.put(scope, State(rxBytes, txBytes, now))
-        if (previous == null) {
-            return DataUsageInfo(0.0, 0.0, 0.0, 0.0)
-        }
+        val previous = states.put(scope, State(rxBytes, txBytes, now)) ?: return DataUsageInfo(
+            0.0,
+            0.0,
+            0.0,
+            0.0
+        )
 
         val seconds = (now - previous.lastTimeMs) / 1_000.0
         val rxDelta = rxBytes - previous.lastRxBytes

@@ -78,6 +78,10 @@ data class MeasurementRequirements(
     val locationServicesEnabled: Boolean,
     val missingPermissions: Set<String>,
 ) {
+    // Location can be disabled and I believe for must users it is like that.
+    // We can get WIFI stats without location.
+    // That means it should not be mandatory.
+    // LOCATION - ALL THE TIME OPEN - OH MY GOD!!!
     val canRun: Boolean
         get() = supportedAndroidVersion &&
 //                locationServicesEnabled &&

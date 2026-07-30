@@ -37,4 +37,4 @@ bin/
 gen/
 
 # Firebase / Google services (only if not meant to be public)
-google-services.json
+app/google-services.json

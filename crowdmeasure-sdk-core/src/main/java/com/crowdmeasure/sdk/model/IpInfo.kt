@@ -12,7 +12,7 @@ import kotlinx.serialization.SerialName
  *
  * [asn] — Autonomous System Number; useful for ISP-level aggregation server-side.
  *
- * All fields are nullable: null means the lookup failed or timed out.
+ * All fields are nullable: If it is null then it means the lookup failed or timed out.
  */
 @Serializable
 data class IpInfo(

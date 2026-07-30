@@ -35,7 +35,7 @@ import kotlinx.coroutines.CancellationException
 internal class SdkMeasurementClient(
     context: Context,
     config: CrowdMeasureConfig,
-    private val settingsStore: CrowdMeasureSettingsStore,
+    settingsStore: CrowdMeasureSettingsStore,
     private val measurementStore: MeasurementStore,
     private val requirementsClient: RequirementsClient,
 ) : MeasurementClient {

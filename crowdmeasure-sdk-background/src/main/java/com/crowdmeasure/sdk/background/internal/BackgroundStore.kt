@@ -14,7 +14,6 @@ import com.crowdmeasure.sdk.background.BackgroundCollectionSettings
 import com.crowdmeasure.sdk.background.BackgroundRun
 import com.crowdmeasure.sdk.background.BackgroundRunCode
 import com.crowdmeasure.sdk.background.BackgroundRunOutcome
-import com.crowdmeasure.sdk.background.CrowdMeasureBackground
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

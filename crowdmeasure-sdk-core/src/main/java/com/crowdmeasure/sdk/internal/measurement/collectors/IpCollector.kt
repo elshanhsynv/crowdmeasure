@@ -7,6 +7,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Resolves the device's current public IP address and basic ISP metadata via
@@ -17,8 +18,6 @@ import java.io.IOException
  *  - Returns `ip`, `org` (ASN + ISP name), `country`, `region` in one call.
  *  - No API key required for low-volume use; add a token for production quotas.
  *  - Response is small (~200 bytes); no tracking beyond IP.
- *
- * The raw IP is stored in the legacy serialized `publicIp` field.
  *
  * ### Fallback
  * If ipinfo.io is unavailable, falls back to `https://api64.ipify.org?format=json`
@@ -38,7 +37,7 @@ object IpCollector {
      */
     @WorkerThread
     suspend fun collect(okHttp: OkHttpClient): IpInfo =
-        withTimeoutOrNull(TIMEOUT_MS) {
+        withTimeoutOrNull(TIMEOUT_MS.milliseconds) {
             tryPrimary(okHttp) ?: tryFallback(okHttp)
         } ?: IpInfo()
 
@@ -83,14 +82,4 @@ object IpCollector {
             null
         }
     }
-
-//    /**
-//     * Privacy-preserving alternative kept for future use.
-//     * Returns SHA-256(salt + ip) as hex.
-//     */
-//    internal fun hashIp(ip: String, salt: String): String {
-//        val digest = MessageDigest.getInstance("SHA-256")
-//        return digest.digest((salt + ip).toByteArray(Charsets.UTF_8))
-//            .joinToString("") { "%02x".format(it) }
-//    }
 }

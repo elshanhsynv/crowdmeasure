@@ -67,10 +67,10 @@ class CrowdMeasureSdk private constructor(
                 cellular = {
                     withContext(Dispatchers.IO) { TelephonyCollector.collect(appContext) }
                 },
-                location = LocationSnapshotClient {
+                location = {
                     withContext(Dispatchers.IO) { LocationCollector.tryGetCoarseOneShot(appContext) }
                 },
-                dataUsage = DataUsageSnapshotClient {
+                dataUsage = {
                     withContext(Dispatchers.IO) { DataUsageCollector.collect(scope = "calls") }
                 },
             )

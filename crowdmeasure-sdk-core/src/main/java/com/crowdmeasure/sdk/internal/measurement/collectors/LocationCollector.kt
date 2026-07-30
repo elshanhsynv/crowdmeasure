@@ -21,6 +21,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
+import kotlin.time.Duration.Companion.milliseconds
 
 object LocationCollector {
     private const val OVERALL_TIMEOUT_MS = 10_000L
@@ -41,7 +42,7 @@ object LocationCollector {
         if (!hasCoarsePermission(context)) return null
         if (!isLocationServicesEnabled(context)) return null
 
-        return withTimeoutOrNull(OVERALL_TIMEOUT_MS) {
+        return withTimeoutOrNull(OVERALL_TIMEOUT_MS.milliseconds) {
             // Strategy 1: Fused last-known / current (lowest latency, no active scan)
             tryFused(context)
             // Strategy 2: Platform NETWORK_PROVIDER last-known, then single update
@@ -70,8 +71,7 @@ object LocationCollector {
     @RequiresPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
     private suspend fun tryFused(context: Context): CoarseLocation? {
         val client = LocationServices.getFusedLocationProviderClient(context)
-        // last-known first: zero latency, no battery cost
-        return awaitLastLocation(context, client)?.toCoarse()
+         return awaitLastLocation(context, client)?.toCoarse()
             ?: awaitCurrentLocation(context, client)?.toCoarse()
     }
 
@@ -111,7 +111,7 @@ object LocationCollector {
     private suspend fun awaitCurrentLocation(
         context: Context,
         client: FusedLocationProviderClient,
-    ): Location? = withTimeoutOrNull(CURRENT_LOCATION_TIMEOUT_MS) {
+    ): Location? = withTimeoutOrNull(CURRENT_LOCATION_TIMEOUT_MS.milliseconds) {
 
         val hasPermission =
             ContextCompat.checkSelfPermission(
@@ -162,7 +162,7 @@ object LocationCollector {
         if (lastKnown != null) return lastKnown.toCoarse()
 
         // No cached fix — request one active update with a timeout
-        return withTimeoutOrNull(STRATEGY_TIMEOUT_MS) {
+        return withTimeoutOrNull(STRATEGY_TIMEOUT_MS.milliseconds) {
             suspendCancellableCoroutine { cont ->
                 val done = AtomicBoolean(false)
 
@@ -189,9 +189,6 @@ object LocationCollector {
                 cont.invokeOnCancellation { runCatching { lm.removeUpdates(listener) } }
 
                 runCatching {
-                    // requestSingleUpdate(String, ...) deprecated at API 30.
-                    // requestLocationUpdates with minTime=0/minDistance=0 + remove on first
-                    // callback is the recommended replacement and behaves identically.
                     @Suppress("DEPRECATION")
                     lm.requestLocationUpdates(
                         LocationManager.NETWORK_PROVIDER,
@@ -213,7 +210,7 @@ object LocationCollector {
     private suspend fun tryFusedSingleUpdate(context: Context): CoarseLocation? {
         val client = LocationServices.getFusedLocationProviderClient(context)
 
-        return withTimeoutOrNull(STRATEGY_TIMEOUT_MS) {
+        return withTimeoutOrNull(STRATEGY_TIMEOUT_MS.milliseconds) {
             suspendCancellableCoroutine { cont ->
                 val done = AtomicBoolean(false)
 
