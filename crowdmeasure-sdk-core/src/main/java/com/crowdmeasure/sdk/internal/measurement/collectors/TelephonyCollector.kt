@@ -227,20 +227,20 @@ object TelephonyCollector {
             return base
         }
 
-        infos.forEach { cell ->
-            Log.d(
-                "CM",
-                """
-                type=${cell.javaClass.simpleName}
-                registered=${cell.isRegistered}
-                connection=${cell.cellConnectionStatus}
-                age=${cell.ageMs()}
-                dbm=${cell.signalDbm()}
-                identity=${cell.cellIdentity}
-                signal=${cell.cellSignalStrength}
-                        """.trimIndent()
-                            )
-        }
+//        infos.forEach { cell ->
+//            Log.d(
+//                "CM",
+//                """
+//                type=${cell.javaClass.simpleName}
+//                registered=${cell.isRegistered}
+//                connection=${cell.cellConnectionStatus}
+//                age=${cell.ageMs()}
+//                dbm=${cell.signalDbm()}
+//                identity=${cell.cellIdentity}
+//                signal=${cell.cellSignalStrength}
+//                        """.trimIndent()
+//                            )
+//        }
 
         val nrState = deriveNrState(
             displayInfo = displayInfo,
@@ -263,17 +263,17 @@ object TelephonyCollector {
         Log.d("CM", "serving=${parsedServing?.rat}")
 
         // status bar
-        Log.d("CM", "display.networkType=${displayInfo?.networkType}")
-        Log.d("CM", "display.override=${displayInfo?.overrideNetworkType}")
+//        Log.d("CM", "display.networkType=${displayInfo?.networkType}")
+//        Log.d("CM", "display.override=${displayInfo?.overrideNetworkType}")
 
         Log.d("CM", targetTm.serviceState?.toString().orEmpty())
 
-        Log.d(
-            "CM",
-            "NSA because: override=${displayInfo?.overrideNetworkType}, " +
-                    "dataType=${targetTm.dataNetworkType}, " +
-                    "registeredNr=${infos.any { it is CellInfoNr && it.isRegistered }}"
-        )
+//        Log.d(
+//            "CM",
+//            "NSA because: override=${displayInfo?.overrideNetworkType}, " +
+//                    "dataType=${targetTm.dataNetworkType}, " +
+//                    "registeredNr=${infos.any { it is CellInfoNr && it.isRegistered }}"
+//        )
 
         return CellInfo(
             simCarriers = collectedSimCarriers,
