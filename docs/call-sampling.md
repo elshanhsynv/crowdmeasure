@@ -22,3 +22,5 @@ The SDK declares permissions but never requests them, opens settings, or present
 Call sampling defaults: database `crowdmeasure_calls.db`, preferences file `crowdmeasure_sdk_calls`, sample interval `5` seconds, retention `7` days, cellular and VoIP settings `true`, host-provided notification icon required.
 
 Call upload defaults: preferences file `crowdmeasure_sdk_calls_upload`, batch size `50`, interval `60` minutes, Wi-Fi-only `true`, enabled `false`.
+
+For non-Firebase call uploads, implement `CallUploader`. See [custom backend integration](custom-backend.md).

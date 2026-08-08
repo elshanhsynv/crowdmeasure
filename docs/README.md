@@ -29,6 +29,7 @@ Version: **0.1.0 Unreleased**.
 - [Cell field glossary](cell-field-glossary.md)
 - [Manual measurements](manual-measurements.md)
 - [Background collection](background-collection.md)
+- [Custom backend integration](custom-backend.md)
 - [Data storage](data-storage.md)
 - [Privacy and consent](privacy-and-consent.md)
 - [Export and deletion](export-and-deletion.md)

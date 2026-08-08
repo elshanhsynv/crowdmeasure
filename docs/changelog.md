@@ -25,3 +25,4 @@
 - Migrated the CrowdMeasure app's call runtime to the SDK while preserving and migrating its shared database.
 - Moved overview/glossary docs under `docs/`, removed status-prefix headers, and added collector documentation including TCP-connect ping metrics.
 - Documented default SDK configuration values and added collector success JSON examples.
+- Added custom backend integration guidance for measurement and call uploaders.

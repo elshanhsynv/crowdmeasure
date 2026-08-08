@@ -30,3 +30,5 @@ uploads.disable()
 Successful measurements enter the local pending queue. Permanent backend failures mark candidates failed; failed records remain eligible for later retries. Transient failures retain queue state and cause WorkManager retries. Observe queue counts and last-run status through the public client.
 
 Defaults: preferences file `crowdmeasure_sdk_upload`, batch size `50`, interval `60` minutes, Wi-Fi-only `false`, persisted upload setting `true`, allowed interval `20` minutes to 7 days. Installing still schedules nothing until `enable()` is called.
+
+For a non-Firebase backend, implement `MeasurementUploader`. See [custom backend integration](custom-backend.md).
