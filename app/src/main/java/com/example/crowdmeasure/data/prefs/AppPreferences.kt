@@ -13,7 +13,7 @@ class AppPreferences(private val context: Context) {
 
     companion object {
         const val CONSENT_VERSION = 1
-        const val DEFAULT_ENDPOINT = "https://www.google.com/"
+        const val DEFAULT_ENDPOINT = "https://www.bakcell.com/"
         const val DEFAULT_RETENTION_DAYS = 7
         const val DEFAULT_AUTORUN_MINUTES = 20
         const val DEFAULT_COLLECT_ONLY_ON_WIFI = false

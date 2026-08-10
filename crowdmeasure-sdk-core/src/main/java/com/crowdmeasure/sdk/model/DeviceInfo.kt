@@ -5,6 +5,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class DeviceInfo(
+    /** Human-readable app name, e.g. "CrowdMeasure". */
+    val appName: String,
     val appVersion: String,
     /** Human-readable Android release string, e.g. "15". */
     val androidRelease: String,
@@ -19,4 +21,4 @@ data class DeviceInfo(
     val hardware: String,
     val chipset: String,
     val chipsetManufacturer: String
-    )
+)

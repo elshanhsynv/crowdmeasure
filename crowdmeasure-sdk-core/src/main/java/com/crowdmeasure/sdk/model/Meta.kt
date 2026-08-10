@@ -8,6 +8,9 @@ data class Meta(
     val timestampUtcMs: Long,
 
     // Device
+    /** Human-readable app name, e.g. "CrowdMeasure". */
+    val appName: String,
+    /** Human-readable app version, e.g. "1.0.0". */
     val appVersion: String,
     /** Human-readable Android release string, e.g. "15". */
     val androidRelease: String,

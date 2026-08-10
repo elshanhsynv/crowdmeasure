@@ -113,6 +113,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         "Device Model" to meta.deviceModel,
         "OS Version" to meta.androidRelease,
         "Android SDK" to meta.androidSdk.toString(),
+        "App Name" to meta.appName,
         "App Version" to meta.appVersion,
 
         "Brand" to meta.brand,

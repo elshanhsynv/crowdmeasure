@@ -32,7 +32,7 @@ internal class MeasurementRunner(
             val http = OkHttpClientProvider().create()
 
             logger.debug("Measurement phase started: device.")
-            val device = DeviceInfoCollector.collect(versionName = hostVersionName())
+            val device = DeviceInfoCollector.collect(versionName = hostVersionName(), context)
             logger.debug(
                 "Device snapshot collected: sdk=${device.androidSdk}, " +
                         "manufacturer=${device.deviceManufacturer}, model=${device.deviceModel}.",
@@ -72,6 +72,7 @@ internal class MeasurementRunner(
                 meta = Meta(
                     measurementId = UUID.randomUUID().toString(),
                     timestampUtcMs = System.currentTimeMillis(),
+                    appName = device.appName,
                     appVersion = device.appVersion,
                     androidRelease = device.androidRelease,
                     androidSdk = device.androidSdk,

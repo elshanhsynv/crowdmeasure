@@ -50,6 +50,7 @@ class Exporter(
         val meta = JSONObject().apply {
             putOpt("measurement_id", m.meta.measurementId)
             putOpt("timestamp_utc_ms", m.meta.timestampUtcMs)
+            putOpt("app_name", m.meta.appName)
             putOpt("app_version", m.meta.appVersion)
             putOpt("android_release", m.meta.androidRelease)
             putOpt("android_sdk", m.meta.androidSdk)
