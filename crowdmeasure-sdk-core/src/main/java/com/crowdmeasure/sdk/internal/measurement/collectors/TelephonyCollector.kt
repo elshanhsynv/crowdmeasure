@@ -251,29 +251,28 @@ object TelephonyCollector {
         val candidate = selectServingCell(infos, nrState)
 
         val parsedServing = candidate?.let { parseCell(it) }
-        val neighbors = infos
+
+        val oldNeighbors = infos
             .filterNot { it.isRegistered }
-//            .filter { it.ageMs() <= TelephonyCollectorLogic.MAX_CELL_AGE_MS }
             .mapNotNull { parseCell(it).snapshot }
 
-        Log.d("TelephonyCollector", "neighbors: $neighbors" + "\n" + "size: ${neighbors.size}")
+        val neighbors = selectTopNeighbors(infos)
+            .mapNotNull { parseCell(it).snapshot }
+
+        Log.d(
+            "TelephonyCollector",
+            "old neighbors(size=${oldNeighbors.size}): $oldNeighbors"
+        )
+
+        Log.d(
+            "TelephonyCollector",
+            "neighbors(size=${neighbors.size}): $neighbors"
+        )
 
         Log.d("CM", "dataNetworkType=$dataType")
         Log.d("CM", "nrState=$nrState")
         Log.d("CM", "serving=${parsedServing?.rat}")
-
-        // status bar
-//        Log.d("CM", "display.networkType=${displayInfo?.networkType}")
-//        Log.d("CM", "display.override=${displayInfo?.overrideNetworkType}")
-
         Log.d("CM", targetTm.serviceState?.toString().orEmpty())
-
-//        Log.d(
-//            "CM",
-//            "NSA because: override=${displayInfo?.overrideNetworkType}, " +
-//                    "dataType=${targetTm.dataNetworkType}, " +
-//                    "registeredNr=${infos.any { it is CellInfoNr && it.isRegistered }}"
-//        )
 
         return CellInfo(
             simCarriers = collectedSimCarriers,
@@ -401,6 +400,67 @@ object TelephonyCollector {
             countryIso = safe { simCountryIso },
             duplexMode = duplexModeString(serviceState),
         )
+    }
+
+    private const val MAX_NEIGHBORS = 5
+
+    private data class NeighborCandidate(
+        val info: AndroidCellInfo,
+        val ageMs: Long,
+        val signalDbm: Int,
+        val signalLevel: Int,
+        val originalIndex: Int,
+    )
+
+    private fun AndroidCellInfo.neighborSignalDbm(): Int? =
+        when (this) {
+            is CellInfoLte ->
+                cellSignalStrength.rsrp.validSig()
+
+            is CellInfoNr ->
+                cellSignalStrength.dbm.validSig()
+
+            is CellInfoWcdma ->
+                cellSignalStrength.dbm.validSig()
+
+            is CellInfoTdscdma ->
+                cellSignalStrength.rscp.validSig()
+
+            is CellInfoGsm ->
+                cellSignalStrength.dbm.validSig()
+
+            else -> null
+        }
+
+    private fun selectTopNeighbors(
+        infos: List<AndroidCellInfo>,
+    ): List<AndroidCellInfo> {
+        return infos
+            .withIndex()
+            .asSequence()
+            .filter { !it.value.isRegistered }
+            .mapNotNull { indexed ->
+                val info = indexed.value
+                val dbm = info.neighborSignalDbm() ?: return@mapNotNull null
+
+                NeighborCandidate(
+                    info = info,
+                    ageMs = info.ageMs(),
+                    signalDbm = dbm,
+                    signalLevel = info.cellSignalStrength.level,
+                    originalIndex = indexed.index,
+                )
+            }
+//            .filter { it.ageMs <= TelephonyCollectorLogic.MAX_CELL_AGE_MS }
+            .sortedWith(
+                compareByDescending<NeighborCandidate> { it.signalDbm }
+                    .thenByDescending { it.signalLevel }
+                    .thenBy { it.ageMs }
+                    .thenBy { it.originalIndex }
+            )
+            .take(MAX_NEIGHBORS)
+            .map { it.info }
+            .toList()
     }
 
     private fun serviceStateDuplexMode(tm: TelephonyManager, phoneGranted: Boolean): String {
@@ -533,7 +593,6 @@ object TelephonyCollector {
             id.bands.firstOrNull()
         } else null
 
-        // getBandwidth() returns kHz (API 28, always available at minSdk=Q)
         val bandwidthMhz: Int? = id.bandwidth
             .takeIf { it != Int.MAX_VALUE && it > 0 }
             ?.let { it / 1000 }

@@ -21,20 +21,40 @@ internal class MeasurementWorker(
             store, BackgroundRunOutcome.FAILURE, BackgroundRunCode.NOT_INSTALLED, null
         )
         if (!BackgroundRuntime.runMutex.tryLock()) {
-            return finish(store, BackgroundRunOutcome.SKIPPED, BackgroundRunCode.SKIPPED_CONCURRENT_RUN, null, false)
+            return finish(
+                store,
+                BackgroundRunOutcome.SKIPPED,
+                BackgroundRunCode.SKIPPED_CONCURRENT_RUN,
+                null,
+                false
+            )
         }
         return try {
             val settings = store.settings.first()
             val latest = sdk.measurements.observeLatest().first()
             if (shouldSkipRecentRun(latest?.meta?.timestampUtcMs, System.currentTimeMillis(), settings.intervalMinutes)) {
-                finish(store, BackgroundRunOutcome.SKIPPED, BackgroundRunCode.SKIPPED_RECENT_RUN, latest?.meta?.measurementId, false)
+                finish(
+                    store,
+                    BackgroundRunOutcome.SKIPPED,
+                    BackgroundRunCode.SKIPPED_RECENT_RUN,
+                    latest?.meta?.measurementId,
+                    false
+                )
             } else {
                 when (val result = sdk.measurements.runAndSave()) {
                     is CrowdMeasureResult.Success -> finish(
-                        store, BackgroundRunOutcome.SUCCESS, BackgroundRunCode.OK, result.value.meta.measurementId, false
+                        store,
+                        BackgroundRunOutcome.SUCCESS,
+                        BackgroundRunCode.OK,
+                        result.value.meta.measurementId,
+                        false
                     )
                     is CrowdMeasureResult.Failure -> finish(
-                        store, BackgroundRunOutcome.FAILURE, BackgroundRunCode.COLLECTION_FAILED, null, false
+                        store,
+                        BackgroundRunOutcome.FAILURE,
+                        BackgroundRunCode.COLLECTION_FAILED,
+                        null,
+                        false
                     )
                 }
             }
@@ -62,7 +82,7 @@ internal class RetentionWorker(
     }
 }
 
-private suspend fun CoroutineWorker.finish(
+private suspend fun finish(
     store: BackgroundStore,
     outcome: BackgroundRunOutcome,
     code: BackgroundRunCode,
