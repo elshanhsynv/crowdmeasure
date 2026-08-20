@@ -15,6 +15,8 @@ import com.crowdmeasure.sdk.calls.*
 import com.crowdmeasure.sdk.model.TransportType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class CallPhoneStateReceiver : BroadcastReceiver() {
@@ -42,7 +44,7 @@ internal class CallPhoneStateReceiver : BroadcastReceiver() {
                             return@launch
                         }
                         val settings = rt.settingsStore.settings.first()
-                        val requirements = context.requirements()
+                        val requirements = rt.requirements()
                         val voipActive = context.isCallSourceActive(CallSource.VOIP_GENERIC)
                         when {
                             voipActive && !settings.voipEnabled -> rt.settingsStore.recordMissed(CallRunCode.DISABLED)
@@ -122,7 +124,7 @@ internal class VoipCallMonitor(
             settings.recordMissed(CallRunCode.CALL_NOT_ACTIVE)
             return
         }
-        val requirements = context.requirements()
+        val requirements = CallsRuntime.get()?.requirements() ?: return
         if (!requirements.canStart) {
             settings.recordMissed(requirements.failureCode())
         } else {
@@ -143,6 +145,8 @@ internal class CallSampler(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var sampling: Job? = null
     private var active: CallSession? = null
+    private var mnoMonitor: DefaultDataMnoMonitor? = null
+    private val mnoFinishMutex = Mutex()
 
     suspend fun start(type: CallType, source: CallSource) {
         active?.let { session ->
@@ -156,7 +160,7 @@ internal class CallSampler(
             settings.recordMissed(CallRunCode.CALL_NOT_ACTIVE)
             return
         }
-        val requirements = context.requirements()
+        val requirements = context.requirements(sdk.requirements.evaluateDefaultDataMno())
         if (!requirements.canStart) {
             settings.recordMissed(requirements.failureCode())
             return
@@ -165,6 +169,13 @@ internal class CallSampler(
         store.deleteOlderThan(System.currentTimeMillis() - config.retentionDays * 86_400_000L)
         active = store.startSession(type, source, config.sampleIntervalSeconds, context.transportFor(source))
         settings.clearMissed()
+        if (requirements.defaultDataMnoEligibility.state !=
+            com.crowdmeasure.sdk.DefaultDataMnoEligibilityState.UNRESTRICTED
+        ) {
+            mnoMonitor = DefaultDataMnoMonitor(context) {
+                scope.launch { finishForIneligibleMno() }
+            }.also { it.start() }
+        }
         sampling = scope.launch {
             while (isActive) {
                 val session = active ?: break
@@ -172,9 +183,14 @@ internal class CallSampler(
                     finishCurrent()
                     break
                 }
+                val eligibility = sdk.requirements.evaluateDefaultDataMno()
+                if (!eligibility.allowsCollection) {
+                    finishForIneligibleMno(eligibility)
+                    break
+                }
                 val at = System.currentTimeMillis()
                 try {
-                    coroutineScope {
+                    val sample = coroutineScope {
                         val cell = async { sdk.cellular.collect() }
                         val location = async {
                             try {
@@ -186,15 +202,31 @@ internal class CallSampler(
                             }
                         }
                         val dataUsage = async { sdk.dataUsage.collect() }
-                        store.insertSample(
-                            session.sessionId,
-                            at,
-                            at - session.startedAtUtcMs,
-                            cell.await(),
-                            location.await(),
-                            dataUsage.await(),
-                            context.transportFor(session.callSource),
+                        CallSampleData(
+                            cell = cell.await(),
+                            location = location.await(),
+                            dataUsage = dataUsage.await(),
                         )
+                    }
+                    val saved = mnoFinishMutex.withLock {
+                        val canSave = active?.sessionId == session.sessionId &&
+                                sdk.requirements.evaluateDefaultDataMno().allowsCollection
+                        if (canSave) {
+                            store.insertSample(
+                                session.sessionId,
+                                at,
+                                at - session.startedAtUtcMs,
+                                sample.cell,
+                                sample.location,
+                                sample.dataUsage,
+                                context.transportFor(session.callSource),
+                            )
+                        }
+                        canSave
+                    }
+                    if (!saved) {
+                        finishForIneligibleMno()
+                        break
                     }
                 } catch (error: CancellationException) {
                     throw error
@@ -206,6 +238,12 @@ internal class CallSampler(
         }
     }
 
+    private data class CallSampleData(
+        val cell: com.crowdmeasure.sdk.model.CellInfo,
+        val location: com.crowdmeasure.sdk.model.Location?,
+        val dataUsage: com.crowdmeasure.sdk.model.DataUsageInfo?,
+    )
+
     suspend fun stop(source: CallSource) {
         val session = active ?: run {
             sampling?.cancelAndJoin()
@@ -215,6 +253,8 @@ internal class CallSampler(
         if (source != CallSource.UNKNOWN && source != session.callSource) return
         sampling?.cancelAndJoin()
         sampling = null
+        mnoMonitor?.stop()
+        mnoMonitor = null
         store.finishSession(session.sessionId, System.currentTimeMillis(), "call_ended")
         active = null
     }
@@ -222,8 +262,26 @@ internal class CallSampler(
     private suspend fun finishCurrent() {
         val session = active ?: return
         sampling = null
+        mnoMonitor?.stop()
+        mnoMonitor = null
         store.finishSession(session.sessionId, System.currentTimeMillis(), "call_ended")
         active = null
+    }
+
+    private suspend fun finishForIneligibleMno(
+        eligibility: com.crowdmeasure.sdk.DefaultDataMnoEligibility =
+            sdk.requirements.evaluateDefaultDataMno(),
+    ) {
+        if (eligibility.allowsCollection) return
+        val session = mnoFinishMutex.withLock {
+            active?.also {
+                active = null
+                mnoMonitor?.stop()
+                mnoMonitor = null
+            }
+        } ?: return
+        store.finishSession(session.sessionId, System.currentTimeMillis(), "target_mno_not_eligible")
+        settings.recordMissed(context.requirements(eligibility).failureCode())
     }
 }
 
@@ -290,7 +348,7 @@ internal class CallSamplingService : Service() {
             stopSelf()
             return
         }
-        val requirements = applicationContext.requirements()
+        val requirements = rt.requirements()
         if (!requirements.canStart) {
             rt.settingsStore.recordMissed(requirements.failureCode())
             stopSelf()
@@ -330,6 +388,19 @@ internal class CallSamplingService : Service() {
                     finishCurrentSession(rt)
                     break
                 }
+                val eligibility = rt.sdk.requirements.evaluateDefaultDataMno()
+                if (!eligibility.allowsCollection) {
+                    rt.store.finishSession(
+                        session.sessionId,
+                        System.currentTimeMillis(),
+                        "target_mno_not_eligible",
+                    )
+                    active = null
+                    rt.settingsStore.recordMissed(applicationContext.requirements(eligibility).failureCode())
+                    ServiceCompat.stopForeground(this@CallSamplingService, ServiceCompat.STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                    break
+                }
                 val at = System.currentTimeMillis()
                 try {
                     coroutineScope {
@@ -344,13 +415,19 @@ internal class CallSamplingService : Service() {
                             }
                         }
                         val dataUsage = async { rt.sdk.dataUsage.collect() }
+                        val collectedCell = cell.await()
+                        val collectedLocation = location.await()
+                        val collectedDataUsage = dataUsage.await()
+                        if (!rt.sdk.requirements.evaluateDefaultDataMno().allowsCollection) {
+                            return@coroutineScope
+                        }
                         rt.store.insertSample(
                             session.sessionId,
                             at,
                             at - session.startedAtUtcMs,
-                            cell.await(),
-                            location.await(),
-                            dataUsage.await(),
+                            collectedCell,
+                            collectedLocation,
+                            collectedDataUsage,
                             applicationContext.transportFor(session.callSource),
                         )
                     }

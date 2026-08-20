@@ -1,6 +1,8 @@
 # 0.1.0 preview public API
 com.crowdmeasure.sdk.CrowdMeasureSdk
 com.crowdmeasure.sdk.CrowdMeasureConfig
+com.crowdmeasure.sdk.DefaultDataMnoEligibility
+com.crowdmeasure.sdk.DefaultDataMnoEligibilityState
 com.crowdmeasure.sdk.SdkResult
 com.crowdmeasure.sdk.MeasurementClient
 com.crowdmeasure.sdk.DataClient

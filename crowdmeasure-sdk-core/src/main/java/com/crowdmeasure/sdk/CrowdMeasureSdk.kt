@@ -2,6 +2,7 @@ package com.crowdmeasure.sdk
 
 import android.content.Context
 import com.crowdmeasure.sdk.internal.DefaultCrowdMeasureSettingsStore
+import com.crowdmeasure.sdk.internal.DefaultDataMnoEligibilityEvaluator
 import com.crowdmeasure.sdk.internal.DefaultMeasurementStore
 import com.crowdmeasure.sdk.internal.SdkDataClient
 import com.crowdmeasure.sdk.internal.SdkMeasurementClient
@@ -39,6 +40,10 @@ class CrowdMeasureSdk private constructor(
             require(config.defaultRetentionDays in 1..90) {
                 "defaultRetentionDays must be between 1 and 90"
             }
+            require(config.requiredDefaultDataMnoId == null ||
+                    config.requiredDefaultDataMnoId.trim().isNotEmpty()) {
+                "requiredDefaultDataMnoId must not be blank"
+            }
             val appContext = context.applicationContext
             val resolvedSettingsStore = settingsStore ?: DefaultCrowdMeasureSettingsStore(
                 context = appContext,
@@ -50,7 +55,14 @@ class CrowdMeasureSdk private constructor(
                 context = appContext,
                 databaseName = config.databaseName,
             )
-            val requirements = SdkRequirementsClient(appContext, config.collectors)
+            val requirements = SdkRequirementsClient(
+                context = appContext,
+                collectors = config.collectors,
+                mnoEligibilityEvaluator = DefaultDataMnoEligibilityEvaluator(
+                    appContext,
+                    config.requiredDefaultDataMnoId,
+                ),
+            )
 
             return CrowdMeasureSdk(
                 measurements = SdkMeasurementClient(

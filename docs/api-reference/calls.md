@@ -4,6 +4,8 @@
 
 `CallSamplingClient` exposes cellular and generic VoIP toggles, explicit activation, requirements/status flows, session and sample history, export, deletion, and the advanced upload queue integration contract.
 
+`CallSamplingRequirements.defaultDataMnoEligibility` mirrors core's optional MNO gate. `CallRunCode.TARGET_MNO_NOT_DEFAULT` and `TARGET_MNO_UNAVAILABLE` explain why no session started or an active session stopped.
+
 `CallSession.simCarriers` contains carrier/SIM metadata captured for the call. `CallCellSample` contains the per-sample cellular snapshot, optional best-effort location, and optional data-usage delta/rate snapshot.
 
 `crowdmeasure-calls-upload` exposes independent call upload settings, scheduling, status, and immediate upload execution. It is not required by local-only call sampling consumers.

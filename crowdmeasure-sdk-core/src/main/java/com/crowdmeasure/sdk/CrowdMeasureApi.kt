@@ -6,6 +6,7 @@ import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
 import com.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
 
 data class CrowdMeasureConfig(
     val databaseName: String = "crowdmeasure_sdk.db",
@@ -16,6 +17,7 @@ data class CrowdMeasureConfig(
     val publicIpPolicy: PublicIpPolicy = PublicIpPolicy.RAW,
     val performanceProbe: PerformanceProbeConfig = PerformanceProbeConfig(),
     val logger: CrowdMeasureLogger = CrowdMeasureLogger.NONE,
+    val requiredDefaultDataMnoId: String? = null,
 )
 
 data class CollectorConfig(
@@ -71,12 +73,35 @@ sealed interface CrowdMeasureError {
     data class PersistenceFailed(val cause: Throwable) : CrowdMeasureError
     data class ExportFailed(val cause: Throwable) : CrowdMeasureError
     data class InvalidConfiguration(val message: String) : CrowdMeasureError
+    data class DefaultDataMnoNotEligible(
+        val eligibility: DefaultDataMnoEligibility,
+    ) : CrowdMeasureError
+}
+
+@Serializable
+enum class DefaultDataMnoEligibilityState {
+    UNRESTRICTED,
+    MATCHED,
+    MISMATCHED,
+    UNAVAILABLE,
+}
+
+@Serializable
+data class DefaultDataMnoEligibility(
+    val state: DefaultDataMnoEligibilityState = DefaultDataMnoEligibilityState.UNRESTRICTED,
+    val requiredMnoId: String? = null,
+    val defaultDataMnoId: String? = null,
+) {
+    val allowsCollection: Boolean
+        get() = state == DefaultDataMnoEligibilityState.UNRESTRICTED ||
+                state == DefaultDataMnoEligibilityState.MATCHED
 }
 
 data class MeasurementRequirements(
     val supportedAndroidVersion: Boolean,
     val locationServicesEnabled: Boolean,
     val missingPermissions: Set<String>,
+    val defaultDataMnoEligibility: DefaultDataMnoEligibility = DefaultDataMnoEligibility(),
 ) {
     // Location can be disabled and I believe for must users it is like that.
     // We can get WIFI stats without location.
@@ -85,7 +110,7 @@ data class MeasurementRequirements(
     val canRun: Boolean
         get() = supportedAndroidVersion &&
 //                locationServicesEnabled &&
-                missingPermissions.isEmpty()
+                missingPermissions.isEmpty() && defaultDataMnoEligibility.allowsCollection
 }
 
 interface MeasurementClient {
@@ -109,6 +134,7 @@ interface SettingsClient {
 
 interface RequirementsClient {
     fun evaluateManualMeasurement(): MeasurementRequirements
+    fun evaluateDefaultDataMno(): DefaultDataMnoEligibility
 }
 
 fun interface CellularSnapshotClient {

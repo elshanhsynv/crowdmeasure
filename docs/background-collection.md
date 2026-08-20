@@ -30,4 +30,6 @@ Intervals must be between 20 minutes and 7 days. Enabling schedules periodic loc
 
 Workers require the process to install the runtime before execution. Missing installation is recorded as `NOT_INSTALLED`. Work names are namespaced under `com.crowdmeasure.sdk.background`.
 
+When core MNO restriction is enabled and the default data SIM is not eligible, a measurement worker records `SKIPPED_TARGET_MNO_NOT_ELIGIBLE` and completes without retrying. Retention cleanup still runs normally.
+
 Defaults: preferences file `crowdmeasure_sdk_background`, enabled setting `true`, interval `60` minutes, Wi-Fi-only `false`, allowed interval `20` minutes to 7 days. Installing still schedules nothing until `enable()` is called.

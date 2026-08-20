@@ -8,6 +8,7 @@ import com.crowdmeasure.sdk.model.RecordState
 import com.crowdmeasure.sdk.CrowdMeasureError
 import com.crowdmeasure.sdk.CrowdMeasureResult
 import com.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.DefaultDataMnoEligibilityState
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.presentation.util.AppLog
 import kotlinx.coroutines.CoroutineDispatcher
@@ -113,5 +114,14 @@ private fun CrowdMeasureError.toException(): IllegalStateException =
         )
         is CrowdMeasureError.InvalidConfiguration -> IllegalStateException(
             "Invalid SDK configuration: $message",
+        )
+        is CrowdMeasureError.DefaultDataMnoNotEligible -> IllegalStateException(
+            when (eligibility.state) {
+                DefaultDataMnoEligibilityState.MISMATCHED ->
+                    "The default data MNO does not match the configured target."
+                DefaultDataMnoEligibilityState.UNAVAILABLE ->
+                    "The default data MNO could not be determined."
+                else -> "The default data MNO is not eligible for collection."
+            },
         )
     }

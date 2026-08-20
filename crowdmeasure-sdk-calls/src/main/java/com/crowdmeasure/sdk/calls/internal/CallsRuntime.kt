@@ -10,6 +10,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.crowdmeasure.sdk.CrowdMeasureSdk
+import com.crowdmeasure.sdk.DefaultDataMnoEligibility
+import com.crowdmeasure.sdk.DefaultDataMnoEligibilityState
 import com.crowdmeasure.sdk.calls.*
 import kotlinx.coroutines.flow.map
 
@@ -71,7 +73,10 @@ internal data class InstalledCallsRuntime(
     val settingsStore: CallsSettingsStore,
     val monitor: VoipCallMonitor,
     val sampler: CallSampler,
-)
+) {
+    fun requirements(): CallSamplingRequirements =
+        context.requirements(sdk.requirements.evaluateDefaultDataMno())
+}
 
 internal object CallsRuntime {
     @Volatile
@@ -90,7 +95,9 @@ internal object CallsRuntime {
     fun get(): InstalledCallsRuntime? = runtime
 }
 
-internal fun Context.requirements(): CallSamplingRequirements {
+internal fun Context.requirements(
+    defaultDataMnoEligibility: DefaultDataMnoEligibility = DefaultDataMnoEligibility(),
+): CallSamplingRequirements {
     fun granted(permission: String) = ContextCompat.checkSelfPermission(
         this,
         permission
@@ -105,6 +112,7 @@ internal fun Context.requirements(): CallSamplingRequirements {
         backgroundLocationGranted = granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
         locationServicesEnabled = location?.isLocationEnabled == true,
         notificationGranted = Build.VERSION.SDK_INT < 33 || granted(Manifest.permission.POST_NOTIFICATIONS),
+        defaultDataMnoEligibility = defaultDataMnoEligibility,
 //        batteryOptimizationIgnored = power?.isIgnoringBatteryOptimizations(packageName) == true,
     )
 }
@@ -116,5 +124,9 @@ internal fun CallSamplingRequirements.failureCode() = when {
     !backgroundLocationGranted -> CallRunCode.MISSING_BACKGROUND_LOCATION
     !locationServicesEnabled -> CallRunCode.LOCATION_SERVICES_DISABLED
     !notificationGranted -> CallRunCode.MISSING_NOTIFICATIONS
+    defaultDataMnoEligibility.state == DefaultDataMnoEligibilityState.MISMATCHED ->
+        CallRunCode.TARGET_MNO_NOT_DEFAULT
+    defaultDataMnoEligibility.state == DefaultDataMnoEligibilityState.UNAVAILABLE ->
+        CallRunCode.TARGET_MNO_UNAVAILABLE
     else -> CallRunCode.OK
 }

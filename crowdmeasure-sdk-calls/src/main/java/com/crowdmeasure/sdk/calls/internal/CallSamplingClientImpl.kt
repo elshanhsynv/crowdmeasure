@@ -63,7 +63,7 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
 
     override fun observeRequirements(): Flow<CallSamplingRequirements> = flow {
         while (true) {
-            emit(context.requirements())
+            emit(runtime()?.requirements() ?: context.requirements())
             delay(2_000.milliseconds)
         }
     }.distinctUntilChanged()
@@ -86,7 +86,7 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
         ) { settings, missed, voip, sessions ->
             CallSamplingStatus(
                 settings,
-                context.requirements(),
+                rt.requirements(),
                 sessions.firstOrNull { it.endedAtUtcMs == null },
                 voip,
                 missed,

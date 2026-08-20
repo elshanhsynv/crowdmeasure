@@ -12,10 +12,13 @@ These are the SDK defaults used when a host does not pass a custom config.
 | `defaultRetentionDays` | `7` |
 | `publicIpPolicy` | `RAW` |
 | `logger` | `CrowdMeasureLogger.NONE` |
+| `requiredDefaultDataMnoId` | `null` (unrestricted) |
 | `performanceProbe.attempts` | `8` |
 | `performanceProbe.timeoutMs` | `10000` |
 
 Collector toggles default to enabled: location, Wi-Fi, cellular, public IP, and performance.
+
+Set `requiredDefaultDataMnoId` to a home MCC+MNC such as `40001` to limit new capture to that default data SIM. `A` is only a project placeholder and must be replaced by a numeric MCC+MNC before release. Set the value back to `null` to remove the check.
 
 ## Background
 

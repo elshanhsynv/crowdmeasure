@@ -65,6 +65,12 @@ internal class SdkMeasurementClient(
                 CrowdMeasureError.MissingPermissions(requirements.missingPermissions),
             )
         }
+        if (!requirements.defaultDataMnoEligibility.allowsCollection) {
+            logger.warn("Measurement blocked: default data MNO is not eligible.")
+            return CrowdMeasureResult.Failure(
+                CrowdMeasureError.DefaultDataMnoNotEligible(requirements.defaultDataMnoEligibility),
+            )
+        }
 //        if (!requirements.locationServicesEnabled) {
 //            logger.warn("Measurement blocked: location services are disabled.")
 //            return CrowdMeasureResult.Failure(CrowdMeasureError.LocationServicesDisabled)
@@ -162,6 +168,7 @@ internal class SdkSettingsClient(
 internal class SdkRequirementsClient(
     private val context: Context,
     private val collectors: CollectorConfig,
+    private val mnoEligibilityEvaluator: DefaultDataMnoEligibilityEvaluator,
 ) : RequirementsClient {
     override fun evaluateManualMeasurement(): MeasurementRequirements {
         val missing = buildSet {
@@ -174,7 +181,9 @@ internal class SdkRequirementsClient(
             if (collectors.cellularEnabled && !hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
                 add(Manifest.permission.ACCESS_FINE_LOCATION)
             }
-            if (collectors.cellularEnabled && !hasPermission(Manifest.permission.READ_PHONE_STATE)) {
+            if ((collectors.cellularEnabled || mnoEligibilityEvaluator.isRestricted()) &&
+                !hasPermission(Manifest.permission.READ_PHONE_STATE)
+            ) {
                 add(Manifest.permission.READ_PHONE_STATE)
             }
         }
@@ -188,8 +197,11 @@ internal class SdkRequirementsClient(
                 locationManager?.isLocationEnabled == true
             }.getOrDefault(false),
             missingPermissions = missing,
+            defaultDataMnoEligibility = evaluateDefaultDataMno(),
         )
     }
+
+    override fun evaluateDefaultDataMno() = mnoEligibilityEvaluator.evaluate()
 
     private fun hasPermission(permission: String): Boolean =
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
@@ -210,7 +222,8 @@ private fun CrowdMeasureLogger.error(message: String, error: Throwable) =
 private fun MeasurementRequirements.describe(): String =
     "supportedAndroidVersion=$supportedAndroidVersion, " +
             "locationServicesEnabled=$locationServicesEnabled, " +
-            "missingPermissions=${missingPermissions.joinToString().ifBlank { "none" }}"
+            "missingPermissions=${missingPermissions.joinToString().ifBlank { "none" }}, " +
+            "defaultDataMno=${defaultDataMnoEligibility.state}"
 
 internal class SdkMeasurementQueueClient(
     private val store: MeasurementStore,

@@ -75,6 +75,7 @@ object AppModule {
             databaseName = "crowdmeasure.db",
             defaultEndpointUrl = AppPreferences.DEFAULT_ENDPOINT,
             defaultRetentionDays = AppPreferences.DEFAULT_RETENTION_DAYS,
+            requiredDefaultDataMnoId = "40002",
             logger = CrowdMeasureLogger { level, message, error ->
                 when (level) {
                     CrowdMeasureLogger.Level.DEBUG -> AppLog.d("SDK", message)

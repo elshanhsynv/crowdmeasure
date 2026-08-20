@@ -13,5 +13,6 @@
 9. Install `CrowdMeasureCalls` with a required notification icon and a compatibility `CallStore` when preserving existing call history.
 10. Migrate cellular, VoIP, and call-upload enabled settings once, then call `activateEnabledFeatures()` during startup.
 11. Remove app-owned call services, receivers, monitors, upload workers, and Firestore repository.
+12. To restrict capture to one operator, set `CrowdMeasureConfig.requiredDefaultDataMnoId` to its home MCC+MNC. Existing history, export, retention, and uploads remain available when capture is blocked; set it to `null` to remove the restriction.
 
 Installing background support alone never enables collection.

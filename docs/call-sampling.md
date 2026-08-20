@@ -15,6 +15,8 @@ Installation starts nothing. Persisted enabled features are restored only after 
 
 Cellular sampling uses phone-state events. Generic VoIP sampling observes Android audio communication mode on a best-effort basis. Both collect cellular, data-usage, and best-effort location snapshots in a foreground location service. Carrier/SIM metadata is stored on the call session because it is stable for the call; per-sample cell snapshots omit repeated carrier lists. Location and data usage are omitted from an individual sample when unavailable. Battery-optimization exemption improves reliability but is not a start requirement.
 
+When core sets `requiredDefaultDataMnoId`, call sessions start only while the default data SIM's home MCC+MNC matches it. A mismatch creates no session and starts no foreground service. During an active session, a default-data-subscription change or the next sample check ends the session with `target_mno_not_eligible`; no later samples are stored. Roaming does not change the decision.
+
 Call uploads have independent enabled, interval, and Wi-Fi-only settings. Default storage is `crowdmeasure_calls.db`; existing apps can provide a `CallStore`.
 
 The SDK declares permissions but never requests them, opens settings, or presents consent UI. WhatsApp notification-listener detection is not included; legacy WhatsApp source enum values remain readable.

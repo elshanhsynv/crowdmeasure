@@ -1,6 +1,7 @@
 package com.crowdmeasure.sdk.calls
 
 import android.net.Uri
+import com.crowdmeasure.sdk.DefaultDataMnoEligibility
 import com.crowdmeasure.sdk.model.CellInfo
 import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.DataUsageInfo
@@ -40,11 +41,13 @@ data class CallSamplingRequirements(
     val backgroundLocationGranted: Boolean,
     val locationServicesEnabled: Boolean,
     val notificationGranted: Boolean,
+    val defaultDataMnoEligibility: DefaultDataMnoEligibility = DefaultDataMnoEligibility(),
 //    val batteryOptimizationIgnored: Boolean,
 ) {
     val canStart: Boolean
         get() = supportedAndroidVersion && phoneStateGranted && fineLocationGranted &&
-                backgroundLocationGranted && locationServicesEnabled && notificationGranted
+                backgroundLocationGranted && locationServicesEnabled && notificationGranted &&
+                defaultDataMnoEligibility.allowsCollection
 }
 
 @Serializable
@@ -72,6 +75,7 @@ enum class CallUploadState { PENDING, UPLOADED, FAILED }
 enum class CallRunCode {
     OK, DISABLED, NOT_INSTALLED, MISSING_PHONE_STATE, MISSING_FINE_LOCATION,
     MISSING_BACKGROUND_LOCATION, LOCATION_SERVICES_DISABLED, MISSING_NOTIFICATIONS,
+    TARGET_MNO_NOT_DEFAULT, TARGET_MNO_UNAVAILABLE,
     UNSUPPORTED_ANDROID, CALL_NOT_ACTIVE, FOREGROUND_SERVICE_FAILED, FOREGROUND_SERVICE_START_NOT_ALLOWED,
     FOREGROUND_SERVICE_PERMISSION_DENIED, BACKEND_REJECTED, TRANSIENT_FAILURE,
     SERIALIZATION_FAILED, PERSISTENCE_FAILED, INVALID_CONFIGURATION, UNEXPECTED_ERROR
@@ -154,6 +158,9 @@ sealed interface CallSamplingError {
     data object Disabled : CallSamplingError
     data object NotInstalled : CallSamplingError
     data class MissingRequirements(val requirements: CallSamplingRequirements) : CallSamplingError
+    data class DefaultDataMnoNotEligible(
+        val eligibility: DefaultDataMnoEligibility,
+    ) : CallSamplingError
     data class InvalidConfiguration(val message: String) : CallSamplingError
     data class BackendRejected(val cause: Throwable? = null) : CallSamplingError
     data class TransientFailure(val cause: Throwable? = null) : CallSamplingError
