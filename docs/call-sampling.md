@@ -17,6 +17,8 @@ Cellular sampling uses phone-state events. Generic VoIP sampling observes Androi
 
 When core sets `requiredDefaultDataMnoId`, call sessions start only while the default data SIM's home MCC+MNC matches it. A mismatch creates no session and starts no foreground service. During an active session, a default-data-subscription change or the next sample check ends the session with `target_mno_not_eligible`; no later samples are stored. Roaming does not change the decision.
 
+Set core `requireNotRoaming = true` to also block call capture while the default data SIM is roaming. A roaming call creates no session or foreground service. If roaming starts during an active call, the session ends with reason `roaming` and no later samples are stored.
+
 Call uploads have independent enabled, interval, and Wi-Fi-only settings. Default storage is `crowdmeasure_calls.db`; existing apps can provide a `CallStore`.
 
 The SDK declares permissions but never requests them, opens settings, or presents consent UI. WhatsApp notification-listener detection is not included; legacy WhatsApp source enum values remain readable.

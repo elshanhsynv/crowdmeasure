@@ -34,4 +34,33 @@ class DefaultDataMnoEligibilityTest {
         assertEquals(DefaultDataMnoEligibilityState.UNAVAILABLE, unavailable.state)
         assertFalse(unavailable.allowsCollection)
     }
+
+    @Test
+    fun blocksRoamingWhenRequired() {
+        val roaming = classifyDefaultDataMnoEligibility(
+            requiredMnoId = "40001",
+            defaultDataMnoId = "40001",
+            requireNotRoaming = true,
+            defaultDataRoaming = true,
+        )
+        val notRoaming = classifyDefaultDataMnoEligibility(
+            requiredMnoId = null,
+            defaultDataMnoId = null,
+            requireNotRoaming = true,
+            defaultDataRoaming = false,
+        )
+        val unavailable = classifyDefaultDataMnoEligibility(
+            requiredMnoId = null,
+            defaultDataMnoId = null,
+            requireNotRoaming = true,
+            defaultDataRoaming = null,
+        )
+
+        assertEquals(DefaultDataMnoEligibilityState.ROAMING, roaming.state)
+        assertFalse(roaming.allowsCollection)
+        assertEquals(DefaultDataMnoEligibilityState.NOT_ROAMING, notRoaming.state)
+        assertTrue(notRoaming.allowsCollection)
+        assertEquals(DefaultDataMnoEligibilityState.UNAVAILABLE, unavailable.state)
+        assertFalse(unavailable.allowsCollection)
+    }
 }

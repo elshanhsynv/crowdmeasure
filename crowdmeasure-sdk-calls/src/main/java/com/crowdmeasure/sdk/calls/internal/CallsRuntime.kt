@@ -128,5 +128,7 @@ internal fun CallSamplingRequirements.failureCode() = when {
         CallRunCode.TARGET_MNO_NOT_DEFAULT
     defaultDataMnoEligibility.state == DefaultDataMnoEligibilityState.UNAVAILABLE ->
         CallRunCode.TARGET_MNO_UNAVAILABLE
+    defaultDataMnoEligibility.state == DefaultDataMnoEligibilityState.ROAMING ->
+        CallRunCode.ROAMING
     else -> CallRunCode.OK
 }

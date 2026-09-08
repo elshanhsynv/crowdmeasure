@@ -13,6 +13,8 @@ val sdk = CrowdMeasureSdk.create(
         logger = CrowdMeasureLogger.NONE,
         // Optional: only collect when this is the default data SIM's home MCC+MNC.
         requiredDefaultDataMnoId = "40001",
+        // Optional: block all new capture while the default data SIM is roaming.
+        requireNotRoaming = true,
     ),
 )
 ```
@@ -20,6 +22,8 @@ val sdk = CrowdMeasureSdk.create(
 Initialization creates clients and stores but does not collect, schedule, upload, request permissions, or show UI. Hosts preserving an existing schema may provide `MeasurementStore` and `CrowdMeasureSettingsStore` adapters.
 
 `requiredDefaultDataMnoId` is optional and defaults to `null`. When set, new manual, background, and call capture runs only when the default data SIM's home MCC+MNC matches. The SDK does not use carrier display names or the currently registered roaming network. Set the value to `null` or omit it to remove the restriction.
+
+`requireNotRoaming` defaults to `false`. When enabled, the SDK blocks new manual, background, and call capture while the default data subscription reports network roaming. If Android cannot determine roaming state, capture is blocked until it can.
 
 Optional background, measurement-upload, calls, and call-upload runtimes must be installed separately. Installing a runtime schedules nothing. Equivalent repeated installation is idempotent; conflicting installation throws `IllegalStateException`.
 

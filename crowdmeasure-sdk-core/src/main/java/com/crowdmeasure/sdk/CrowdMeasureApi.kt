@@ -18,6 +18,7 @@ data class CrowdMeasureConfig(
     val performanceProbe: PerformanceProbeConfig = PerformanceProbeConfig(),
     val logger: CrowdMeasureLogger = CrowdMeasureLogger.NONE,
     val requiredDefaultDataMnoId: String? = null,
+    val requireNotRoaming: Boolean = false,
 )
 
 data class CollectorConfig(
@@ -82,7 +83,9 @@ sealed interface CrowdMeasureError {
 enum class DefaultDataMnoEligibilityState {
     UNRESTRICTED,
     MATCHED,
+    NOT_ROAMING,
     MISMATCHED,
+    ROAMING,
     UNAVAILABLE,
 }
 
@@ -91,10 +94,13 @@ data class DefaultDataMnoEligibility(
     val state: DefaultDataMnoEligibilityState = DefaultDataMnoEligibilityState.UNRESTRICTED,
     val requiredMnoId: String? = null,
     val defaultDataMnoId: String? = null,
+    val requireNotRoaming: Boolean = false,
+    val defaultDataRoaming: Boolean? = null,
 ) {
     val allowsCollection: Boolean
         get() = state == DefaultDataMnoEligibilityState.UNRESTRICTED ||
-                state == DefaultDataMnoEligibilityState.MATCHED
+                state == DefaultDataMnoEligibilityState.MATCHED ||
+                state == DefaultDataMnoEligibilityState.NOT_ROAMING
 }
 
 data class MeasurementRequirements(

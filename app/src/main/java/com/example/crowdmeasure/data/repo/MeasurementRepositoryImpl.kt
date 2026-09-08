@@ -121,6 +121,8 @@ private fun CrowdMeasureError.toException(): IllegalStateException =
                     "The default data MNO does not match the configured target."
                 DefaultDataMnoEligibilityState.UNAVAILABLE ->
                     "The default data MNO could not be determined."
+                DefaultDataMnoEligibilityState.ROAMING ->
+                    "Collection is disabled while the default data SIM is roaming."
                 else -> "The default data MNO is not eligible for collection."
             },
         )

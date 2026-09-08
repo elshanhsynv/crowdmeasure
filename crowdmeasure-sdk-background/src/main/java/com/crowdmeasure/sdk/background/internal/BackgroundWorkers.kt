@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.crowdmeasure.sdk.CrowdMeasureResult
 import com.crowdmeasure.sdk.CrowdMeasureError
+import com.crowdmeasure.sdk.DefaultDataMnoEligibilityState
 import com.crowdmeasure.sdk.background.BackgroundRun
 import com.crowdmeasure.sdk.background.BackgroundRunCode
 import com.crowdmeasure.sdk.background.BackgroundRunOutcome
@@ -51,14 +52,17 @@ internal class MeasurementWorker(
                         false
                     )
                     is CrowdMeasureResult.Failure -> {
-                        val mnoBlocked = result.error is CrowdMeasureError.DefaultDataMnoNotEligible
+                        val eligibility = (result.error as? CrowdMeasureError.DefaultDataMnoNotEligible)
+                            ?.eligibility
+                        val blocked = eligibility != null
                         finish(
                             store,
-                            if (mnoBlocked) BackgroundRunOutcome.SKIPPED else BackgroundRunOutcome.FAILURE,
-                            if (mnoBlocked) {
+                            if (blocked) BackgroundRunOutcome.SKIPPED else BackgroundRunOutcome.FAILURE,
+                            when (eligibility?.state) {
+                                DefaultDataMnoEligibilityState.ROAMING -> BackgroundRunCode.SKIPPED_ROAMING
+                                null -> BackgroundRunCode.COLLECTION_FAILED
+                                else ->
                                 BackgroundRunCode.SKIPPED_TARGET_MNO_NOT_ELIGIBLE
-                            } else {
-                                BackgroundRunCode.COLLECTION_FAILED
                             },
                             null,
                             false,

@@ -2,6 +2,7 @@
 
 ## 0.1.0 Unreleased
 
+- Added optional `requireNotRoaming` capture policy. It blocks new manual, background, and call capture while the default data subscription is roaming.
 - Added an opt-in default-data-SIM home-MCC+MNC gate for manual, background, and call capture. The CrowdMeasure app currently uses placeholder `A`; normal SDK hosts remain unrestricted.
 - Added per-sample data-usage snapshots to call sampling and moved stable carrier/SIM metadata to call sessions.
 - Added optional location snapshots to cellular and generic VoIP call samples without changing existing database schemas.

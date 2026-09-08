@@ -39,4 +39,23 @@ class CallRequirementsTest {
 
         assertFalse(requirements.canStart)
     }
+
+    @Test
+    fun roamingBlocksCallSampling() {
+        val requirements = CallSamplingRequirements(
+            supportedAndroidVersion = true,
+            phoneStateGranted = true,
+            fineLocationGranted = true,
+            backgroundLocationGranted = true,
+            locationServicesEnabled = true,
+            notificationGranted = true,
+            defaultDataMnoEligibility = DefaultDataMnoEligibility(
+                state = DefaultDataMnoEligibilityState.ROAMING,
+                requireNotRoaming = true,
+                defaultDataRoaming = true,
+            ),
+        )
+
+        assertFalse(requirements.canStart)
+    }
 }

@@ -32,4 +32,6 @@ Workers require the process to install the runtime before execution. Missing ins
 
 When core MNO restriction is enabled and the default data SIM is not eligible, a measurement worker records `SKIPPED_TARGET_MNO_NOT_ELIGIBLE` and completes without retrying. Retention cleanup still runs normally.
 
+When core `requireNotRoaming` is enabled, a roaming default data SIM records `SKIPPED_ROAMING` instead. The worker does not retry; the next scheduled run resumes automatically after roaming ends.
+
 Defaults: preferences file `crowdmeasure_sdk_background`, enabled setting `true`, interval `60` minutes, Wi-Fi-only `false`, allowed interval `20` minutes to 7 days. Installing still schedules nothing until `enable()` is called.

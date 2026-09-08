@@ -280,7 +280,15 @@ internal class CallSampler(
                 mnoMonitor = null
             }
         } ?: return
-        store.finishSession(session.sessionId, System.currentTimeMillis(), "target_mno_not_eligible")
+        store.finishSession(
+            session.sessionId,
+            System.currentTimeMillis(),
+            if (eligibility.state == com.crowdmeasure.sdk.DefaultDataMnoEligibilityState.ROAMING) {
+                "roaming"
+            } else {
+                "target_mno_not_eligible"
+            },
+        )
         settings.recordMissed(context.requirements(eligibility).failureCode())
     }
 }
@@ -393,7 +401,11 @@ internal class CallSamplingService : Service() {
                     rt.store.finishSession(
                         session.sessionId,
                         System.currentTimeMillis(),
-                        "target_mno_not_eligible",
+                        if (eligibility.state == com.crowdmeasure.sdk.DefaultDataMnoEligibilityState.ROAMING) {
+                            "roaming"
+                        } else {
+                            "target_mno_not_eligible"
+                        },
                     )
                     active = null
                     rt.settingsStore.recordMissed(applicationContext.requirements(eligibility).failureCode())

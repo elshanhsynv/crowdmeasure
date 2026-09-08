@@ -61,6 +61,7 @@ class CrowdMeasureSdk private constructor(
                 mnoEligibilityEvaluator = DefaultDataMnoEligibilityEvaluator(
                     appContext,
                     config.requiredDefaultDataMnoId,
+                    config.requireNotRoaming,
                 ),
             )
 

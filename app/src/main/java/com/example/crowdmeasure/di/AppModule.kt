@@ -76,6 +76,7 @@ object AppModule {
             defaultEndpointUrl = AppPreferences.DEFAULT_ENDPOINT,
             defaultRetentionDays = AppPreferences.DEFAULT_RETENTION_DAYS,
             requiredDefaultDataMnoId = "40002",
+            requireNotRoaming = true,
             logger = CrowdMeasureLogger { level, message, error ->
                 when (level) {
                     CrowdMeasureLogger.Level.DEBUG -> AppLog.d("SDK", message)

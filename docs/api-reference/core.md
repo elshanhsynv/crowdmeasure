@@ -13,6 +13,6 @@ All mutating public operations return typed `CrowdMeasureResult` values.
 
 `PerformanceInfo` includes HTTP timing metrics and TCP-connect ping fields: average, min, max, jitter, and failed-attempt percentage.
 
-`CrowdMeasureConfig.requiredDefaultDataMnoId` is an optional default-data-SIM home MCC+MNC gate. `DefaultDataMnoEligibility` reports `UNRESTRICTED`, `MATCHED`, `MISMATCHED`, or `UNAVAILABLE`; `MeasurementRequirements` includes it.
+`CrowdMeasureConfig.requiredDefaultDataMnoId` is an optional default-data-SIM home MCC+MNC gate. `CrowdMeasureConfig.requireNotRoaming` optionally blocks capture while the default data subscription is roaming. `DefaultDataMnoEligibility` reports `UNRESTRICTED`, `MATCHED`, `NOT_ROAMING`, `MISMATCHED`, `ROAMING`, or `UNAVAILABLE`; `MeasurementRequirements` includes it.
 
 Core defaults: database `crowdmeasure_sdk.db`, preferences `crowdmeasure_sdk_preferences`, endpoint `https://www.google.com/`, retention 7 days, raw public IP policy, no-op logger, unrestricted MNO policy, 8 HTTP probes, 10-second probe timeout, all collectors enabled.
