@@ -43,7 +43,90 @@
         "txLinkSpeedMbps": 148,
         "rxLinkSpeedMbps": 152
       },
-      "cell": null,
+      "cell": {
+        "simCarriers": [
+          {
+            "carrierName": "Example Mobile",
+            "mcc": "310",
+            "mnc": "260",
+            "simOperatorId": "310260",
+            "simOperatorName": "Example Mobile",
+            "countryIso": "US",
+            "duplexMode": "FDD",
+            "subscriptionId": 1,
+            "simSlotIndex": 0,
+            "displayName": "Example Mobile",
+            "carrierId": 1234,
+            "dataRoaming": false,
+            "isEmbedded": false,
+            "isDefaultData": true,
+            "isDefaultVoice": true,
+            "isDefaultSms": true,
+            "isActiveData": true
+          }
+        ],
+        "collectedSubscriptionId": 1,
+        "collectedSimSlotIndex": 0,
+        "dataNetworkType": "LTE",
+        "voiceNetworkType": "LTE",
+        "roaming": false,
+        "rat": "LTE",
+        "nrState": "none",
+        "serving": {
+          "timestampOffsetMs": 0,
+          "radio": {
+            "type": "lte",
+            "cellId": 12345678,
+            "tac": 321,
+            "pci": 42,
+            "earfcn": 1300,
+            "bands": [
+              3
+            ],
+            "bandwidthKhz": 20000,
+            "rsrpDbm": -86,
+            "rsrqDb": -9,
+            "rssnrDb": 18,
+            "rssiDbm": -60,
+            "cqi": 12,
+            "timingAdvance": 3,
+            "mimoLayers": 2
+          },
+          "dbm": -86,
+          "asuLevel": 54,
+          "level": 4,
+          "subscriptionId": 1,
+          "isRegistered": true
+        },
+        "neighbors": [
+          {
+            "timestampOffsetMs": 0,
+            "radio": {
+              "type": "lte",
+              "cellId": 12345679,
+              "tac": 321,
+              "pci": 43,
+              "earfcn": 1300,
+              "bands": [
+                3
+              ],
+              "bandwidthKhz": 20000,
+              "rsrpDbm": -101,
+              "rsrqDb": -15,
+              "rssnrDb": 5,
+              "rssiDbm": -80,
+              "cqi": 7,
+              "timingAdvance": null,
+              "mimoLayers": 2
+            },
+            "dbm": -101,
+            "asuLevel": 39,
+            "level": 2,
+            "subscriptionId": 1,
+            "isRegistered": false
+          }
+        ]
+      },
       "dataUsage": {
         "dlMB": 245.67,
         "ulMB": 18.93,
