@@ -65,8 +65,8 @@ class DefaultStorageInstrumentedTest {
             hardware = "test",
             chipset = "test",
             chipsetManufacturer = "test",
-            sessionId = null,
-            userIdHash = null,
+            userPhoneNumber = null,
+            appName = "test",
         ),
         environment = EnvironmentInfo(
             location = null,

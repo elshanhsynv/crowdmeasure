@@ -84,8 +84,7 @@ internal class MeasurementRunner(
                     hardware = device.hardware,
                     chipset = device.chipset,
                     chipsetManufacturer = device.chipsetManufacturer,
-                    sessionId = null,
-                    userIdHash = null,
+                    userPhoneNumber = null
                 ),
                 environment = environment,
                 performance = performance,

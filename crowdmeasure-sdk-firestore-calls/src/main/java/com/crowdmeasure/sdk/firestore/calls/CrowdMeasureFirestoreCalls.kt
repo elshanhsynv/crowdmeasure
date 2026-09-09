@@ -72,15 +72,6 @@ internal object CallFirestorePayload {
         "sample_id" to value.id,
         "sampled_at_utc_ms" to value.sampledAtUtcMs,
         "elapsed_ms" to value.elapsedMs,
-        "rat" to value.rat,
-        "nr_state" to value.nrState,
-        "dbm" to value.dbm,
-        "rsrp_dbm" to value.rsrpDbm,
-        "rsrq_db" to value.rsrqDb,
-        "sinr_db" to value.sinrDb,
-        "pci" to value.pci,
-        "tac" to value.tac,
-        "band" to value.band,
         "transport_type" to value.transportType?.name,
         "location" to value.location?.let {
             mapOf(

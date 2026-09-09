@@ -81,6 +81,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.blue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.crowdmeasure.sdk.model.CellRadio
 import com.example.crowdmeasure.domain.model.CallCellSample
 import com.example.crowdmeasure.domain.model.CallSession
 import com.example.crowdmeasure.presentation.screens.callsampling.Metric
@@ -374,11 +375,13 @@ private fun SessionCard(
 ) {
     val latest = session.latestSample
 
-    Timber.tag("CallSessionsScreen").d("""
+    Timber.tag("CallSessionsScreen").d(
+        """
         SessionCard:
         selected: $selected:
         transport: ${session.transportType}
-    """.trimIndent())
+    """.trimIndent()
+    )
 
     Surface(
         onClick = onClick,
@@ -540,23 +543,74 @@ private fun SamplesSheet(
             }
 
             selectedSample?.let { sample ->
+                val serving = sample.cell.serving
+                val radio = serving?.radio
+
+                val cellId = when (radio) {
+                    is CellRadio.Gsm -> radio.cellId?.toString()
+                    is CellRadio.Wcdma -> radio.cellId?.toString()
+                    is CellRadio.Lte -> radio.cellId?.toString()
+                    is CellRadio.Nr -> radio.cellId?.toString()
+                    else -> null
+                }
+
+                val rssiDbm = when (radio) {
+                    is CellRadio.Gsm -> radio.rssiDbm
+                    is CellRadio.Lte -> radio.rssiDbm
+                    else -> null
+                }
+
+                val rsrpDbm = when (radio) {
+                    is CellRadio.Lte -> radio.rsrpDbm
+                    is CellRadio.Nr -> radio.ss?.rsrpDbm ?: radio.csi?.rsrpDbm
+                    else -> null
+                }
+
+                val rsrqDb = when (radio) {
+                    is CellRadio.Lte -> radio.rsrqDb
+                    is CellRadio.Nr -> radio.ss?.rsrqDb ?: radio.csi?.rsrqDb
+                    else -> null
+                }
+
+                val sinrDb = when (radio) {
+                    is CellRadio.Lte -> radio.rssnrDb
+                    is CellRadio.Nr -> radio.ss?.sinrDb ?: radio.csi?.sinrDb
+                    else -> null
+                }
+
+                val band = when (radio) {
+                    is CellRadio.Lte -> radio.bands.firstOrNull()
+                    is CellRadio.Nr -> radio.bands.firstOrNull()
+                    else -> null
+                }
+                val pci = when (radio) {
+                    is CellRadio.Lte -> radio.pci
+                    is CellRadio.Nr -> radio.pci
+                    else -> null
+                }
+
+                val tac = when (radio) {
+                    is CellRadio.Lte -> radio.tac
+                    is CellRadio.Nr -> radio.tac
+                    else -> null
+                }
+
                 item(key = "cell") {
                     SectionHeader("Cell", Icons.Filled.CellTower)
                     Spacer(Modifier.height(8.dp))
                     MetricGrid(
                         metrics = listOf(
-                            SheetMetric("Cell ID", sample.cell.serving?.cellId.toString()),
-                            SheetMetric("PCI", sample.pci?.toString()),
-                            SheetMetric("TAC", sample.tac?.toString()),
-                            SheetMetric("Band", sample.band?.toString()),
+                            SheetMetric("Cell ID", cellId),
+                            SheetMetric("PCI", pci?.toString()),
+                            SheetMetric("TAC", tac?.toString()),
+                            SheetMetric("Band", band?.let { "Band $it" }),
                             SheetMetric("Transport", sample.transportType?.name),
-                            SheetMetric("NR", sample.nrState),
+                            SheetMetric("NR", sample.cell.nrState.name),
                             SheetMetric("Neighbors", sample.cell.neighbors.size.toString()),
-                            SheetMetric("RSSI", sample.cell.serving?.rssiDbm?.toString()),
-                            SheetMetric("RSRP", sample.cell.serving?.rsrpDbm?.toString()),
-                            SheetMetric("RSRQ", sample.cell.serving?.rsrqDb?.toString()),
-                            SheetMetric("SINR", sample.cell.serving?.sinrDb?.toString()),
-                            SheetMetric("Band", sample.cell.serving?.band?.let { "Band $it" })
+                            SheetMetric("RSSI", rssiDbm?.let { "$it dBm" }),
+                            SheetMetric("RSRP", rsrpDbm?.let { "$it dBm" }),
+                            SheetMetric("RSRQ", rsrqDb?.let { "$it dB" }),
+                            SheetMetric("SINR", sinrDb?.let { "$it dB" }),
                         )
                     )
                 }
@@ -821,13 +875,13 @@ private fun durationLabel(session: CallSession?): String {
 
 private fun sessionSubtitle(session: CallSession): String =
     listOf(
-        session.latestSample?.rat ?: "Unknown",
+        session.latestSample?.cell?.rat ?: "Unknown",
         session.callSource.name.readableEnum(),
         session.callType.name.readableEnum()
     ).joinToString("  -  ")
 
 private fun CallSession.matches(query: String, networkFilter: NetworkFilter): Boolean {
-    val rat = latestSample?.rat.orEmpty()
+    val rat = latestSample?.cell?.rat.orEmpty()
     val networkMatches = when (networkFilter) {
         NetworkFilter.All -> true
         NetworkFilter.Lte -> rat.equals("LTE", ignoreCase = true)
@@ -841,13 +895,26 @@ private fun CallSession.matches(query: String, networkFilter: NetworkFilter): Bo
     val searchable = listOfNotNull(
         formatTime(startedAtUtcMs),
         rat,
-        latestSample?.nrState,
+        latestSample?.cell?.nrState,
         callSource.name.readableEnum(),
         callType.name.readableEnum(),
-        latestSample?.cell?.serving?.cellId?.maskedId(),
-        latestSample?.cell?.serving?.cellId?.lastDigits()
+        latestSample?.cell?.serving?.radio?.let {
+            when (it) {
+                is CellRadio.Gsm -> it.cellId?.maskedId()
+                is CellRadio.Lte -> it.cellId?.maskedId()
+                is CellRadio.Nr -> it.cellId?.maskedId()
+                is CellRadio.Wcdma -> it.cellId?.maskedId()
+            }
+        },
+        latestSample?.cell?.serving?.radio?.let {
+            when (it) {
+                is CellRadio.Gsm -> it.cellId?.lastDigits()
+                is CellRadio.Lte -> it.cellId?.lastDigits()
+                is CellRadio.Nr -> it.cellId?.lastDigits()
+                is CellRadio.Wcdma -> it.cellId?.lastDigits()
+            }
+        }
     ).joinToString(" ").lowercase()
-
     return searchable.contains(cleanedQuery)
 }
 

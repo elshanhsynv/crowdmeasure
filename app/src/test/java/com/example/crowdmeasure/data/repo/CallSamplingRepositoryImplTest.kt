@@ -6,6 +6,7 @@ import com.example.crowdmeasure.data.db.CallSessionEntity
 import com.example.crowdmeasure.data.db.Converters
 import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.CellRadio
 import com.crowdmeasure.sdk.model.CellRadioSnapshot
 import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
@@ -90,9 +91,9 @@ class CallSamplingRepositoryImplTest {
 
         assertEquals(1, sessions.single().sampleCount)
         assertEquals("Test", sessions.single().simCarriers.single().carrierName)
-        assertEquals("LTE", sessions.single().latestSample?.rat)
+        assertEquals("LTE", sessions.single().latestSample?.cell?.rat)
         assertEquals(1, samples.size)
-        assertEquals(-91, samples.single().dbm)
+        assertEquals(-91, samples.single().cell.serving?.dbm)
         assertEquals(40.4093, samples.single().location?.lat)
         assertEquals(1.0, samples.single().dataUsage?.dlMB)
         assertEquals(emptyList<CarrierInfo>(), samples.single().cell.simCarriers)
@@ -106,7 +107,11 @@ class CallSamplingRepositoryImplTest {
             intervalSeconds = 30
         )
 
-        listOf(TransportType.CELL, TransportType.NONE, TransportType.WIFI).forEachIndexed { index, transport ->
+        listOf(
+            TransportType.CELL,
+            TransportType.NONE,
+            TransportType.WIFI
+        ).forEachIndexed { index, transport ->
             repository.insertSample(
                 sessionId = session.sessionId,
                 sampledAtUtcMs = 1_000L + index,
@@ -116,7 +121,10 @@ class CallSamplingRepositoryImplTest {
             )
         }
 
-        assertEquals(TransportType.MIXED, repository.observeRecentSessions().first().single().transportType)
+        assertEquals(
+            TransportType.MIXED,
+            repository.observeRecentSessions().first().single().transportType
+        )
     }
 
     @Test
@@ -132,21 +140,12 @@ class CallSamplingRepositoryImplTest {
                 sampledAtUtcMs = 1_000L,
                 elapsedMs = 0L,
                 cellJson = Converters.json.encodeToString(CellInfo.serializer(), testCellInfo()),
-                rat = "LTE",
-                nrState = "NONE",
-                dbm = -91,
-                rsrpDbm = -95,
-                rsrqDb = -12,
-                sinrDb = 14,
-                pci = 20,
-                tac = 10,
-                band = 3,
             )
         )
 
         val sample = repository.observeSamples(session.sessionId).first().single()
 
-        assertEquals("LTE", sample.rat)
+        assertEquals("LTE", sample.cell.rat)
         assertNull(sample.location)
     }
 
@@ -244,34 +243,16 @@ class CallSamplingRepositoryImplTest {
             roaming = false,
             serving = CellRadioSnapshot(
                 timestampOffsetMs = 0L,
-                cellId = 1,
-                cid = null,
-                nci = null,
-                lac = null,
-                tac = 10,
-                pci = 20,
-                psc = null,
-                bsic = null,
-                band = 3,
-                arfcn = 1_800,
-                uarfcn = null,
-                nrarfcn = null,
-                rsrpDbm = -95,
-                rsrqDb = -12,
-                sinrDb = 14,
-                rssiDbm = -70,
-                cqi = null,
-                asuLevel = 40,
+                radio = CellRadio.Gsm(
+                    cellId = 12345,
+                    lac = 6789,
+                    bsic = 10
+                ),
                 dbm = -91,
-                timingAdvance = 1,
-                ssRsrpDbm = null,
-                ssRsrqDb = null,
-                ssSinrDb = null,
-                csiRsrpDbm = null,
-                csiRsrqDb = null,
-                csiSinrDb = null,
-                bandwidthMhz = 20,
-                mimoLayers = null
+                asuLevel = 20,
+                level = 3,
+                subscriptionId = 1,
+                isRegistered = true
             ),
             neighbors = emptyList(),
         )

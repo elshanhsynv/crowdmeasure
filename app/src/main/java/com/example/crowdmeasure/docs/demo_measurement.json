@@ -13,8 +13,7 @@
     "hardware": "husky",
     "chipset": "Google Tensor G4",
     "chipsetManufacturer": "Google",
-    "sessionId": "sess-20250706-001",
-    "userIdHash": "hash-user-001"
+    "userPhoneNumber": "+1234567890"
   },
   "environment": {
     "location": {

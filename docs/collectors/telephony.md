@@ -25,17 +25,21 @@ Successful sample:
   "voiceNetworkType": "LTE",
   "roaming": false,
   "serving": {
-    "cellId": 12345678,
-    "tac": 321,
-    "pci": 42,
-    "band": 3,
-    "arfcn": 1300,
-    "rsrpDbm": -86,
-    "rsrqDb": -9,
-    "sinrDb": 18,
+    "timestampOffsetMs": 150,
+    "radio": {
+      "type": "lte",
+      "cellId": 12345678,
+      "tac": 321,
+      "pci": 42,
+      "earfcn": 1300,
+      "bands": [3],
+      "bandwidthKhz": 20000,
+      "rsrpDbm": -86,
+      "rsrqDb": -9,
+      "rssnrDb": 18
+    },
     "dbm": -86,
-    "timingAdvance": 4,
-    "bandwidthMhz": 20
+    "level": 4
   },
   "neighbors": []
 }

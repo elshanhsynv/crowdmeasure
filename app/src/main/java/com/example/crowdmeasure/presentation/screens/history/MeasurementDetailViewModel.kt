@@ -3,6 +3,7 @@ package com.example.crowdmeasure.presentation.screens.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.crowdmeasure.sdk.model.CarrierInfo
+import com.crowdmeasure.sdk.model.CellRadio
 import com.crowdmeasure.sdk.model.Measurement
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.presentation.util.UiState
@@ -124,8 +125,7 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
         "Chipset" to meta.chipset,
         "Chipset Manufacturer" to meta.chipsetManufacturer,
 
-        "Session ID" to meta.sessionId,
-        "User ID" to meta.userIdHash
+        "User Phone Number" to meta.userPhoneNumber
     )
     val envPairs = listOf(
         "Transport" to environment.network.transport.toString(),
@@ -199,24 +199,80 @@ private fun Measurement.toDetailUi(formatter: SimpleDateFormat): MeasurementDeta
     }
 
     // Sensitive: Cell IDs
-    val cellIdsText = environment.network.cell?.serving?.let { sc ->
+    val cellIdsText = environment.network.cell?.serving?.let { serving ->
+        val radio = serving.radio
+
         buildList {
-            add("Serving Cell" to sc.cellId.toString())
-            sc.cid?.let { add("CID" to "$it") }
-            sc.nci?.let { add("NCI" to "$it") }
-            sc.band?.let { add("Band" to "$it") }
-            sc.arfcn?.let { add("ARFCN" to "$it") }
-            sc.nrarfcn?.let { add("NRARFCN" to "$it") }
-            sc.tac?.let { add("TAC" to "$it") }
-            sc.pci?.let { add("PCI" to "$it") }
-            sc.rsrpDbm?.let { add("RSRP" to "$it dBm") }
-            sc.rsrqDb?.let { add("RSRQ" to "$it dB") }
-            sc.sinrDb?.let { add("SINR" to "$it dB") }
-            sc.cqi?.let { add("CQI" to "$it") }
-            sc.rssiDbm?.let { add("RSSI" to "$it dBm") }
-            sc.bandwidthMhz?.let { add("Bandwidth" to "$it MHz") }
-            sc.mimoLayers?.let { add("MIMO Layers" to "$it") }
-        }.joinToString(" • ") { (name, value) -> "$name: $value" }.takeIf { it.isNotBlank() }
+            when (radio) {
+                is CellRadio.Gsm -> {
+                    radio.cellId?.let { add("CID" to "$it") }
+                    radio.lac?.let { add("LAC" to "$it") }
+                    radio.bsic?.let { add("BSIC" to "$it") }
+                    radio.arfcn?.let { add("ARFCN" to "$it") }
+                    radio.rssiDbm?.let { add("RSSI" to "$it dBm") }
+                    radio.timingAdvance?.let { add("Timing Advance" to "$it") }
+                }
+
+                is CellRadio.Wcdma -> {
+                    radio.cellId?.let { add("CID" to "$it") }
+                    radio.lac?.let { add("LAC" to "$it") }
+                    radio.psc?.let { add("PSC" to "$it") }
+                    radio.uarfcn?.let { add("UARFCN" to "$it") }
+                    radio.ecNoDb?.let { add("Ec/No" to "$it dB") }
+                }
+
+                is CellRadio.Lte -> {
+                    radio.cellId?.let { add("Cell ID" to "$it") }
+                    radio.tac?.let { add("TAC" to "$it") }
+                    radio.pci?.let { add("PCI" to "$it") }
+                    radio.earfcn?.let { add("EARFCN" to "$it") }
+
+                    radio.bands
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { add("Band" to it.joinToString(", ") { band -> "B$band" }) }
+
+                    radio.rsrpDbm?.let { add("RSRP" to "$it dBm") }
+                    radio.rsrqDb?.let { add("RSRQ" to "$it dB") }
+                    radio.rssnrDb?.let { add("SINR" to "$it dB") }
+                    radio.rssiDbm?.let { add("RSSI" to "$it dBm") }
+                    radio.cqi?.let { add("CQI" to "$it") }
+
+                    radio.bandwidthKhz?.let {
+                        add("Bandwidth" to "${it / 1000.0} MHz")
+                    }
+
+                    radio.mimoLayers?.let { add("MIMO Layers" to "$it") }
+                    radio.timingAdvance?.let { add("Timing Advance" to "$it") }
+                }
+
+                is CellRadio.Nr -> {
+                    radio.cellId?.let { add("NCI" to "$it") }
+                    radio.tac?.let { add("TAC" to "$it") }
+                    radio.pci?.let { add("PCI" to "$it") }
+                    radio.nrarfcn?.let { add("NRARFCN" to "$it") }
+
+                    radio.bands
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { add("Band" to it.joinToString(", ") { band -> "n$band" }) }
+
+                    val rsrp = radio.ss?.rsrpDbm ?: radio.csi?.rsrpDbm
+                    val rsrq = radio.ss?.rsrqDb ?: radio.csi?.rsrqDb
+                    val sinr = radio.ss?.sinrDb ?: radio.csi?.sinrDb
+
+                    rsrp?.let { add("RSRP" to "$it dBm") }
+                    rsrq?.let { add("RSRQ" to "$it dB") }
+                    sinr?.let { add("SINR" to "$it dB") }
+
+                    radio.bandwidthKhz?.let {
+                        add("Bandwidth" to "${it / 1000.0} MHz")
+                    }
+
+                    radio.mimoLayers?.let { add("MIMO Layers" to "$it") }
+                }
+            }
+        }
+            .joinToString(" • ") { (name, value) -> "$name: $value" }
+            .takeIf { it.isNotBlank() }
     }
 
     // IP info
@@ -294,11 +350,9 @@ private fun CarrierInfo.toSimCarrierUi(
         simSlotIndex?.let { add("Slot Index" to it.toString()) }
         subscriptionId?.let { add("Subscription ID" to it.toString()) }
         carrierId?.let { add("Carrier ID" to it.toString()) }
-        portIndex?.let { add("Port Index" to it.toString()) }
         cardId?.let { add("Card ID" to it.toString()) }
         dataRoaming?.let { add("Data Roaming" to it.toString()) }
         isEmbedded?.let { add("eSIM" to it.toString()) }
-        isOpportunistic?.let { add("Opportunistic" to it.toString()) }
         isActiveData?.takeIf { it }?.let { add("Active Data" to it.toString()) }
         isDefaultData?.takeIf { it }?.let { add("Default Data" to it.toString()) }
         isDefaultVoice?.takeIf { it }?.let { add("Default Voice" to it.toString()) }

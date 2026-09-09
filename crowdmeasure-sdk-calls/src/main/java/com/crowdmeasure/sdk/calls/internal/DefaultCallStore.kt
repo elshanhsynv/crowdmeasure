@@ -5,6 +5,7 @@ import androidx.room.*
 import com.crowdmeasure.sdk.calls.*
 import com.crowdmeasure.sdk.model.CarrierInfo
 import com.crowdmeasure.sdk.model.CellInfo
+import com.crowdmeasure.sdk.model.CellRadio
 import com.crowdmeasure.sdk.model.DataUsageInfo
 import com.crowdmeasure.sdk.model.Location
 import com.crowdmeasure.sdk.model.TransportType
@@ -48,15 +49,6 @@ internal data class SampleEntity(
     val sampledAtUtcMs: Long,
     val elapsedMs: Long,
     val cellJson: String,
-    val rat: String?,
-    val nrState: String?,
-    val dbm: Int?,
-    val rsrpDbm: Int?,
-    val rsrqDb: Int?,
-    val sinrDb: Int?,
-    val pci: Int?,
-    val tac: Int?,
-    val band: Int?,
 )
 
 @Dao
@@ -120,7 +112,7 @@ internal interface CallsDao {
     suspend fun clear()
 }
 
-@Database(entities = [SessionEntity::class, SampleEntity::class], version = 2, exportSchema = true)
+@Database(entities = [SessionEntity::class, SampleEntity::class], version = 3, exportSchema = true)
 internal abstract class CallsDatabase : RoomDatabase() {
     abstract fun dao(): CallsDao
 }
@@ -175,7 +167,6 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
         dataUsage: DataUsageInfo?,
         transportType: TransportType?,
     ) {
-        val serving = cellInfo.serving
         val carriersJson = encodeCarriers(cellInfo.simCarriers)
         dao.insertAndIncrement(
             SampleEntity(
@@ -187,15 +178,6 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
                     StoredCallSample.serializer(),
                     StoredCallSample(cellInfo.withoutCarriers(), location, dataUsage, transportType)
                 ),
-                cellInfo.rat,
-                cellInfo.nrState.name,
-                serving?.dbm,
-                serving?.rsrpDbm,
-                serving?.rsrqDb,
-                serving?.sinrDb,
-                serving?.pci,
-                serving?.tac,
-                serving?.band
             ),
             carriersJson,
         )
@@ -216,7 +198,8 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
     override fun observeSessions(limit: Int) =
         dao.observeSessions(limit).combine(dao.recentSamples(limit)) { sessions, samples ->
             val samplesBySession = samples.mapNotNull { it.domainOrNull() }.groupBy { it.sessionId }
-            val latest = samplesBySession.mapValues { it.value.maxByOrNull(CallCellSample::sampledAtUtcMs) }
+            val latest =
+                samplesBySession.mapValues { it.value.maxByOrNull(CallCellSample::sampledAtUtcMs) }
             val sampleCarriers = samples.mapNotNull { it.carriersOrNull() }.toMap()
             sessions.map {
                 it.domain(
@@ -295,15 +278,6 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
             sampledAtUtcMs,
             elapsedMs,
             stored.cell.withoutCarriers(),
-            rat,
-            nrState,
-            dbm,
-            rsrpDbm,
-            rsrqDb,
-            sinrDb,
-            pci,
-            tac,
-            band,
             stored.location,
             stored.dataUsage,
             stored.transportType,
@@ -311,13 +285,16 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
     }.getOrNull()
 
     private fun SampleEntity.carriersOrNull(): Pair<String, List<CarrierInfo>>? =
-        decodeStoredSample(cellJson).cell.simCarriers.takeIf { it.isNotEmpty() }?.let { sessionId to it }
+        decodeStoredSample(cellJson).cell.simCarriers.takeIf { it.isNotEmpty() }
+            ?.let { sessionId to it }
 
     private fun List<SampleEntity>.firstCarriersOrNull(): List<CarrierInfo>? =
         firstNotNullOfOrNull { it.carriersOrNull()?.second }
 
     private fun List<CallCellSample>?.sessionTransport(): TransportType? {
-        val real = this.orEmpty().mapNotNull { it.transportType }.filter { it != TransportType.NONE }.toSet()
+        val real =
+            this.orEmpty().mapNotNull { it.transportType }.filter { it != TransportType.NONE }
+                .toSet()
         return when {
             real.size > 1 -> TransportType.MIXED
             real.size == 1 -> real.first()
@@ -339,7 +316,12 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
 
     private fun decodeCarriers(value: String?): List<CarrierInfo> =
         value?.takeIf { it.isNotBlank() }?.let {
-            runCatching { json.decodeFromString(ListSerializer(CarrierInfo.serializer()), it) }.getOrNull()
+            runCatching {
+                json.decodeFromString(
+                    ListSerializer(CarrierInfo.serializer()),
+                    it
+                )
+            }.getOrNull()
         }.orEmpty()
 
     private fun CellInfo.withoutCarriers(): CellInfo = copy(simCarriers = emptyList())

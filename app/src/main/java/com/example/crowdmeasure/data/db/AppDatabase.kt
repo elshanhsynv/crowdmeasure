@@ -9,7 +9,7 @@ import androidx.room.RoomDatabase
         CallSessionEntity::class,
         CallCellSampleEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

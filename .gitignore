@@ -38,3 +38,5 @@ gen/
 
 # Firebase / Google services (only if not meant to be public)
 app/google-services.json
+
+test.json

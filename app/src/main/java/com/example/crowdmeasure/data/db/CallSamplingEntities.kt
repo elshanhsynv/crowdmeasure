@@ -43,13 +43,4 @@ data class CallCellSampleEntity(
     val sampledAtUtcMs: Long,
     val elapsedMs: Long,
     val cellJson: String,
-    val rat: String?,
-    val nrState: String?,
-    val dbm: Int?,
-    val rsrpDbm: Int?,
-    val rsrqDb: Int?,
-    val sinrDb: Int?,
-    val pci: Int?,
-    val tac: Int?,
-    val band: Int?
 )

@@ -9,15 +9,16 @@ Plain-English reference for every field in the telephony measurement models.
 
 | Field | What it means |
 |---|---|
-| `carrier` | Your mobile operator's identity information |
-| `rat` | **Radio Access Technology** — the cellular generation in use: `GSM`, `WCDMA`, `TD-SCDMA`, `LTE`, or `NR` |
+| `simCarriers` | List of identities for SIM cards currently in the device |
+| `collectedSubscriptionId` | The subscription ID that was actively being used for the measurement |
+| `collectedSimSlotIndex` | The physical SIM slot index for the collected subscription |
+| `rat` | **Radio Access Technology** — the cellular generation in use: `GSM`, `WCDMA`, `LTE`, or `NR` |
 | `nrState` | Whether 5G NR is active and how (see [NrState](#nrstate)) |
 | `dataNetworkType` | Technology used for mobile data — may differ from voice (e.g. data on NR while voice falls back to LTE) |
 | `voiceNetworkType` | Technology used for voice calls |
 | `roaming` | `true` if the device is using a foreign/partner network outside the home carrier's coverage |
 | `serving` | Full snapshot of the cell tower currently handling this device's connection |
 | `neighbors` | Other visible (non-serving) towers. Useful for coverage mapping and handover analysis |
-| `aggregation` | Carrier Aggregation info — when multiple frequency bands are bonded for higher speed |
 
 ---
 
@@ -28,8 +29,14 @@ Plain-English reference for every field in the telephony measurement models.
 | `carrierName` | Human-readable operator name (e.g. "Vodafone", "AT&T", "Azercell") |
 | `mcc` | **Mobile Country Code** — 3-digit number identifying the country (e.g. `310` = USA, `400` = Azerbaijan) |
 | `mnc` | **Mobile Network Code** — 2–3 digit number identifying the carrier within the country |
-| `operatorId` | MCC + MNC combined into one string (e.g. `"31026"` = T-Mobile USA). Used as a globally unique carrier key |
+| `simOperatorId` | MCC + MNC combined into one string (e.g. `"31026"` = T-Mobile USA). Used as a globally unique carrier key |
+| `simOperatorName` | Registered operator name for the SIM |
 | `countryIso` | 2-letter ISO 3166 country code from the SIM card (e.g. `"us"`, `"az"`, `"gb"`) |
+| `duplexMode` | TDD or FDD duplex mode if known |
+| `subscriptionId` | Android platform subscription ID |
+| `simSlotIndex` | Physical SIM slot (0 or 1) |
+| `isDefaultData` | Whether this SIM is the primary source for mobile data |
+| `isActiveData` | Whether this SIM was actively handling data during the measurement |
 
 ---
 
@@ -45,31 +52,72 @@ Plain-English reference for every field in the telephony measurement models.
 
 ## CellRadioSnapshot
 
-### Timing
+### Generic Info
 
 | Field | What it means |
 |---|---|
 | `timestampOffsetMs` | How many milliseconds ago this cell reading was captured by the OS. `0` = just collected. Large values (> 5000 ms) mean the OS is returning stale cached data |
+| `radio` | Technology-specific details (see [CellRadio](#cellradio)) |
+| `dbm` | **Unified signal strength in dBm** — the single best number for comparing signal across RATs. RSRP for LTE/NR, RSCP for WCDMA, signal level for GSM |
+| `asuLevel` | **Arbitrary Strength Units** — Android's normalized 0–97 signal scale used for signal bar display |
+| `level` | Android's 0..4 quality category (0 = none/unknown) |
+| `subscriptionId` | Which subscription this cell was observed on |
+| `isRegistered` | Whether the device is actively registered/attached to this cell |
 
 ---
 
-### Cell Identity
-*Who this tower is. Most fields are RAT-specific — expect nulls for inapplicable RATs.*
+## CellRadio
 
-| Field | RATs | What it means |
-|---|---|---|
-| `cellId` | LTE | **Cell Identity (CI)** — uniquely identifies an LTE cell sector globally when combined with MCC+MNC+TAC. Range: 0–268,435,455 |
-| `cid` | GSM, WCDMA, TD-SCDMA | **Cell ID** — identifies the cell within a Location Area. Shorter range than LTE CI |
-| `nci` | NR (5G) | **NR Cell Identity** — 36-bit ID for 5G cells. Very large range, hence `Long` |
-| `lac` | GSM, WCDMA | **Location Area Code** — groups many cells together (like a postal district). Used in 2G/3G paging |
-| `tac` | LTE, NR | **Tracking Area Code** — the LTE/NR equivalent of LAC |
-| `pci` | LTE, NR | **Physical Cell ID** — a short local number (0–503) used to distinguish neighboring cells on the same frequency. Not globally unique |
-| `psc` | WCDMA | **Primary Scrambling Code** — 3G equivalent of PCI (0–511) |
-| `bsic` | GSM | **Base Station Identity Code** — 2G equivalent of PCI. Helps phones distinguish adjacent GSM cells |
-| `band` | All | **Frequency band number** — e.g. Band 3 (1800 MHz), Band 20 (800 MHz), Band 78 (3.5 GHz 5G). Standardized by 3GPP |
-| `arfcn` | LTE | **EARFCN** (E-UTRA Absolute Radio Frequency Channel Number) — pinpoints the exact LTE frequency within a band |
-| `uarfcn` | WCDMA, TD-SCDMA | **UARFCN** (UTRA Absolute Radio Frequency Channel Number) — 3G equivalent of EARFCN |
-| `nrarfcn` | NR (5G) | **NR-ARFCN** — 5G equivalent of EARFCN. Range: 0–3,279,165 |
+This is a sealed structure containing details specific to the radio technology.
+
+### GSM
+| Field | What it means |
+|---|---|
+| `cellId` | GSM Cell ID (CID) |
+| `lac` | Location Area Code |
+| `bsic` | Base Station Identity Code |
+| `arfcn` | Absolute Radio Frequency Channel Number |
+| `rssiDbm` | Signal strength in dBm |
+| `timingAdvance` | Timing Advance (range 0-63) |
+
+### WCDMA
+| Field | What it means |
+|---|---|
+| `cellId` | WCDMA Cell ID |
+| `lac` | Location Area Code |
+| `psc` | Primary Scrambling Code |
+| `uarfcn` | UTRA-ARFCN |
+| `ecNoDb` | Signal quality metric |
+
+### LTE
+| Field | What it means |
+|---|---|
+| `cellId` | LTE Cell Identity (CI) |
+| `tac` | Tracking Area Code |
+| `pci` | Physical Cell ID |
+| `earfcn` | E-UTRA ARFCN |
+| `bands` | List of active frequency bands |
+| `bandwidthKhz` | Channel bandwidth in kHz |
+| `rsrpDbm` | Reference Signal Received Power |
+| `rsrqDb` | Reference Signal Received Quality |
+| `rssnrDb` | Signal-to-Noise Ratio (dB) |
+| `rssiDbm` | Received Signal Strength Indicator |
+| `cqi` | Channel Quality Indicator |
+| `timingAdvance` | LTE Timing Advance |
+| `mimoLayers` | Number of spatial streams |
+
+### NR (5G)
+| Field | What it means |
+|---|---|
+| `cellId` | 36-bit NR Cell Identity (NCI) |
+| `tac` | Tracking Area Code |
+| `pci` | Physical Cell ID |
+| `nrarfcn` | NR-ARFCN |
+| `bands` | List of active frequency bands |
+| `ss` | Synchronization Signal metrics (RSRP, RSRQ, SINR) |
+| `csi` | Channel State Information metrics (RSRP, RSRQ, SINR) |
+| `bandwidthKhz` | Channel bandwidth in kHz |
+| `mimoLayers` | Number of spatial streams |
 
 ---
 
