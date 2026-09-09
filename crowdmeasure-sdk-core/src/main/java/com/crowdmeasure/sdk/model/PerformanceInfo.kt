@@ -122,17 +122,4 @@ data class PerformanceInfo(
     val firstResponseBodyStarted: Boolean? = null,
 
     val protocol: ProtocolType = ProtocolType.UNKNOWN,
-
-    /**
-     * Reserved for future throughput tests.
-     */
-    val testPayloadBytes: Long? = null,
-
-    // Throughput (Those fields are unused)
-    val downMbps: Double? = null,
-    val upMbps: Double? = null,
-    val downP95Mbps: Double? = null,
-    val downStdDevMbps: Double? = null,
-    val upP95Mbps: Double? = null,
-    val upStdDevMbps: Double? = null,
 )

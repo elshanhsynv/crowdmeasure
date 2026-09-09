@@ -150,17 +150,10 @@ class Exporter(
             putOpt("ping_jitter_ms", m.performance.pingJitterMs)
             putOpt("ping_packet_loss_pct", m.performance.pingPacketLossPct)
             putOpt("packet_loss_pct", m.performance.probeFailurePct)
-            putOpt("down_mbps", m.performance.downMbps)
-            putOpt("up_mbps", m.performance.upMbps)
-            putOpt("down_p95_mbps", m.performance.downP95Mbps)
-            putOpt("down_stddev_mbps", m.performance.downStdDevMbps)
-            putOpt("up_p95_mbps", m.performance.upP95Mbps)
-            putOpt("up_stddev_mbps", m.performance.upStdDevMbps)
             putOpt("stalls_count", m.performance.stallsCount)
             putOpt("max_stall_ms", m.performance.maxStallMs)
             putOpt("http_status", m.performance.httpStatus)
             putOpt("server_region", m.performance.serverRegion)
-            putOpt("test_payload_bytes", m.performance.testPayloadBytes)
             put("protocol", m.performance.protocol)
         }
 

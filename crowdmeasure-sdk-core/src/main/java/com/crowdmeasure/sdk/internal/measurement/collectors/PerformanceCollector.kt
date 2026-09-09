@@ -99,56 +99,35 @@ object PerformanceCollector {
 
         return PerformanceInfo(
             endpointId = endpointId,
-
             dnsMs = probes.firstNotNullOfOrNull { it.timings.dnsMs },
             connectMs = probes.firstNotNullOfOrNull { it.timings.connectMs },
             tlsMs = probes.firstNotNullOfOrNull { it.timings.tlsMs },
-
             ttfbAvgMs = ttfbSamples
                 .takeIf { it.isNotEmpty() }
                 ?.average()
                 ?.roundToLong(),
-
             ttfbP95Ms = percentile(ttfbSamples, 0.95),
-
             httpLatencyAvgMs = latencySamples
                 .takeIf { it.isNotEmpty() }
                 ?.average()
                 ?.roundToLong(),
-
             httpLatencyP95Ms = percentile(latencySamples, 0.95),
-
             jitterMs = jitter(latencySamples),
-
             pingAvgMs = ping.avgMs,
             pingMinMs = ping.minMs,
             pingMaxMs = ping.maxMs,
             pingJitterMs = ping.jitterMs,
             pingPacketLossPct = ping.packetLossPct,
-
             probeFailurePct = probeFailurePct,
-
             probesAttempted = attempts,
             probesSucceeded = probes.size,
             probesFailed = failures,
-
             stallsCount = stalls.takeIf { latencySamples.isNotEmpty() },
             maxStallMs = maxStallMs,
-
             httpStatus = firstSuccessfulProbe?.httpStatus,
             serverRegion = firstSuccessfulProbe?.serverRegion,
             firstResponseBodyStarted = firstSuccessfulProbe?.responseBodyStarted,
-
             protocol = protocol,
-
-            testPayloadBytes = null,
-
-            downMbps = null,
-            upMbps = null,
-            downP95Mbps = null,
-            downStdDevMbps = null,
-            upP95Mbps = null,
-            upStdDevMbps = null,
         )
     }
 
