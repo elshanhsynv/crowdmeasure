@@ -49,35 +49,30 @@ class UpdateViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    installing = true,
-                    message = "Preparing update",
-                    error = null
+                    installing = true, message = "Preparing update", error = null
                 )
             }
 
-            updateRepository.downloadVerifyAndInstall(metadata).fold(
-                onSuccess = {
-                    _uiState.update {
-                        it.copy(
-                            installing = false,
-                            message = "Confirm installation in the system prompt.",
-                            error = null
-                        )
-                    }
-                },
-                onFailure = { error ->
-                    if (error is InstallPermissionRequiredException) {
-                        updateRepository.openUnknownAppSourcesSettings()
-                    }
-                    _uiState.update {
-                        it.copy(
-                            installing = false,
-                            message = null,
-                            error = error.message ?: "Update failed. Try again."
-                        )
-                    }
+            updateRepository.downloadVerifyAndInstall(metadata).fold(onSuccess = {
+                _uiState.update {
+                    it.copy(
+                        installing = false,
+                        message = "Confirm installation in the system prompt.",
+                        error = null
+                    )
                 }
-            )
+            }, onFailure = { error ->
+                if (error is InstallPermissionRequiredException) {
+                    updateRepository.openUnknownAppSourcesSettings()
+                }
+                _uiState.update {
+                    it.copy(
+                        installing = false,
+                        message = null,
+                        error = error.message ?: "Update failed. Try again."
+                    )
+                }
+            })
         }
     }
 
@@ -85,29 +80,23 @@ class UpdateViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(checking = true, error = null) }
 
-            updateRepository.checkForUpdate(notify = notify).fold(
-                onSuccess = { availability ->
-                    _uiState.update {
-                        it.copy(
-                            checking = false,
-                            update = availability.metadata,
-                            error = null
-                        )
-                    }
-                },
-                onFailure = { error ->
-                    _uiState.update {
-                        it.copy(
-                            checking = false,
-                            error = if (it.update?.forceUpdate == true) {
-                                error.message ?: "Could not check for updates."
-                            } else {
-                                null
-                            }
-                        )
-                    }
+            updateRepository.checkForUpdate(notify = notify).fold(onSuccess = { availability ->
+                _uiState.update {
+                    it.copy(
+                        checking = false, update = availability.metadata, error = null
+                    )
                 }
-            )
+            }, onFailure = { error ->
+                _uiState.update {
+                    it.copy(
+                        checking = false, error = if (it.update?.forceUpdate == true) {
+                            error.message ?: "Could not check for updates."
+                        } else {
+                            null
+                        }
+                    )
+                }
+            })
         }
     }
 }

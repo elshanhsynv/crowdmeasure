@@ -24,7 +24,7 @@ fun keystoreProperty(name: String): String =
 android {
     namespace = "com.example.crowdmeasure"
     compileSdk {
-        version = release(36)
+        version = release(37)
     }
 
     sourceSets {
@@ -40,13 +40,13 @@ android {
     defaultConfig {
         applicationId = "com.example.crowdmeasure"
         minSdk = 29
-        targetSdk = 36
-        versionCode = 12
-        versionName = "1.12"
+        targetSdk = 37
+        versionCode = 13
+        versionName = "1.13"
         buildConfigField(
             "String",
             "UPDATE_METADATA_URL",
-            "\"${providers.gradleProperty("crowdmeasure.updateMetadataUrl").orNull ?: "https://elshanwork.github.io/crowdmeasure-releases/latest.json"}\""
+            "\"${providers.gradleProperty("crowdmeasure.updateMetadataUrl").orNull ?: "https://elshanhsynv.github.io/crowdmeasure-releases/latest.json"}\""
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

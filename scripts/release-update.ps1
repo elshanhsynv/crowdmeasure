@@ -27,7 +27,7 @@ $Tag = "v$VersionName"
 $ApkName = "app-v$VersionCode.apk"
 $BuiltApk = Join-Path $RepoRoot "app\build\outputs\apk\release\app-release.apk"
 $StagedApk = Join-Path $ReleaseRepoPath $ApkName
-$AssetUrl = "https://github.com/elshanwork/crowdmeasure-releases/releases/download/$Tag/$ApkName"
+$AssetUrl = "https://github.com/elshanhsynv/crowdmeasure-releases/releases/download/$Tag/$ApkName"
 
 if (-not $SkipBuild) {
     Push-Location $RepoRoot

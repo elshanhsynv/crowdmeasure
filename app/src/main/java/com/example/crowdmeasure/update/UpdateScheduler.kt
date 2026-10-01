@@ -14,18 +14,13 @@ class UpdateScheduler @Inject constructor(
     private val workManager: WorkManager
 ) {
     fun schedulePeriodicChecks() {
-        val request = PeriodicWorkRequestBuilder<UpdateCheckWorker>(1, TimeUnit.DAYS)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .build()
+        val request =
+            PeriodicWorkRequestBuilder<UpdateCheckWorker>(1, TimeUnit.DAYS).setConstraints(
+                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+            ).build()
 
         workManager.enqueueUniquePeriodicWork(
-            UNIQUE_WORK_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE,
-            request
+            UNIQUE_WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request
         )
     }
 

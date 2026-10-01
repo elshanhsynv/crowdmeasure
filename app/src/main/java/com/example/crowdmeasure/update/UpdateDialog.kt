@@ -49,56 +49,47 @@ fun UpdateDialog(
         )
     }
 
-    AlertDialog(
-        modifier = modifier,
-        onDismissRequest = {
-            if (dialogState.canDismiss) onDismiss()
-        },
-        icon = {
-            Icon(
-                imageVector = Icons.Outlined.SystemUpdate,
-                contentDescription = null
-            )
-        },
-        title = {
-            Text(
-                text = if (dialogState.forceUpdate) {
-                    "Update required"
-                } else {
-                    "Update available"
-                }
-            )
-        },
-        text = {
-            UpdateDialogContent(
-                versionLabel = dialogState.versionLabel,
-                releaseNotes = update.releaseNotes,
-                message = state.message,
-                error = state.error
-            )
-        },
-        confirmButton = {
-            InstallButton(
-                installing = state.installing,
-                enabled = dialogState.canInstall,
-                label = dialogState.installLabel,
-                onClick = onInstall
-            )
-        },
-        dismissButton = {
-            SecondaryActionButton(
-                forceUpdate = dialogState.forceUpdate,
-                enabled = if (dialogState.forceUpdate) {
-                    dialogState.canRetry
-                } else {
-                    dialogState.canDismiss
-                },
-                label = dialogState.secondaryLabel,
-                onRetryCheck = onRetryCheck,
-                onDismiss = onDismiss
-            )
-        }
-    )
+    AlertDialog(modifier = modifier, onDismissRequest = {
+        if (dialogState.canDismiss) onDismiss()
+    }, icon = {
+        Icon(
+            imageVector = Icons.Outlined.SystemUpdate, contentDescription = null
+        )
+    }, title = {
+        Text(
+            text = if (dialogState.forceUpdate) {
+                "Update required"
+            } else {
+                "Update available"
+            }
+        )
+    }, text = {
+        UpdateDialogContent(
+            versionLabel = dialogState.versionLabel,
+            releaseNotes = update.releaseNotes,
+            message = state.message,
+            error = state.error
+        )
+    }, confirmButton = {
+        InstallButton(
+            installing = state.installing,
+            enabled = dialogState.canInstall,
+            label = dialogState.installLabel,
+            onClick = onInstall
+        )
+    }, dismissButton = {
+        SecondaryActionButton(
+            forceUpdate = dialogState.forceUpdate,
+            enabled = if (dialogState.forceUpdate) {
+                dialogState.canRetry
+            } else {
+                dialogState.canDismiss
+            },
+            label = dialogState.secondaryLabel,
+            onRetryCheck = onRetryCheck,
+            onDismiss = onDismiss
+        )
+    })
 }
 
 @Composable
@@ -110,49 +101,38 @@ private fun UpdateDialogContent(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
             text = "CrowdMeasure $versionLabel is ready to install.",
             style = MaterialTheme.typography.bodyMedium
         )
 
-        releaseNotes
-            ?.takeIf(String::isNotBlank)
-            ?.let { notes ->
-                Text(
-                    text = notes,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        releaseNotes?.takeIf(String::isNotBlank)?.let { notes ->
+            Text(
+                text = notes,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
-        message
-            ?.takeIf(String::isNotBlank)
-            ?.let { value ->
-                StatusText(
-                    text = value,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+        message?.takeIf(String::isNotBlank)?.let { value ->
+            StatusText(
+                text = value, color = MaterialTheme.colorScheme.primary
+            )
+        }
 
-        error
-            ?.takeIf(String::isNotBlank)
-            ?.let { value ->
-                StatusText(
-                    text = value,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
+        error?.takeIf(String::isNotBlank)?.let { value ->
+            StatusText(
+                text = value, color = MaterialTheme.colorScheme.error
+            )
+        }
     }
 }
 
 @Composable
 private fun StatusText(
-    text: String,
-    color: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier
+    text: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier
 ) {
     Text(
         modifier = modifier,
@@ -172,9 +152,7 @@ private fun InstallButton(
     modifier: Modifier = Modifier
 ) {
     Button(
-        modifier = modifier,
-        onClick = onClick,
-        enabled = enabled
+        modifier = modifier, onClick = onClick, enabled = enabled
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -182,8 +160,7 @@ private fun InstallButton(
         ) {
             if (installing) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp
+                    modifier = Modifier.size(18.dp), strokeWidth = 2.dp
                 )
             }
 
@@ -211,9 +188,7 @@ private fun SecondaryActionButton(
 }
 
 private val UpdateMetadata.displayVersion: String
-    get() = versionName
-        ?.takeIf(String::isNotBlank)
-        ?: versionCode.toString()
+    get() = versionName?.takeIf(String::isNotBlank) ?: versionCode.toString()
 
 @Immutable
 private data class UpdateDialogState(
@@ -232,23 +207,15 @@ private fun UpdateDialogPreview() {
     CrowdMeasureTheme {
         UpdateDialog(
             state = UpdateUiState(
-                update = UpdateMetadata(
-                    versionCode = 42,
-                    versionName = "2.0.0",
-                    releaseNotes = "New features and improvements.",
-                    apkUrl = "https://example.com/crowdmeasure.apk",
-                    forceUpdate = false,
-                    sha256 = "abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567890abc123"
-                ),
-                checking = false,
-                installing = false,
-                message = "Download complete",
-                error = null
-            ),
-            onInstall = {},
-            onDismiss = {},
-            onRetryCheck = {}
-        )
+            update = UpdateMetadata(
+                versionCode = 42,
+                versionName = "2.0.0",
+                releaseNotes = "New features and improvements.",
+                apkUrl = "https://example.com/crowdmeasure.apk",
+                forceUpdate = false,
+                sha256 = "abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567890abc123"
+            ), checking = false, installing = false, message = "Download complete", error = null
+        ), onInstall = {}, onDismiss = {}, onRetryCheck = {})
     }
 }
 
@@ -258,22 +225,18 @@ private fun ForceUpdateDialogPreview() {
     CrowdMeasureTheme {
         UpdateDialog(
             state = UpdateUiState(
-                update = UpdateMetadata(
-                    versionCode = 43,
-                    versionName = "2.1.0",
-                    releaseNotes = "This version includes critical stability fixes.",
-                    apkUrl = "https://example.com/crowdmeasure.apk",
-                    forceUpdate = true,
-                    sha256 = "abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567890abc123"
-                ),
-                checking = false,
-                installing = false,
-                message = null,
-                error = "Unable to prepare the update. Please try again."
+            update = UpdateMetadata(
+                versionCode = 43,
+                versionName = "2.1.0",
+                releaseNotes = "This version includes critical stability fixes.",
+                apkUrl = "https://example.com/crowdmeasure.apk",
+                forceUpdate = true,
+                sha256 = "abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567890abc123"
             ),
-            onInstall = {},
-            onDismiss = {},
-            onRetryCheck = {}
-        )
+            checking = false,
+            installing = false,
+            message = null,
+            error = "Unable to prepare the update. Please try again."
+        ), onInstall = {}, onDismiss = {}, onRetryCheck = {})
     }
 }

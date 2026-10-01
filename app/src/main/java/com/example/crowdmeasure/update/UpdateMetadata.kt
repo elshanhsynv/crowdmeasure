@@ -12,8 +12,7 @@ data class UpdateMetadata(
     val forceUpdate: Boolean = false,
     val releaseNotes: String? = null
 ) {
-    fun isNewerThan(currentVersionCode: Int): Boolean =
-        versionCode > currentVersionCode
+    fun isNewerThan(currentVersionCode: Int): Boolean = versionCode > currentVersionCode
 
     fun validate(): UpdateMetadata {
         require(versionCode > 0) { "versionCode must be positive" }

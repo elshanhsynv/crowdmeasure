@@ -10,8 +10,7 @@ import javax.inject.Singleton
 
 @Singleton
 class ApkDownloader @Inject constructor(
-    @ApplicationContext context: Context,
-    private val okHttpClient: OkHttpClient
+    @ApplicationContext context: Context, private val okHttpClient: OkHttpClient
 ) {
     private val updateDir = File(context.cacheDir, "updates")
 

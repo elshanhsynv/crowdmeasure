@@ -43,8 +43,7 @@ private fun MainContent() {
     val settings by consentViewModel.settings.collectAsStateWithLifecycle()
     val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
 
-    val shouldShowConsent =
-        settings != null && !settings!!.consentGateDismissed
+    val shouldShowConsent = settings != null && !settings!!.consentGateDismissed
 
     LaunchedEffect(Unit) {
         updateViewModel.checkOnStartup()
@@ -53,12 +52,9 @@ private fun MainContent() {
     Box(modifier = Modifier.fillMaxSize()) {
         AppNav()
         ConsentGateScreen(
-            visible = shouldShowConsent,
-            onComplete = {
+            visible = shouldShowConsent, onComplete = {
                 consentViewModel.markConsentGateCompleted()
-            },
-            onDismiss = {},
-            viewModel = consentViewModel
+            }, onDismiss = {}, viewModel = consentViewModel
         )
         UpdateDialog(
             state = updateState,

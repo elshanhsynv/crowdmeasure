@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.crowdmeasure.sdk.firestore.calls"
-    compileSdk { version = release(36) }
+    compileSdk { version = release(37) }
     defaultConfig { minSdk = 29 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

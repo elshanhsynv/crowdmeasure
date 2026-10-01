@@ -8,8 +8,7 @@ import javax.inject.Singleton
 
 @Singleton
 class UpdateAnalytics @Inject constructor(
-    private val analytics: FirebaseAnalytics,
-    private val crashlytics: FirebaseCrashlytics
+    private val analytics: FirebaseAnalytics, private val crashlytics: FirebaseCrashlytics
 ) {
     fun available(metadata: UpdateMetadata) {
         analytics.logEvent("update_available", metadataBundle(metadata))
@@ -29,12 +28,10 @@ class UpdateAnalytics @Inject constructor(
 
     fun failed(stage: String, metadata: UpdateMetadata?, throwable: Throwable) {
         analytics.logEvent(
-            "update_failed",
-            metadataBundle(metadata).apply {
+            "update_failed", metadataBundle(metadata).apply {
                 putString("stage", stage)
                 putString("error", throwable.javaClass.simpleName)
-            }
-        )
+            })
         crashlytics.recordException(throwable)
     }
 
