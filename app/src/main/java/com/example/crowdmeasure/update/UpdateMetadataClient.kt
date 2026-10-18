@@ -23,8 +23,15 @@ class UpdateMetadataClient @Inject constructor(
 
         okHttpClient.newCall(request).execute().use { response ->
             check(response.isSuccessful) { "Update metadata request failed: HTTP ${response.code}" }
-            val body = response.body.string()
+            val source = response.body.source()
+            // request() returns true once more than the limit is buffered, i.e. the body is too large.
+            check(!source.request(MAX_METADATA_BYTES + 1)) { "Update metadata is too large" }
+            val body = source.buffer.readUtf8()
             return json.decodeFromString<UpdateMetadata>(body).validate()
         }
+    }
+
+    private companion object {
+        const val MAX_METADATA_BYTES = 64L * 1024
     }
 }

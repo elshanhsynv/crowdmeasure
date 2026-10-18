@@ -72,9 +72,10 @@ val apiBaselineFiles = sdkProjects.associateWith { file("api/$it.api") }
 tasks.register("apiCheck") {
     group = "verification"
     description = "Validates that every published artifact has an intentional public API baseline."
-    inputs.files(apiBaselineFiles.values)
+    val baselines = apiBaselineFiles
+    inputs.files(baselines.values)
     doLast {
-        apiBaselineFiles.forEach { (artifact, baseline) ->
+        baselines.forEach { (artifact, baseline) ->
             check(baseline.isFile) { "Missing API baseline for $artifact" }
             val symbols = baseline.readLines().filter { it.isNotBlank() && !it.startsWith("#") }
             check(symbols.isNotEmpty()) { "API baseline for $artifact is empty" }
@@ -92,9 +93,10 @@ val sdkBoundaryFiles = mapOf(
 )
 
 tasks.register("verifySdkDependencyBoundaries") {
-    description = ""
+    description = "Checks that SDK modules do not declare dependencies outside their boundary."
     group = "verification"
-    inputs.files(sdkBoundaryFiles.values)
+    val boundaryFiles = sdkBoundaryFiles
+    inputs.files(boundaryFiles.values)
     doLast {
         val forbidden = mapOf(
             "crowdmeasure-sdk-core" to listOf("work-runtime", "firebase", "hilt", "compose", "crashlytics"),
@@ -104,7 +106,7 @@ tasks.register("verifySdkDependencyBoundaries") {
             "crowdmeasure-sdk-firestore-calls" to listOf("crowdmeasure-sdk-measurements-upload", "work-runtime"),
         )
         forbidden.forEach { (projectName, terms) ->
-            val buildFile = sdkBoundaryFiles.getValue(projectName).readText()
+            val buildFile = boundaryFiles.getValue(projectName).readText()
             terms.forEach { term ->
                 check(!buildFile.contains(term, ignoreCase = true)) {
                     "$projectName contains forbidden dependency marker '$term'"
@@ -118,10 +120,11 @@ val documentationFiles = fileTree("docs") { include("**/*.md") }
 tasks.register("verifyDocumentation") {
     description = "Validates that documentation pages have normal Markdown headings."
     group = "verification"
-    inputs.files(documentationFiles)
+    val pages = documentationFiles
+    inputs.files(pages)
     doLast {
-        check(documentationFiles.files.any { it.name == "README.md" }) { "docs/README.md is missing" }
-        documentationFiles.files.forEach { page ->
+        check(pages.files.any { it.name == "README.md" }) { "docs/README.md is missing" }
+        pages.files.forEach { page ->
             val first = page.useLines { lines -> lines.firstOrNull { it.isNotBlank() }.orEmpty() }
             check(first.startsWith("#")) {
                 "${page.path} must start with a Markdown heading"

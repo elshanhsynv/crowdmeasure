@@ -48,7 +48,7 @@ class HomeViewModel @Inject constructor(
 
         HomeUiState(
             uploadsEnabled = uploadsEnabled,
-            canCollect = true,
+            canCollect = settings.consentGateDismissed,
             locationServicesOn = locationServicesOn,
             queuedCount = queue.pendingCount + queue.failedCount,
             lastMeasurement = lastMeasurement?.toUiModel()

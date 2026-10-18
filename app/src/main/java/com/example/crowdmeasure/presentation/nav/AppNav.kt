@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,7 +41,6 @@ fun AppNav() {
 
     val homeViewModel = hiltViewModel<HomeViewModel>()
     val settingsViewModel = hiltViewModel<SettingsViewModel>()
-    val measurementDetailViewModel = hiltViewModel<MeasurementDetailViewModel>()
     val historyViewModel = hiltViewModel<HistoryViewModel>()
     val historyUiState by historyViewModel.uiState.collectAsStateWithLifecycle()
     var historySearchVisible by rememberSaveable { mutableStateOf(false) }
@@ -195,16 +195,17 @@ fun AppNav() {
                     with(NavigationConfig) { popExitTransition }
                 },
             ) { backStackEntry ->
-                val measurementId = backStackEntry.arguments
-                    ?.getString(Routes.DETAIL_ARG_ID)
-                    ?: run {
-                        navController.popBackStack()
-                        return@composable
-                    }
+                val measurementId = backStackEntry.arguments?.getString(Routes.DETAIL_ARG_ID)
+                if (measurementId == null) {
+                    // Navigation is a side effect; never call it during composition.
+                    LaunchedEffect(Unit) { navController.popBackStack() }
+                    return@composable
+                }
 
                 MeasurementDetailScreen(
                     id = measurementId,
-                    viewModel = measurementDetailViewModel,
+                    // Scoped to this back-stack entry, so revealed fields never carry over to another measurement.
+                    viewModel = hiltViewModel<MeasurementDetailViewModel>(),
                     contentPadding = paddingValues
                 )
             }

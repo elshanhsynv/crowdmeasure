@@ -17,9 +17,12 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        mavenLocal()
         google()
         mavenCentral()
+        // Only for locally published CrowdMeasure SDK artifacts; must not shadow other dependencies.
+        mavenLocal {
+            content { includeGroup("com.crowdmeasure") }
+        }
     }
 }
 

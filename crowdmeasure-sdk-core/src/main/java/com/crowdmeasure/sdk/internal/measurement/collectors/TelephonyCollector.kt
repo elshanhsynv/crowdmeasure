@@ -47,6 +47,9 @@ data class SubscriptionDisplayInfo(
 )
 
 internal object TelephonyCollectorLogic {
+    /** TelephonyManager.NETWORK_TYPE_LTE_CA; a hidden platform constant some devices still report. */
+    private const val NETWORK_TYPE_LTE_CA = 19
+
     const val MAX_CELL_AGE_MS = 60_000L // 1 minute
 
     fun deriveNrState(
@@ -127,6 +130,7 @@ internal object TelephonyCollectorLogic {
     @Suppress("DEPRECATION")
     fun networkTypeName(type: Int): String? = when (type) {
         TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
+        NETWORK_TYPE_LTE_CA -> "LTE"
         TelephonyManager.NETWORK_TYPE_NR -> "NR"
         TelephonyManager.NETWORK_TYPE_HSPAP -> "HSPAP"
         TelephonyManager.NETWORK_TYPE_HSPA -> "HSPA"

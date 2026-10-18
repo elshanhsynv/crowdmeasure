@@ -8,6 +8,7 @@ import com.crowdmeasure.sdk.model.Measurement
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.presentation.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -44,6 +45,7 @@ class MeasurementDetailViewModel @Inject constructor(
     private val dateFormatter = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
     private val _uiState = MutableStateFlow(MeasurementDetailUiState())
     val uiState: StateFlow<MeasurementDetailUiState> = _uiState
+    private var loadJob: Job? = null
 
     /**
      * Load measurement by ID.
@@ -51,8 +53,11 @@ class MeasurementDetailViewModel @Inject constructor(
      * @param id Measurement ID to load
      */
     fun load(id: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(loadState = UiState.Loading) }
+        // A slower earlier load must not overwrite this one, and nothing revealed for another
+        // measurement stays revealed.
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            _uiState.update { it.copy(loadState = UiState.Loading, revealed = emptySet()) }
 
             val result = runCatching {
                 measurementRepository.getMeasurementById(id)
@@ -76,7 +81,7 @@ class MeasurementDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         loadState = UiState.Error(
-                            message = "Couldn't load measurement. Check connection and retry.",
+                            message = "Couldn't load this measurement. Try again.",
                             throwable = error
                         )
                     )

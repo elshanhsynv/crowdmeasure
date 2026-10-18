@@ -25,6 +25,7 @@ import kotlin.math.roundToLong
 object PerformanceCollector {
 
     private const val STALL_THRESHOLD_MS = 1_500L
+    private const val MAX_SERVER_REGION_LENGTH = 64
 
     /**
      * Runs [PROBE_ATTEMPTS] sequential lightweight HTTPS probes against [endpointUrl].
@@ -276,7 +277,11 @@ object PerformanceCollector {
         }
     }
 
-    private fun extractServerRegion(headers: Headers): String? {
+    /** Header values are server-controlled; keep only a short label. */
+    private fun extractServerRegion(headers: Headers): String? =
+        rawServerRegion(headers)?.trim()?.take(MAX_SERVER_REGION_LENGTH)?.takeIf { it.isNotEmpty() }
+
+    private fun rawServerRegion(headers: Headers): String? {
         // Cloudflare: CF-RAY = "<ray_id>-<IATA>", e.g. "7c1abc-AMS"
         headers["cf-ray"]?.let { value ->
             val dash = value.lastIndexOf('-')

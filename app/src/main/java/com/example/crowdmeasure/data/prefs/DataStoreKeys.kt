@@ -3,8 +3,6 @@ package com.example.crowdmeasure.data.prefs
 import androidx.datastore.preferences.core.*
 
 object DataStoreKeys {
-    val CONSENT_ACCEPTED = booleanPreferencesKey("consent_accepted")
-    val COLLECTION_ENABLED = booleanPreferencesKey("collection_enabled")
     val ENDPOINT_URL = stringPreferencesKey("endpoint_url")
     val COLLECT_ONLY_WIFI = booleanPreferencesKey("collect_only_wifi")
     val AUTO_RUN_ENABLED = booleanPreferencesKey("auto_run_enabled")
@@ -19,43 +17,10 @@ object DataStoreKeys {
     val CONSENT_ACCEPTED_AT_UTC_MS = longPreferencesKey("consent_accepted_at_utc_ms")
     val FIRESTORE_UPLOADS_ENABLED = booleanPreferencesKey("firestore_uploads_enabled")
     val CALL_SAMPLING_ENABLED = booleanPreferencesKey("call_sampling_enabled")
-    val WHATSAPP_CALL_SAMPLING_ENABLED =
-        booleanPreferencesKey("whatsapp_call_sampling_enabled")
     val VOIP_CALL_SAMPLING_ENABLED =
         booleanPreferencesKey("voip_call_sampling_enabled")
-    val CALL_SAMPLING_LAST_MISSED_AT_UTC_MS =
-        longPreferencesKey("call_sampling_last_missed_at_utc_ms")
-    val CALL_SAMPLING_LAST_MISSED_REASON =
-        stringPreferencesKey("call_sampling_last_missed_reason")
-    val VOIP_MONITOR_ACTIVE = booleanPreferencesKey("voip_monitor_active")
     val BATTERY_OPTIMIZATION_RECOMMENDATION_DISMISSED_UNTIL =
         longPreferencesKey("battery_optimization_recommendation_dismissed_until")
-    val AUTORUN_LAST_START_UTC_MS = longPreferencesKey("autorun_last_start_utc_ms")
-    val AUTORUN_LAST_END_UTC_MS = longPreferencesKey("autorun_last_end_utc_ms")
-    val AUTORUN_LAST_RESULT = stringPreferencesKey("autorun_last_result")
-    val AUTORUN_LAST_CODE = stringPreferencesKey("autorun_last_code")
-    val AUTORUN_LAST_ERROR = stringPreferencesKey("autorun_last_error")
-    val AUTORUN_LAST_UPLOADED_COUNT = intPreferencesKey("autorun_last_uploaded_count")
-    val AUTORUN_LAST_MEASUREMENT_ID = stringPreferencesKey("autorun_last_measurement_id")
-    val AUTORUN_LAST_MEASUREMENT_TIMESTAMP_UTC_MS =
-        longPreferencesKey("autorun_last_measurement_timestamp_utc_ms")
-    val AUTORUN_LAST_SUCCESS_UTC_MS = longPreferencesKey("autorun_last_success_utc_ms")
-    val AUTORUN_LAST_SCHEDULE_MINUTES = intPreferencesKey("autorun_last_schedule_minutes")
-    val AUTORUN_LAST_SCHEDULE_WIFI_ONLY = booleanPreferencesKey("autorun_last_schedule_wifi_only")
-    val UPLOAD_LAST_START_UTC_MS = longPreferencesKey("upload_last_start_utc_ms")
-    val UPLOAD_LAST_END_UTC_MS = longPreferencesKey("upload_last_end_utc_ms")
-    val UPLOAD_LAST_RESULT = stringPreferencesKey("upload_last_result")
-    val UPLOAD_LAST_CODE = stringPreferencesKey("upload_last_code")
-    val UPLOAD_LAST_UPLOADED_COUNT = intPreferencesKey("upload_last_uploaded_count")
-    val UPLOAD_PENDING_COUNT = intPreferencesKey("upload_pending_count")
-    val UPLOAD_FAILED_COUNT = intPreferencesKey("upload_failed_count")
-    val UPLOAD_LAST_ERROR = stringPreferencesKey("upload_last_error")
-    val UPLOAD_LAST_SUCCESS_UTC_MS = longPreferencesKey("upload_last_success_utc_ms")
-
-    // Data Usage Stats
-    val DATA_USAGE_LAST_RX_BYTES = longPreferencesKey("data_usage_last_rx_bytes")
-    val DATA_USAGE_LAST_TX_BYTES = longPreferencesKey("data_usage_last_tx_bytes")
-    val DATA_USAGE_LAST_TIME_MS = longPreferencesKey("data_usage_last_time_ms")
     val UPDATE_LAST_NOTIFIED_VERSION_CODE =
         intPreferencesKey("update_last_notified_version_code")
 }

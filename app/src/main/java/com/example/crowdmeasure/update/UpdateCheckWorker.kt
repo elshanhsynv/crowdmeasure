@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.io.IOException
 
 @HiltWorker
 class UpdateCheckWorker @AssistedInject constructor(
@@ -16,7 +17,8 @@ class UpdateCheckWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return updateRepository.checkForUpdate(notify = true).fold(
             onSuccess = { Result.success() },
-            onFailure = { Result.retry() }
+            // Only network errors are worth retrying; bad metadata waits for the next daily run.
+            onFailure = { if (it is IOException) Result.retry() else Result.failure() }
         )
     }
 }

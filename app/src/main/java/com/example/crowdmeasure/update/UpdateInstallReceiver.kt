@@ -41,6 +41,10 @@ class UpdateInstallReceiver : BroadcastReceiver() {
 
             PackageInstaller.STATUS_SUCCESS -> Unit
 
+            // The user cancelled the system prompt: not an error worth a crash report.
+            PackageInstaller.STATUS_FAILURE_ABORTED ->
+                installEvents.reportFailure("Update installation was cancelled.")
+
             else -> {
                 val error = UpdateInstallFailedException(
                     status,

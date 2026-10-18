@@ -11,6 +11,10 @@ import org.junit.Test
 class UpdateMetadataTest {
     private val json = Json { ignoreUnknownKeys = true }
 
+    private companion object {
+        const val VALID_SHA = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+
     @Test
     fun parseValidMetadata() {
         val metadata = json.decodeFromString<UpdateMetadata>(
@@ -68,6 +72,51 @@ class UpdateMetadataTest {
         assertThrows(IllegalArgumentException::class.java) {
             metadata.validate()
         }
+    }
+
+    @Test
+    fun uppercaseHttpsSchemeIsAccepted() {
+        val metadata = UpdateMetadata(
+            versionCode = 104,
+            apkUrl = "HTTPS://example.com/app.apk",
+            sha256 = VALID_SHA
+        )
+
+        assertEquals(104, metadata.validate().versionCode)
+    }
+
+    @Test
+    fun apkUrlWithCredentialsFailsValidation() {
+        val metadata = UpdateMetadata(
+            versionCode = 104,
+            apkUrl = "https://user:secret@example.com/app.apk",
+            sha256 = VALID_SHA
+        )
+
+        assertThrows(IllegalArgumentException::class.java) { metadata.validate() }
+    }
+
+    @Test
+    fun malformedApkUrlFailsWithIllegalArgument() {
+        val metadata = UpdateMetadata(
+            versionCode = 104,
+            apkUrl = "https://exa mple.com/app.apk",
+            sha256 = VALID_SHA
+        )
+
+        assertThrows(IllegalArgumentException::class.java) { metadata.validate() }
+    }
+
+    @Test
+    fun oversizedReleaseNotesFailValidation() {
+        val metadata = UpdateMetadata(
+            versionCode = 104,
+            apkUrl = "https://example.com/app.apk",
+            sha256 = VALID_SHA,
+            releaseNotes = "x".repeat(4_001)
+        )
+
+        assertThrows(IllegalArgumentException::class.java) { metadata.validate() }
     }
 
     @Test

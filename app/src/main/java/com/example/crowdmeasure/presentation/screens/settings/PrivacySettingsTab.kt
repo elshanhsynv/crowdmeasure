@@ -2,9 +2,7 @@ package com.example.crowdmeasure.presentation.screens.settings
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.os.Build
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -60,11 +58,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.example.crowdmeasure.presentation.ui.components.cards.SettingsSectionCard
 import com.example.crowdmeasure.presentation.ui.components.feedback.LocationServicesBanner
 import com.example.crowdmeasure.presentation.ui.components.settings.PermissionRow
 import com.example.crowdmeasure.presentation.ui.components.settings.PermissionStatus
 import com.example.crowdmeasure.presentation.util.AppPermissions
+import com.example.crowdmeasure.presentation.util.SystemSettingsIntents
 import com.example.crowdmeasure.presentation.util.AppPermissions.hasFineLocation
 import com.example.crowdmeasure.presentation.util.AppPermissions.isLocationServicesEnabled
 
@@ -81,6 +81,12 @@ internal fun PrivacySettingsTab() {
 
     fun refreshPermissions() {
         permissionSnapshot = PermissionSnapshot.from(context)
+    }
+
+    // Re-check on every resume so returning from system settings shows the current state.
+    LifecycleResumeEffect(Unit) {
+        refreshPermissions()
+        onPauseOrDispose { }
     }
 
     val requestCoarse = rememberPermissionLauncher(
@@ -103,7 +109,7 @@ internal fun PrivacySettingsTab() {
         snapshot = permissionSnapshot,
         onRefresh = ::refreshPermissions,
         onOpenLocationSettings = {
-            context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            SystemSettingsIntents.openLocationSettings(context)
         },
         onRequestCoarseLocation = {
             requestCoarse.launch(Manifest.permission.ACCESS_COARSE_LOCATION)

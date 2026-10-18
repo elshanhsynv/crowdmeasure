@@ -28,14 +28,7 @@ internal class CallsSettingsStore(context: Context, preferencesName: String) {
         val voipActive = booleanPreferencesKey("voip_active")
     }
 
-    val settings = dataStore.data.map { preferences ->
-        CallSamplingSettings(
-            cellularEnabled = preferences[Keys.cellular]
-                ?: CallSamplingSettings.DEFAULT_CELLULAR_ENABLED,
-            voipEnabled = preferences[Keys.voip]
-                ?: CallSamplingSettings.DEFAULT_VOIP_ENABLED,
-        )
-    }
+    val settings = dataStore.data.map { it.toSettings() }
     val missed = dataStore.data.map { p ->
         p[Keys.missedAt]?.let {
             MissedCallStart(
@@ -47,10 +40,17 @@ internal class CallsSettingsStore(context: Context, preferencesName: String) {
         }
     }
     val voipActive = dataStore.data.map { it[Keys.voipActive] ?: false }
-    suspend fun set(value: CallSamplingSettings) = dataStore.edit {
-        it[Keys.cellular] = value.cellularEnabled; it[Keys.voip] =
-        value.voipEnabled
+    /** Reads and writes in one edit so concurrent changes to different settings do not overwrite each other. */
+    suspend fun update(transform: (CallSamplingSettings) -> CallSamplingSettings) = dataStore.edit {
+        val value = transform(it.toSettings())
+        it[Keys.cellular] = value.cellularEnabled
+        it[Keys.voip] = value.voipEnabled
     }
+
+    private fun Preferences.toSettings() = CallSamplingSettings(
+        cellularEnabled = this[Keys.cellular] ?: CallSamplingSettings.DEFAULT_CELLULAR_ENABLED,
+        voipEnabled = this[Keys.voip] ?: CallSamplingSettings.DEFAULT_VOIP_ENABLED,
+    )
 
     suspend fun recordMissed(code: CallRunCode) = dataStore.edit {
         it[Keys.missedAt] = System.currentTimeMillis(); it[Keys.missedCode] = code.name

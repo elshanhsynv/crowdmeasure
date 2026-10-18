@@ -148,7 +148,7 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
 
     private suspend fun setting(transform: (CallSamplingSettings) -> CallSamplingSettings): CallSamplingResult<Unit> {
         val rt = runtime() ?: return CallSamplingResult.Failure(CallSamplingError.NotInstalled)
-        return operational { rt.settingsStore.set(transform(rt.settingsStore.settings.first())) }
+        return operational { rt.settingsStore.update(transform) }
     }
 
     private suspend fun operational(block: suspend () -> Unit): CallSamplingResult<Unit> = try {

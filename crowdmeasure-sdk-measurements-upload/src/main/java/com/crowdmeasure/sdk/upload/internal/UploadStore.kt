@@ -30,12 +30,14 @@ internal class DefaultInstallationIdProvider(context: Context, preferencesName: 
     private val dataStore: DataStore<Preferences> = UploadDataStores.get(context, preferencesName)
 
     override suspend fun getInstallationId(): String {
-        var id = dataStore.data.map { it[Keys.installId] }.firstOrNull()
-        if (id.isNullOrBlank()) {
-            id = UUID.randomUUID().toString()
-            dataStore.edit { it[Keys.installId] = id }
+        dataStore.data.map { it[Keys.installId] }.firstOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { return it }
+        // Generate inside edit() so concurrent first calls agree on a single ID.
+        val updated = dataStore.edit {
+            if (it[Keys.installId].isNullOrBlank()) it[Keys.installId] = UUID.randomUUID().toString()
         }
-        return id
+        return checkNotNull(updated[Keys.installId])
     }
 }
 

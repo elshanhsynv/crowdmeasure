@@ -1,7 +1,5 @@
 package com.example.crowdmeasure.presentation.screens.settings
 
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,7 +29,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.presentation.screens.settings.components.BackgroundReliabilityCard
 import com.example.crowdmeasure.presentation.screens.settings.components.BackgroundWorkStatusCard
@@ -86,7 +84,11 @@ internal fun CollectionSettingsTab(
         locationServicesOn = isLocationServicesEnabled(context)
     }
 
-    LaunchedEffect(Unit) { refreshCallSamplingPrerequisites() }
+    // Re-check on every resume so returning from system settings shows the current state.
+    LifecycleResumeEffect(Unit) {
+        refreshCallSamplingPrerequisites()
+        onPauseOrDispose { }
+    }
 
     Column(
         modifier = Modifier
@@ -121,7 +123,7 @@ internal fun CollectionSettingsTab(
             onEnableChanged = onSetCallSamplingEnabled,
             onVoipEnableChanged = onSetVoipCallSamplingEnabled,
             onOpenLocationSettings = {
-                context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                SystemSettingsIntents.openLocationSettings(context)
             },
             onOpenBatterySettings = {
                 SystemSettingsIntents.openBatteryOptimizationSettings(context)

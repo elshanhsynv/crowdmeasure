@@ -53,11 +53,15 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file(keystoreProperty("storeFile"))
-            storePassword = keystoreProperty("storePassword")
-            keyAlias = keystoreProperty("keyAlias")
-            keyPassword = keystoreProperty("keyPassword")
+        // Only when keystore.properties exists, so a checkout without it can still configure and
+        // build debug; release builds are then unsigned.
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                storeFile = file(keystoreProperty("storeFile"))
+                storePassword = keystoreProperty("storePassword")
+                keyAlias = keystoreProperty("keyAlias")
+                keyPassword = keystoreProperty("keyPassword")
+            }
         }
     }
 
@@ -72,7 +76,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -151,9 +155,6 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-
-    // WorkManager
-    implementation(libs.androidx.work.runtime.ktx)
 
     // Hilt
     implementation(libs.hilt.android)
