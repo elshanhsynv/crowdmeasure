@@ -37,7 +37,7 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
     override suspend fun setCellularSamplingEnabled(enabled: Boolean): CallSamplingResult<Unit> {
         val result = setting { it.copy(cellularEnabled = enabled) }
         if (!enabled && result is CallSamplingResult.Success) {
-            runCatching { CallSamplingService.stop(context, CallSource.CELLULAR) }
+            CallSamplingService.stop(CallSource.CELLULAR)
         }
         return result
     }
