@@ -29,6 +29,10 @@ class UpdateScheduler @Inject constructor(
         )
     }
 
+    fun cancelPeriodicChecks() {
+        workManager.cancelUniqueWork(UNIQUE_WORK_NAME)
+    }
+
     companion object {
         private const val UNIQUE_WORK_NAME = "app_update_check"
     }

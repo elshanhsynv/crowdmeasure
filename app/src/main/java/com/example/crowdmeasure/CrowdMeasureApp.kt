@@ -8,7 +8,6 @@ import com.example.crowdmeasure.domain.usecase.ApplyCollectionSettingsUseCase
 import com.example.crowdmeasure.workers.AppBackgroundMigration
 import com.example.crowdmeasure.workers.AppUploadMigration
 import com.example.crowdmeasure.workers.AppCallsMigration
-import com.example.crowdmeasure.update.UpdateScheduler
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
@@ -30,8 +29,6 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
     lateinit var appCallsMigration: AppCallsMigration
     @Inject
     lateinit var applyCollectionSettings: ApplyCollectionSettingsUseCase
-    @Inject
-    lateinit var updateScheduler: UpdateScheduler
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val workManagerConfiguration: Configuration
@@ -51,9 +48,9 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
             appBackgroundMigration.migrateOnce()
             appUploadMigration.migrateOnce()
             appCallsMigration.migrateOnce()
-            // Starts the enabled features only if the current consent is accepted; stops them otherwise.
+            // Starts the enabled features (and update checks) only if the current consent is
+            // accepted; stops them otherwise.
             applyCollectionSettings()
-            updateScheduler.schedulePeriodicChecks()
         }
     }
 }
