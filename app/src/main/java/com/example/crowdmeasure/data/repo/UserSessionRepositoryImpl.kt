@@ -10,10 +10,7 @@ class UserSessionRepositoryImpl(
 ) : UserSessionRepository {
 
     override val settings: Flow<AppSettings> = prefs.settings
-    override suspend fun setEndpointUrl(url: String) = prefs.setEndpointUrl(url)
-    override suspend fun setCollectOnlyWifi(enabled: Boolean) = prefs.setCollectOnlyWifi(enabled)
     override suspend fun setAutoRun(enabled: Boolean, intervalMinutes: Int) = prefs.setAutoRun(enabled, intervalMinutes)
-    override suspend fun setRetentionDays(days: Int) = prefs.setRetentionDays(days)
     override suspend fun acceptConsent(atUtcMs: Long) = prefs.acceptConsent(atUtcMs)
     override suspend fun setFirestoreUploadsEnabled(enabled: Boolean) {
         prefs.setFirestoreUploadsEnabled(enabled)
@@ -21,10 +18,6 @@ class UserSessionRepositoryImpl(
 
     override suspend fun setCallSamplingEnabled(enabled: Boolean) {
         prefs.setCallSamplingEnabled(enabled)
-    }
-
-    override suspend fun setWhatsappCallSamplingEnabled(enabled: Boolean) {
-        prefs.setWhatsappCallSamplingEnabled(enabled)
     }
 
     override suspend fun setVoipCallSamplingEnabled(enabled: Boolean) {

@@ -18,19 +18,14 @@ data class AppSettings(
     val consentGateDismissed: Boolean,
     val firestoreUploadsEnabled: Boolean,
     val callSamplingEnabled: Boolean,
-    val whatsappCallSamplingEnabled: Boolean,
     val voipCallSamplingEnabled: Boolean
 )
 
 interface UserSessionRepository {
     val settings: Flow<AppSettings>
-    suspend fun setEndpointUrl(url: String)
-    suspend fun setCollectOnlyWifi(enabled: Boolean)
     suspend fun setAutoRun(enabled: Boolean, intervalMinutes: Int)
-    suspend fun setRetentionDays(days: Int)
     suspend fun acceptConsent(atUtcMs: Long)
     suspend fun setFirestoreUploadsEnabled(enabled: Boolean)
     suspend fun setCallSamplingEnabled(enabled: Boolean)
-    suspend fun setWhatsappCallSamplingEnabled(enabled: Boolean)
     suspend fun setVoipCallSamplingEnabled(enabled: Boolean)
 }

@@ -9,14 +9,16 @@ import com.crowdmeasure.sdk.calls.upload.CallUploadClient
 import com.crowdmeasure.sdk.upload.MeasurementUploadClient
 import com.crowdmeasure.sdk.upload.MeasurementUploadResult
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
+import com.example.crowdmeasure.update.UpdateScheduler
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * The single place that turns SDK features on or off. The app settings are the user's intent
- * (on by default); they are only applied while the current consent version is accepted.
- * Without consent every feature is switched off, whatever the SDK defaults are.
+ * The single place that turns consent-gated features on or off: the SDK features and the
+ * periodic app update check. The app settings are the user's intent (on by default); they are
+ * only applied while the current consent version is accepted. Without consent every feature is
+ * switched off, whatever the SDK defaults are.
  */
 class ApplyCollectionSettingsUseCase @Inject constructor(
     private val session: UserSessionRepository,
@@ -24,6 +26,7 @@ class ApplyCollectionSettingsUseCase @Inject constructor(
     private val uploads: MeasurementUploadClient,
     private val calls: CallSamplingClient,
     private val callUploads: CallUploadClient,
+    private val updateScheduler: UpdateScheduler,
 ) {
     suspend operator fun invoke() {
         val settings = session.settings.first()
@@ -68,6 +71,8 @@ class ApplyCollectionSettingsUseCase @Inject constructor(
         callResults.filterIsInstance<CallSamplingResult.Failure>().forEach {
             Timber.w("Call sampling update failed: %s", it.error)
         }
+
+        if (consented) updateScheduler.schedulePeriodicChecks() else updateScheduler.cancelPeriodicChecks()
     }
 
     private companion object {

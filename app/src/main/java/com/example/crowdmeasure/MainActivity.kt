@@ -46,8 +46,10 @@ private fun MainContent() {
     val shouldShowConsent =
         settings != null && !settings!!.consentGateDismissed
 
-    LaunchedEffect(Unit) {
-        updateViewModel.checkOnStartup()
+    // Update checks contact the release host, so they wait for consent like every other feature.
+    val consentAccepted = settings?.consentGateDismissed == true
+    LaunchedEffect(consentAccepted) {
+        if (consentAccepted) updateViewModel.checkOnStartup()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

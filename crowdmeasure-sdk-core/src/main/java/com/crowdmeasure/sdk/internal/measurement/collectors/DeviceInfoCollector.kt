@@ -23,7 +23,7 @@ object DeviceInfoCollector {
         fun getAppName(context: Context): String {
             val stringId = context.applicationInfo.labelRes
             return if (stringId == 0) {
-                context.applicationInfo.nonLocalizedLabel.toString()
+                context.applicationInfo.nonLocalizedLabel?.toString().orEmpty()
             } else {
                 context.getString(stringId)
             }

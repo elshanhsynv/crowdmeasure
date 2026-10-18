@@ -1,6 +1,7 @@
 package com.crowdmeasure.sdk
 
 import android.content.Context
+import com.crowdmeasure.sdk.internal.isValidHttpsEndpoint
 import com.crowdmeasure.sdk.internal.DefaultCrowdMeasureSettingsStore
 import com.crowdmeasure.sdk.internal.DefaultDataMnoEligibilityEvaluator
 import com.crowdmeasure.sdk.internal.DefaultMeasurementStore
@@ -34,8 +35,8 @@ class CrowdMeasureSdk private constructor(
         ): CrowdMeasureSdk {
             require(config.databaseName.isNotBlank()) { "databaseName must not be blank" }
             require(config.preferencesName.isNotBlank()) { "preferencesName must not be blank" }
-            require(config.defaultEndpointUrl.startsWith("https://")) {
-                "defaultEndpointUrl must use HTTPS"
+            require(isValidHttpsEndpoint(config.defaultEndpointUrl)) {
+                "defaultEndpointUrl must be a valid HTTPS URL without credentials"
             }
             require(config.defaultRetentionDays in 1..90) {
                 "defaultRetentionDays must be between 1 and 90"

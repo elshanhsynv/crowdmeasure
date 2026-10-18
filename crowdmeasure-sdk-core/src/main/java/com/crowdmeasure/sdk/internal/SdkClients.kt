@@ -28,7 +28,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
-import java.net.URI
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 
@@ -108,8 +107,14 @@ internal class SdkDataClient(
 ) : DataClient {
     private val exporter = MeasurementExporter(context)
 
-    override suspend fun exportMeasurements(lastN: Int): CrowdMeasureResult<Uri> =
-        exporter.export(measurementStore.getLastN(lastN.coerceIn(1, 10_000)))
+    override suspend fun exportMeasurements(lastN: Int): CrowdMeasureResult<Uri> {
+        val measurements = try {
+            measurementStore.getLastN(lastN.coerceIn(1, 10_000))
+        } catch (error: Exception) {
+            return CrowdMeasureResult.Failure(CrowdMeasureError.PersistenceFailed(error))
+        }
+        return exporter.export(measurements)
+    }
 
     override suspend fun deleteAllMeasurements(): CrowdMeasureResult<Unit> =
         try {
@@ -136,11 +141,7 @@ internal class SdkSettingsClient(
     override fun observeSettings(): Flow<CrowdMeasureSettings> = store.settings
 
     override suspend fun setEndpointUrl(url: String): CrowdMeasureResult<Unit> {
-        val valid = runCatching {
-            val uri = URI(url.trim())
-            uri.scheme == "https" && !uri.host.isNullOrBlank()
-        }.getOrDefault(false)
-        if (!valid) {
+        if (!isValidHttpsEndpoint(url)) {
             return CrowdMeasureResult.Failure(
                 CrowdMeasureError.InvalidConfiguration("Endpoint must be a valid HTTPS URL")
             )

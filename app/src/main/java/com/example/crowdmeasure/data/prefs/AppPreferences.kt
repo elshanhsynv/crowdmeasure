@@ -28,7 +28,6 @@ class AppPreferences(private val context: Context) {
         const val DEFAULT_FIRESTORE_UPLOADS_ENABLED = true
         const val DEFAULT_CALL_SAMPLING_ENABLED = true
         const val DEFAULT_VOIP_CALL_SAMPLING_ENABLED = true
-        const val DEFAULT_WHATSAPP_CALL_SAMPLING_ENABLED = true
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -49,8 +48,6 @@ class AppPreferences(private val context: Context) {
             consentGateDismissed = acceptedVersion >= CONSENT_VERSION,
             firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: DEFAULT_FIRESTORE_UPLOADS_ENABLED,
             callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: DEFAULT_CALL_SAMPLING_ENABLED,
-            // Retained for existing-data compatibility; WhatsApp detection is not available.
-            whatsappCallSamplingEnabled = prefs[DataStoreKeys.WHATSAPP_CALL_SAMPLING_ENABLED] ?: DEFAULT_WHATSAPP_CALL_SAMPLING_ENABLED,
             voipCallSamplingEnabled = prefs[DataStoreKeys.VOIP_CALL_SAMPLING_ENABLED] ?: DEFAULT_VOIP_CALL_SAMPLING_ENABLED,
         )
     }
@@ -71,10 +68,6 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setEndpointUrl(url: String) {
         context.dataStore.edit { it[DataStoreKeys.ENDPOINT_URL] = url.trim() }
-    }
-
-    suspend fun setCollectOnlyWifi(enabled: Boolean) {
-        context.dataStore.edit { it[DataStoreKeys.COLLECT_ONLY_WIFI] = enabled }
     }
 
     suspend fun setAutoRun(enabled: Boolean, intervalMinutes: Int) {
@@ -102,10 +95,6 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setCallSamplingEnabled(enabled: Boolean) {
         context.dataStore.edit { it[DataStoreKeys.CALL_SAMPLING_ENABLED] = enabled }
-    }
-
-    suspend fun setWhatsappCallSamplingEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[DataStoreKeys.WHATSAPP_CALL_SAMPLING_ENABLED] = enabled }
     }
 
     suspend fun setVoipCallSamplingEnabled(enabled: Boolean) {

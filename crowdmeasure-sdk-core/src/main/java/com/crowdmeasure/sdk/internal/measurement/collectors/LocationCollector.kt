@@ -236,11 +236,17 @@ object LocationCollector {
 
                 cont.invokeOnCancellation { client.removeLocationUpdates(callback) }
 
-                client.requestLocationUpdates(request, callback, Looper.getMainLooper())
-                    .addOnFailureListener {
-                        client.removeLocationUpdates(callback)
-                        finish(null)
-                    }
+                try {
+                    client.requestLocationUpdates(request, callback, Looper.getMainLooper())
+                        .addOnFailureListener {
+                            client.removeLocationUpdates(callback)
+                            finish(null)
+                        }
+                } catch (_: SecurityException) {
+                    // Permission revoked mid-run: no location for this measurement, but keep the rest.
+                    client.removeLocationUpdates(callback)
+                    finish(null)
+                }
             }
         }
     }

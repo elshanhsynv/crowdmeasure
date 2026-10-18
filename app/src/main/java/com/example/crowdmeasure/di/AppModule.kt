@@ -1,7 +1,6 @@
 package com.example.crowdmeasure.di
 
 import android.content.Context
-import com.example.crowdmeasure.data.export.Exporter
 import com.example.crowdmeasure.data.prefs.AppPreferences
 import com.example.crowdmeasure.data.repo.AppMeasurementStore
 import com.example.crowdmeasure.data.repo.AppSdkSettingsStore
@@ -39,6 +38,7 @@ import com.example.crowdmeasure.presentation.util.AppLog
 import com.example.crowdmeasure.update.ApkVerifier
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -50,7 +50,10 @@ object AppModule {
         AppPreferences(context)
 
     @Provides @Singleton
-    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder().build()
+    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        // Bounds a whole request, including an APK download that trickles data slowly.
+        .callTimeout(10, TimeUnit.MINUTES)
+        .build()
 
     @Provides @Singleton
     fun provideJson(): Json = Json {
@@ -154,8 +157,4 @@ object AppModule {
             installationIdProvider = CallInstallationIdProvider { prefs.installationId() },
         ),
     )
-
-    @Provides @Singleton
-    fun provideExporter(@ApplicationContext context: Context): Exporter =
-        Exporter(context)
 }

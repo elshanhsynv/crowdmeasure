@@ -31,10 +31,13 @@ class UpdateRepository @Inject constructor(
 
     suspend fun downloadVerifyAndInstall(metadata: UpdateMetadata): Result<Unit> = withContext(io) {
         runCatching {
+            // Ask for the install permission before downloading, so the user does not download twice.
+            if (!installer.canRequestPackageInstalls()) throw InstallPermissionRequiredException()
             analytics.downloadStarted(metadata)
             val apkFile = downloader.download(metadata)
-            check(verifier.verify(apkFile, metadata.sha256)) {
-                "APK SHA-256 did not match latest.json"
+            if (!verifier.verify(apkFile, metadata.sha256)) {
+                apkFile.delete()
+                error("APK SHA-256 did not match latest.json")
             }
             analytics.downloadVerified(metadata)
             installer.install(apkFile)

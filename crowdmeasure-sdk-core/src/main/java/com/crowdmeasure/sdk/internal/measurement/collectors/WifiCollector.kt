@@ -30,7 +30,7 @@ object WifiCollector {
         val wifiInfo = resolveWifiInfo(context)
 
         val frequencyMhz = wifiInfo?.frequency?.takeIf { it > 0 }
-        val channelWidthMhz = channelWidthMhz(wifiInfo)
+        val channelWidthMhz = channelWidthMhz(resolveScanResult(context, wifiInfo?.bssid))
 
         Log.d("Wifi", "SSID=${wifiInfo?.ssid}")
         Log.d("Wifi", "BSSID=${wifiInfo?.bssid}")
@@ -95,8 +95,10 @@ object WifiCollector {
         }
     }
 
-    private fun channelWidthMhz(info: AndroidWifiInfo?): Int? {
-        return when (info?.linkSpeed) {
+    /** Channel width comes from the cached scan result; [AndroidWifiInfo] does not expose it. */
+    @SuppressLint("InlinedApi")
+    private fun channelWidthMhz(scan: ScanResult?): Int? {
+        return when (scan?.channelWidth) {
             ScanResult.CHANNEL_WIDTH_20MHZ -> 20
             ScanResult.CHANNEL_WIDTH_40MHZ -> 40
             ScanResult.CHANNEL_WIDTH_80MHZ -> 80
