@@ -41,8 +41,8 @@ android {
         applicationId = "com.example.crowdmeasure"
         minSdk = 29
         targetSdk = 37
-        versionCode = 13
-        versionName = "1.13"
+        versionCode = 14
+        versionName = "1.14"
         buildConfigField(
             "String",
             "UPDATE_METADATA_URL",
