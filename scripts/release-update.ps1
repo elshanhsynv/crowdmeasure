@@ -34,6 +34,21 @@ function Invoke-Checked {
     return $output | ForEach-Object { "$_" }
 }
 
+function Test-NativeCommand {
+    # True when the command exits 0. Its output, including stderr, is discarded. Windows
+    # PowerShell 5.1 would otherwise turn stderr (e.g. gh's "release not found") into a
+    # terminating error under $ErrorActionPreference = "Stop".
+    param([scriptblock]$Command)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $Command *> $null
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+    return $LASTEXITCODE -eq 0
+}
+
 function Get-BuildTool {
     param([string]$Name)
     $sdk = $env:ANDROID_HOME
@@ -166,8 +181,7 @@ if (-not $SkipUpload) {
     if (-not $HasGh) {
         throw "gh CLI not found. Install GitHub CLI, or upload $StagedApk to release $Tag manually and rerun with -SkipUpload -SkipBuild."
     }
-    gh release view $Tag --repo $ReleaseRepo *> $null
-    if ($LASTEXITCODE -ne 0) {
+    if (-not (Test-NativeCommand { gh release view $Tag --repo $ReleaseRepo })) {
         Invoke-Checked "Creating release $Tag" { gh release create $Tag $StagedApk --repo $ReleaseRepo --title $Tag --notes $ReleaseNotes } | Out-Null
     } else {
         $Existing = Invoke-Checked "Listing release assets" { gh release view $Tag --repo $ReleaseRepo --json assets --jq '.assets[].name' }
@@ -184,6 +198,10 @@ if (-not $SkipUpload) {
 
 # --- Only point clients at the asset once it is really served with this exact content ----------
 $Downloaded = Join-Path $StagingDir "$ApkName.published"
+# Windows PowerShell 5.1: the progress bar makes large downloads very slow, and older .NET
+# defaults may not offer TLS 1.2, which GitHub requires.
+$ProgressPreference = "SilentlyContinue"
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 try {
     Invoke-WebRequest -Uri $AssetUrl -OutFile $Downloaded -UseBasicParsing
 } catch {
@@ -204,8 +222,7 @@ foreach ($RepoPath in $MetadataRepoPaths) {
 if (-not $NoCommit) {
     foreach ($RepoPath in $MetadataRepoPaths) {
         Invoke-Checked "Staging latest.json in $RepoPath" { git -C $RepoPath add latest.json } | Out-Null
-        git -C $RepoPath diff --cached --quiet
-        if ($LASTEXITCODE -eq 0) {
+        if (Test-NativeCommand { git -C $RepoPath diff --cached --quiet }) {
             Write-Host "latest.json unchanged in $RepoPath; nothing to commit."
             continue
         }
