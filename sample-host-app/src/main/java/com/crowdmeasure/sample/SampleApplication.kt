@@ -14,6 +14,9 @@ import com.crowdmeasure.sdk.upload.MeasurementUploadError
 import com.crowdmeasure.sdk.upload.MeasurementUploader
 import com.crowdmeasure.sdk.upload.MeasurementUploaderResult
 import com.crowdmeasure.sdk.calls.CallSamplingClient
+import com.crowdmeasure.sdk.calls.CallSamplingError
+import com.crowdmeasure.sdk.calls.CallUploader
+import com.crowdmeasure.sdk.calls.CallUploaderResult
 import com.crowdmeasure.sdk.calls.CallSamplingConfig
 import com.crowdmeasure.sdk.calls.CrowdMeasureCalls
 import com.crowdmeasure.sdk.calls.upload.CallUploadClient
@@ -40,13 +43,17 @@ class SampleApplication : Application() {
         super.onCreate()
         sdk = CrowdMeasureSdk.create(this)
         background = CrowdMeasureBackground.install(this, sdk)
-        val uploader = runCatching {
-            CrowdMeasureFirestoreMeasurements.create(FirebaseFirestore.getInstance())
-        }.getOrElse { initError ->
-            MeasurementUploader { _ ->
-                MeasurementUploaderResult.Failure(MeasurementUploadError.BackendRejected(initError))
-            }
-        }
+        // The sample ships without google-services.json; without Firebase both uploaders report
+        // a backend failure instead of crashing the app at startup.
+        val firestore = runCatching { FirebaseFirestore.getInstance() }
+        val uploader = firestore.fold(
+            onSuccess = { CrowdMeasureFirestoreMeasurements.create(it) },
+            onFailure = { initError ->
+                MeasurementUploader { _ ->
+                    MeasurementUploaderResult.Failure(MeasurementUploadError.BackendRejected(initError))
+                }
+            },
+        )
         uploads = CrowdMeasureUploads.install(this, sdk, uploader)
         calls = CrowdMeasureCalls.install(
             context = this,
@@ -59,7 +66,14 @@ class SampleApplication : Application() {
             this,
             calls,
             CallUploadConfig(
-                uploader = CrowdMeasureFirestoreCalls.create(FirebaseFirestore.getInstance()),
+                uploader = firestore.fold(
+                    onSuccess = { CrowdMeasureFirestoreCalls.create(it) },
+                    onFailure = { initError ->
+                        CallUploader { _ ->
+                            CallUploaderResult.Failure(CallSamplingError.BackendRejected(initError))
+                        }
+                    },
+                ),
             ),
         )
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {

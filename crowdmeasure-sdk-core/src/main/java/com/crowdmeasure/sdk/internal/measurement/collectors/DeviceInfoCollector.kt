@@ -2,7 +2,6 @@ package com.crowdmeasure.sdk.internal.measurement.collectors
 
 import android.content.Context
 import android.os.Build
-import android.util.Log
 import com.crowdmeasure.sdk.model.DeviceInfo
 
 object DeviceInfoCollector {
@@ -30,11 +29,6 @@ object DeviceInfoCollector {
         }
 
         val appName = getAppName(context = context)
-
-        Log.d(
-            "DeviceInfoCollector",
-            "Collecting device info for app: $appName, version: $versionName"
-        )
 
         val deviceInfo = DeviceInfo(
             appName = appName.ifBlank { "unknown" },
