@@ -1,6 +1,5 @@
 package com.crowdmeasure.sdk.internal.measurement.collectors
 
-import android.util.Log
 import androidx.annotation.WorkerThread
 import com.crowdmeasure.sdk.model.PerformanceInfo
 import com.crowdmeasure.sdk.model.ProtocolType
@@ -95,8 +94,6 @@ object PerformanceCollector {
 
         val probeFailurePct = (failures.toDouble() / attempts.toDouble()) * 100.0
         val ping = PingCollector.run(okHttp, parsedUrl)
-
-        Log.d("PerformanceCollector", "Ping: $ping")
 
         return PerformanceInfo(
             endpointId = endpointId,

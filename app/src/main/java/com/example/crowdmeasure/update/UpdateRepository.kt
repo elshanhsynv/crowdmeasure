@@ -12,6 +12,7 @@ class UpdateRepository @Inject constructor(
     private val metadataClient: UpdateMetadataClient,
     private val downloader: ApkDownloader,
     private val verifier: ApkVerifier,
+    private val identityVerifier: ApkIdentityVerifier,
     private val installer: UpdateInstaller,
     private val notifier: UpdateNotifier,
     private val analytics: UpdateAnalytics,
@@ -38,6 +39,12 @@ class UpdateRepository @Inject constructor(
             if (!verifier.verify(apkFile, metadata.sha256)) {
                 apkFile.delete()
                 error("APK SHA-256 did not match latest.json")
+            }
+            try {
+                identityVerifier.verify(apkFile, metadata)
+            } catch (error: ApkIdentityMismatchException) {
+                apkFile.delete()
+                throw error
             }
             analytics.downloadVerified(metadata)
             installer.install(apkFile)

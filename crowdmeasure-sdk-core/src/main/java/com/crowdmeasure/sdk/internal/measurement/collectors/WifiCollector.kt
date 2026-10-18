@@ -10,7 +10,6 @@ import android.net.wifi.ScanResult
 import android.net.wifi.WifiInfo as AndroidWifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
-import android.util.Log
 import androidx.annotation.WorkerThread
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
@@ -31,12 +30,6 @@ object WifiCollector {
 
         val frequencyMhz = wifiInfo?.frequency?.takeIf { it > 0 }
         val channelWidthMhz = channelWidthMhz(resolveScanResult(context, wifiInfo?.bssid))
-
-        Log.d("Wifi", "SSID=${wifiInfo?.ssid}")
-        Log.d("Wifi", "BSSID=${wifiInfo?.bssid}")
-        Log.d("Wifi", "NetworkId=${wifiInfo?.networkId}")
-        Log.d("Wifi", "Frequency=${wifiInfo?.frequency}")
-        Log.d("Wifi", "TransportInfo=${wifiInfo}")
 
         val ssid = wifiInfo?.ssid
             ?.takeUnless { it == WifiManager.UNKNOWN_SSID }
