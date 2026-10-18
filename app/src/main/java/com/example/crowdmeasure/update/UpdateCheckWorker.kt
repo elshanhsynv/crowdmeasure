@@ -14,7 +14,9 @@ class UpdateCheckWorker @AssistedInject constructor(
     private val updateRepository: UpdateRepository
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
-        return updateRepository.checkForUpdate(notify = true)
-            .fold(onSuccess = { Result.success() }, onFailure = { Result.retry() })
+        return updateRepository.checkForUpdate(notify = true).fold(
+            onSuccess = { Result.success() },
+            onFailure = { Result.retry() }
+        )
     }
 }

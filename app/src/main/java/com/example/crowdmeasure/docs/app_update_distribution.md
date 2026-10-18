@@ -7,19 +7,19 @@ This app uses a self-update flow for users who install APKs outside Google Play.
 APK release metadata is hosted in the public GitHub repository:
 
 ```text
-https://github.com/elshanwork/crowdmeasure-releases
+https://github.com/elshanhsynv/crowdmeasure-releases
 ```
 
 GitHub Pages serves the metadata file:
 
 ```text
-https://elshanwork.github.io/crowdmeasure-releases/latest.json
+https://elshanhsynv.github.io/crowdmeasure-releases/latest.json
 ```
 
 APK files are not committed to that repository. They are uploaded as GitHub Release assets, for example:
 
 ```text
-https://github.com/elshanwork/crowdmeasure-releases/releases/download/v1.3/app-v3.apk
+https://github.com/elshanhsynv/crowdmeasure-releases/releases/download/v1.3/app-v3.apk
 ```
 
 ## Private App Repository Configuration
@@ -27,7 +27,7 @@ https://github.com/elshanwork/crowdmeasure-releases/releases/download/v1.3/app-v
 The private app repository configures the metadata URL through Gradle:
 
 ```properties
-crowdmeasure.updateMetadataUrl=https://elshanwork.github.io/crowdmeasure-releases/latest.json
+crowdmeasure.updateMetadataUrl=https://elshanhsynv.github.io/crowdmeasure-releases/latest.json
 ```
 
 The app reads this value into `BuildConfig.UPDATE_METADATA_URL`. If the Gradle property is missing, `app/build.gradle.kts` uses the same GitHub Pages URL as the default.
@@ -40,7 +40,7 @@ The public `latest.json` file must use this shape:
 {
   "versionCode": 3,
   "versionName": "1.3",
-  "apkUrl": "https://github.com/elshanwork/crowdmeasure-releases/releases/download/v1.3/app-v3.apk",
+  "apkUrl": "https://github.com/elshanhsynv/crowdmeasure-releases/releases/download/v1.3/app-v3.apk",
   "sha256": "PASTE_SHA256_HASH_HERE",
   "forceUpdate": false,
   "releaseNotes": "Bug fixes and stability improvements."
@@ -63,6 +63,12 @@ Use the helper script from the private repo root:
 ```
 
 The script builds the signed release APK, stages it as `app-v<versionCode>.apk`, computes SHA-256, updates the public repo `latest.json`, optionally uploads the APK with GitHub CLI, then commits and pushes `latest.json`.
+
+Builds up to 1.12 have `https://elshanwork.github.io/crowdmeasure-releases/latest.json` compiled in. Until those installs have updated, pass a clone of the old Pages repository so its `latest.json` is kept current too:
+
+```powershell
+.\scripts\release-update.ps1 -LegacyReleaseRepoPath ..\crowdmeasure-releases-legacy
+```
 
 Manual flow:
 

@@ -20,11 +20,20 @@ data class UpdateUiState(
 
 @HiltViewModel
 class UpdateViewModel @Inject constructor(
-    private val updateRepository: UpdateRepository
+    private val updateRepository: UpdateRepository,
+    installEvents: UpdateInstallEvents
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(UpdateUiState())
     val uiState: StateFlow<UpdateUiState> = _uiState.asStateFlow()
     private var startupCheckStarted = false
+
+    init {
+        viewModelScope.launch {
+            installEvents.failures.collect { error ->
+                _uiState.update { it.copy(installing = false, message = null, error = error) }
+            }
+        }
+    }
 
     fun checkOnStartup() {
         if (startupCheckStarted) return
@@ -49,30 +58,35 @@ class UpdateViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    installing = true, message = "Preparing update", error = null
+                    installing = true,
+                    message = "Preparing update",
+                    error = null
                 )
             }
 
-            updateRepository.downloadVerifyAndInstall(metadata).fold(onSuccess = {
-                _uiState.update {
-                    it.copy(
-                        installing = false,
-                        message = "Confirm installation in the system prompt.",
-                        error = null
-                    )
+            updateRepository.downloadVerifyAndInstall(metadata).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            installing = false,
+                            message = "Confirm installation in the system prompt.",
+                            error = null
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    if (error is InstallPermissionRequiredException) {
+                        updateRepository.openUnknownAppSourcesSettings()
+                    }
+                    _uiState.update {
+                        it.copy(
+                            installing = false,
+                            message = null,
+                            error = error.message ?: "Update failed. Try again."
+                        )
+                    }
                 }
-            }, onFailure = { error ->
-                if (error is InstallPermissionRequiredException) {
-                    updateRepository.openUnknownAppSourcesSettings()
-                }
-                _uiState.update {
-                    it.copy(
-                        installing = false,
-                        message = null,
-                        error = error.message ?: "Update failed. Try again."
-                    )
-                }
-            })
+            )
         }
     }
 
@@ -80,23 +94,29 @@ class UpdateViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(checking = true, error = null) }
 
-            updateRepository.checkForUpdate(notify = notify).fold(onSuccess = { availability ->
-                _uiState.update {
-                    it.copy(
-                        checking = false, update = availability.metadata, error = null
-                    )
+            updateRepository.checkForUpdate(notify = notify).fold(
+                onSuccess = { availability ->
+                    _uiState.update {
+                        it.copy(
+                            checking = false,
+                            update = availability.metadata,
+                            error = null
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            checking = false,
+                            error = if (it.update?.forceUpdate == true) {
+                                error.message ?: "Could not check for updates."
+                            } else {
+                                null
+                            }
+                        )
+                    }
                 }
-            }, onFailure = { error ->
-                _uiState.update {
-                    it.copy(
-                        checking = false, error = if (it.update?.forceUpdate == true) {
-                            error.message ?: "Could not check for updates."
-                        } else {
-                            null
-                        }
-                    )
-                }
-            })
+            )
         }
     }
 }

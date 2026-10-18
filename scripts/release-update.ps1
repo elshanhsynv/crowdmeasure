@@ -1,5 +1,6 @@
 param(
     [string]$ReleaseRepoPath,
+    [string]$LegacyReleaseRepoPath,
     [string]$ReleaseNotes = "Bug fixes and stability improvements.",
     [switch]$ForceUpdate,
     [switch]$SkipBuild,
@@ -54,7 +55,16 @@ $Latest = [ordered]@{
     forceUpdate = [bool]$ForceUpdate
     releaseNotes = $ReleaseNotes
 }
-$Latest | ConvertTo-Json | Set-Content (Join-Path $ReleaseRepoPath "latest.json")
+$LatestJson = $Latest | ConvertTo-Json
+$Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+$MetadataRepoPaths = @($ReleaseRepoPath)
+if ($LegacyReleaseRepoPath) {
+    # Builds up to 1.12 poll the old GitHub Pages URL; keep its latest.json current so they can still update.
+    $MetadataRepoPaths += (Resolve-Path $LegacyReleaseRepoPath).Path
+}
+foreach ($RepoPath in $MetadataRepoPaths) {
+    [System.IO.File]::WriteAllText((Join-Path $RepoPath "latest.json"), $LatestJson, $Utf8NoBom)
+}
 
 if (-not $SkipUpload) {
     $gh = Get-Command gh -ErrorAction SilentlyContinue
@@ -63,7 +73,7 @@ if (-not $SkipUpload) {
     } else {
         Push-Location $ReleaseRepoPath
         try {
-            gh release view $ *> $null
+            gh release view $Tag *> $null
             if ($LASTEXITCODE -ne 0) {
                 gh release create $Tag $StagedApk --title $Tag --notes $ReleaseNotes
             } else {
@@ -77,15 +87,17 @@ if (-not $SkipUpload) {
 }
 
 if (-not $NoCommit) {
-    Push-Location $ReleaseRepoPath
-    try {
-        git add latest.json
-        git commit -m "Release $Tag"
-        if ($LASTEXITCODE -ne 0) { throw "Could not commit latest.json" }
-        git push
-        if ($LASTEXITCODE -ne 0) { throw "Could not push latest.json" }
-    } finally {
-        Pop-Location
+    foreach ($RepoPath in $MetadataRepoPaths) {
+        Push-Location $RepoPath
+        try {
+            git add latest.json
+            git commit -m "Release $Tag"
+            if ($LASTEXITCODE -ne 0) { throw "Could not commit latest.json in $RepoPath" }
+            git push
+            if ($LASTEXITCODE -ne 0) { throw "Could not push latest.json in $RepoPath" }
+        } finally {
+            Pop-Location
+        }
     }
 }
 

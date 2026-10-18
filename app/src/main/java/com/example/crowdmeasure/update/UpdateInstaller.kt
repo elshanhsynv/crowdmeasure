@@ -17,11 +17,13 @@ import androidx.core.net.toUri
 class UpdateInstaller @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    fun canRequestPackageInstalls(): Boolean = context.packageManager.canRequestPackageInstalls()
+    fun canRequestPackageInstalls(): Boolean =
+        context.packageManager.canRequestPackageInstalls()
 
     fun openUnknownAppSourcesSettings() {
         val intent = Intent(
-            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:${context.packageName}".toUri()
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            "package:${context.packageName}".toUri()
         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
@@ -32,9 +34,8 @@ class UpdateInstaller @Inject constructor(
         }
 
         val installer = context.packageManager.packageInstaller
-        val params =
-            PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-                .apply { setAppPackageName(context.packageName) }
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+            .apply { setAppPackageName(context.packageName) }
         val sessionId = installer.createSession(params)
 
         try {
@@ -46,17 +47,20 @@ class UpdateInstaller @Inject constructor(
                     }
                 }
 
-                val flags =
-                    PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        PendingIntent.FLAG_MUTABLE
-                    } else {
-                        0
-                    }
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                ) {
+                    PendingIntent.FLAG_MUTABLE
+                } else {
+                    0
+                }
 
                 val callback = PendingIntent.getBroadcast(
-                    context, sessionId, Intent(
-                        context, UpdateInstallReceiver::class.java
-                    ).setPackage(context.packageName), flags
+                    context,
+                    sessionId,
+                    Intent(context, UpdateInstallReceiver::class.java)
+                        .setPackage(context.packageName),
+                    flags
                 )
                 session.commit(callback.intentSender)
             }
