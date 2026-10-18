@@ -24,6 +24,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -162,6 +163,9 @@ class SettingsViewModel @Inject constructor(
                 lastMissedLabel = if (reason == null) "None" else "$timestamp • $reason",
                 voipMonitorActive = status.voipMonitorActive
             )
+        }.catch { error ->
+            Timber.e(error, "Call sampling status could not be loaded")
+            emit(CallSamplingStatusUiState.empty())
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),

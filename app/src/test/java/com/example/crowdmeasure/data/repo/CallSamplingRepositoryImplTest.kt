@@ -150,6 +150,40 @@ class CallSamplingRepositoryImplTest {
     }
 
     @Test
+    fun undecodableSampleRow_isSkippedInsteadOfFailing() = runBlocking {
+        val session = repository.startSession(
+            callType = CallType.INCOMING,
+            callSource = CallSource.CELLULAR,
+            intervalSeconds = 30
+        )
+        // A row neither the current nor the legacy sample shape can read.
+        dao.insertSample(
+            CallCellSampleEntity(
+                sessionId = session.sessionId,
+                sampledAtUtcMs = 1_000L,
+                elapsedMs = 0L,
+                cellJson = "{}",
+            )
+        )
+        repository.insertSample(
+            sessionId = session.sessionId,
+            sampledAtUtcMs = 2_000L,
+            elapsedMs = 1_000L,
+            cellInfo = testCellInfo(),
+        )
+
+        val listed = repository.observeRecentSessions().first().single()
+        val samples = repository.observeSamples(session.sessionId).first()
+        val exported = repository.getRecentSessionsForExport(10).single()
+
+        assertEquals(session.sessionId, listed.sessionId)
+        assertEquals(2_000L, listed.latestSample?.sampledAtUtcMs)
+        assertEquals(listOf(2_000L), samples.map { it.sampledAtUtcMs })
+        assertEquals(listOf(2_000L), exported.samples.map { it.sampledAtUtcMs })
+        assertEquals("Test", exported.session.simCarriers.single().carrierName)
+    }
+
+    @Test
     fun finishSession_closesOnlyActiveSession() = runBlocking {
         val session = repository.startSession(
             callType = CallType.INCOMING,

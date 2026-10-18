@@ -271,7 +271,7 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
     )
 
     private fun SampleEntity.domainOrNull() = runCatching {
-        val stored = decodeStoredSample(cellJson)
+        val stored = decodeStoredSampleOrNull(cellJson) ?: return@runCatching null
         CallCellSample(
             id,
             sessionId,
@@ -285,7 +285,7 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
     }.getOrNull()
 
     private fun SampleEntity.carriersOrNull(): Pair<String, List<CarrierInfo>>? =
-        decodeStoredSample(cellJson).cell.simCarriers.takeIf { it.isNotEmpty() }
+        decodeStoredSampleOrNull(cellJson)?.cell?.simCarriers?.takeIf { it.isNotEmpty() }
             ?.let { sessionId to it }
 
     private fun List<SampleEntity>.firstCarriersOrNull(): List<CarrierInfo>? =
@@ -303,11 +303,15 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
         }
     }
 
-    private fun decodeStoredSample(value: String): StoredCallSample =
+    /**
+     * Decodes the current sample shape, falling back to the legacy cell-only shape. Returns null
+     * for a row neither can read so that one bad row is skipped instead of failing every flow
+     * and export that reads it.
+     */
+    private fun decodeStoredSampleOrNull(value: String): StoredCallSample? =
         runCatching { json.decodeFromString(StoredCallSample.serializer(), value) }
-            .getOrElse {
-                StoredCallSample(json.decodeFromString(CellInfo.serializer(), value))
-            }
+            .recoverCatching { StoredCallSample(json.decodeFromString(CellInfo.serializer(), value)) }
+            .getOrNull()
 
     private fun encodeCarriers(value: List<CarrierInfo>): String? =
         value.takeIf { it.isNotEmpty() }?.let {
