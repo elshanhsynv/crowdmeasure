@@ -16,6 +16,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    sourceSets {
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
+    }
 }
 
 ksp {
@@ -34,4 +37,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.room.testing)
 }

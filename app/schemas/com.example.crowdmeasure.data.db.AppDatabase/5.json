@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 5,
-    "identityHash": "0ba17f4517b0557b21d789453eeb18d5",
+    "identityHash": "b63bafdb4bc79cdd0d540ad94f6b7c26",
     "entities": [
       {
         "tableName": "measurements",
@@ -128,7 +128,7 @@
       },
       {
         "tableName": "call_cell_samples",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` TEXT NOT NULL, `sampledAtUtcMs` INTEGER NOT NULL, `elapsedMs` INTEGER NOT NULL, `cellJson` TEXT NOT NULL, FOREIGN KEY(`sessionId`) REFERENCES `call_sessions`(`sessionId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` TEXT NOT NULL, `sampledAtUtcMs` INTEGER NOT NULL, `elapsedMs` INTEGER NOT NULL, `cellJson` TEXT NOT NULL, `rat` TEXT, `nrState` TEXT, `dbm` INTEGER, `rsrpDbm` INTEGER, `rsrqDb` INTEGER, `sinrDb` INTEGER, `pci` INTEGER, `tac` INTEGER, `band` INTEGER, FOREIGN KEY(`sessionId`) REFERENCES `call_sessions`(`sessionId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -159,6 +159,51 @@
             "columnName": "cellJson",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "rat",
+            "columnName": "rat",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nrState",
+            "columnName": "nrState",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "dbm",
+            "columnName": "dbm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rsrpDbm",
+            "columnName": "rsrpDbm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rsrqDb",
+            "columnName": "rsrqDb",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sinrDb",
+            "columnName": "sinrDb",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "pci",
+            "columnName": "pci",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "tac",
+            "columnName": "tac",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "band",
+            "columnName": "band",
+            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -204,7 +249,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0ba17f4517b0557b21d789453eeb18d5')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b63bafdb4bc79cdd0d540ad94f6b7c26')"
     ]
   }
 }

@@ -336,9 +336,36 @@ internal class DefaultCallStore private constructor(private val dao: CallsDao) :
             }
         }
 
+        // v3 dropped the denormalized signal columns from call_cell_samples (all data lives in cellJson).
+        // SQLite on minSdk 29 has no DROP COLUMN, so the table is rebuilt.
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE call_cell_samples_new (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "sessionId TEXT NOT NULL, " +
+                        "sampledAtUtcMs INTEGER NOT NULL, " +
+                        "elapsedMs INTEGER NOT NULL, " +
+                        "cellJson TEXT NOT NULL, " +
+                        "FOREIGN KEY(sessionId) REFERENCES call_sessions(sessionId) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE)"
+                )
+                db.execSQL(
+                    "INSERT INTO call_cell_samples_new (id, sessionId, sampledAtUtcMs, elapsedMs, cellJson) " +
+                        "SELECT id, sessionId, sampledAtUtcMs, elapsedMs, cellJson FROM call_cell_samples"
+                )
+                db.execSQL("DROP TABLE call_cell_samples")
+                db.execSQL("ALTER TABLE call_cell_samples_new RENAME TO call_cell_samples")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_call_cell_samples_sessionId ON call_cell_samples(sessionId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_call_cell_samples_sampledAtUtcMs ON call_cell_samples(sampledAtUtcMs)")
+            }
+        }
+
+        internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+
         fun create(context: Context, name: String): CallStore = DefaultCallStore(
             Room.databaseBuilder(context, CallsDatabase::class.java, name)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(*MIGRATIONS)
                 .build()
                 .dao()
         )
