@@ -1,16 +1,15 @@
 package com.example.crowdmeasure.domain.usecase
 
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
-import com.crowdmeasure.sdk.upload.MeasurementUploadClient
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
+/** Turns uploads of both measurements and call sessions on or off. */
 class SetFirestoreUploadsEnabledUseCase @Inject constructor(
     private val session: UserSessionRepository,
-    private val uploads: MeasurementUploadClient,
+    private val applyCollectionSettings: ApplyCollectionSettingsUseCase,
 ) {
     suspend operator fun invoke(enabled: Boolean) {
         session.setFirestoreUploadsEnabled(enabled)
-        if (enabled) uploads.enable(60, true) else uploads.disable()
+        applyCollectionSettings()
     }
 }

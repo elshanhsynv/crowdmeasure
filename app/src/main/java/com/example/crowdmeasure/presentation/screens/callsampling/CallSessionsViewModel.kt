@@ -10,10 +10,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,6 +25,10 @@ class CallSessionsViewModel @Inject constructor(
     private val selectedSessionId = MutableStateFlow<String?>(null)
 
     val sessions: StateFlow<List<CallSession>> = calls.observeSessions()
+        .catch { error ->
+            Timber.e(error, "Call sessions could not be loaded")
+            emit(emptyList())
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
@@ -33,6 +39,10 @@ class CallSessionsViewModel @Inject constructor(
     val samples: StateFlow<List<CallCellSample>> = selectedSessionId
         .flatMapLatest { sessionId ->
             if (sessionId == null) flowOf(emptyList()) else calls.observeSamples(sessionId)
+        }
+        .catch { error ->
+            Timber.e(error, "Call samples could not be loaded")
+            emit(emptyList())
         }
         .stateIn(
             scope = viewModelScope,

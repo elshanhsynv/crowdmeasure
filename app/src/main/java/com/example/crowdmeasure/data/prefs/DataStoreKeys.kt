@@ -15,6 +15,8 @@ object DataStoreKeys {
     val RETENTION_DAYS = intPreferencesKey("retention_days")
     val INSTALL_ID = stringPreferencesKey("install_id")
     val CONSENT_GATE_DISMISSED = booleanPreferencesKey("consent_gate_dismissed")
+    val CONSENT_ACCEPTED_VERSION = intPreferencesKey("consent_accepted_version")
+    val CONSENT_ACCEPTED_AT_UTC_MS = longPreferencesKey("consent_accepted_at_utc_ms")
     val FIRESTORE_UPLOADS_ENABLED = booleanPreferencesKey("firestore_uploads_enabled")
     val CALL_SAMPLING_ENABLED = booleanPreferencesKey("call_sampling_enabled")
     val WHATSAPP_CALL_SAMPLING_ENABLED =

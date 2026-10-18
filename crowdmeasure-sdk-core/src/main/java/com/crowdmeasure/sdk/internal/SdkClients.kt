@@ -114,6 +114,7 @@ internal class SdkDataClient(
     override suspend fun deleteAllMeasurements(): CrowdMeasureResult<Unit> =
         try {
             measurementStore.deleteAll()
+            exporter.deleteExports()
             CrowdMeasureResult.Success(Unit)
         } catch (error: Exception) {
             CrowdMeasureResult.Failure(CrowdMeasureError.PersistenceFailed(error))

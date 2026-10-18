@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import timber.log.Timber
 import java.util.UUID
 
 @Serializable
@@ -231,7 +232,7 @@ class CallSamplingRepositoryImpl(
 
     private fun CallCellSampleEntity.toDomainOrNull(): CallCellSample? =
         runCatching {
-            val stored = decodeStoredSample(cellJson)
+            val stored = decodeStoredSampleOrNull(cellJson) ?: return@runCatching null
             CallCellSample(
                 id = id,
                 sessionId = sessionId,
@@ -245,7 +246,7 @@ class CallSamplingRepositoryImpl(
         }.getOrNull()
 
     private fun CallCellSampleEntity.carriersOrNull(): Pair<String, List<CarrierInfo>>? =
-        decodeStoredSample(cellJson).cell.simCarriers.takeIf { it.isNotEmpty() }
+        decodeStoredSampleOrNull(cellJson)?.cell?.simCarriers?.takeIf { it.isNotEmpty() }
             ?.let { sessionId to it }
 
     private fun List<CallCellSampleEntity>.firstCarriersOrNull(): List<CarrierInfo>? =
@@ -263,11 +264,18 @@ class CallSamplingRepositoryImpl(
         }
     }
 
-    private fun decodeStoredSample(value: String): StoredCallSample =
+    /**
+     * Decodes the current sample shape, falling back to the legacy cell-only shape. Returns null
+     * for a row neither can read (e.g. written by an older, incompatible build) so that one bad
+     * row is skipped instead of failing every flow and export that reads it.
+     */
+    private fun decodeStoredSampleOrNull(value: String): StoredCallSample? =
         runCatching { Converters.json.decodeFromString(StoredCallSample.serializer(), value) }
-            .getOrElse {
+            .recoverCatching {
                 StoredCallSample(Converters.json.decodeFromString(CellInfo.serializer(), value))
             }
+            .onFailure { Timber.w("Skipping undecodable call sample: %s", it.message) }
+            .getOrNull()
 
     private fun encodeCarriers(value: List<CarrierInfo>): String? =
         value.takeIf { it.isNotEmpty() }?.let {

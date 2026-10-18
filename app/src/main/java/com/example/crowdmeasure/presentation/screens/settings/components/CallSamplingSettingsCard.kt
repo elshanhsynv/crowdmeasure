@@ -426,7 +426,7 @@ private fun SamplingToggleSection(
 }
 
 @Composable
-private fun SamplingToggleRow(
+internal fun SamplingToggleRow(
     title: String,
     subtitle: String,
     checked: Boolean,

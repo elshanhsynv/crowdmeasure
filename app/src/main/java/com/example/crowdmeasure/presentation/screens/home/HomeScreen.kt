@@ -146,7 +146,7 @@ private fun PermissionWarnings(state: HomeUiState) {
         } else if (!state.uploadsEnabled) {
             AppBanner(
                 title = "Uploads paused",
-                body = "Measurements will stay on this device until uploads are enabled.",
+                body = "Measurements stay on this device. Turn on Upload data in Settings › Collection to sync them.",
                 tone = BannerTone.Info
             )
         }

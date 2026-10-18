@@ -5,11 +5,14 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import com.crowdmeasure.sdk.calls.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -108,7 +111,7 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
         val rt = runtime() ?: return CallSamplingResult.Failure(CallSamplingError.NotInstalled)
         return try {
             val sessions = rt.store.getRecentSessions(lastN.coerceIn(1, 10_000))
-            val dir = File(context.cacheDir, "crowdmeasure-call-exports").apply { mkdirs() }
+            val dir = exportDirectory().apply { mkdirs() }
             val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val file = File(dir, "crowdmeasure_call_sessions_$stamp.json")
             file.writeText(jsonP.encodeToString(JsonObject.serializer(), callExportJson(sessions)))
@@ -128,8 +131,20 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
 
     override suspend fun deleteAll(): CallSamplingResult<Unit> {
         val rt = runtime() ?: return CallSamplingResult.Failure(CallSamplingError.NotInstalled)
-        return operational { rt.store.deleteAll() }
+        return operational {
+            // End any active session first so sampling does not keep writing into deleted rows.
+            rt.sampler.stop(CallSource.UNKNOWN)
+            rt.store.deleteAll()
+            withContext(Dispatchers.IO) {
+                val exports = exportDirectory()
+                if (exports.exists() && !exports.deleteRecursively()) {
+                    throw IOException("Could not delete $exports")
+                }
+            }
+        }
     }
+
+    private fun exportDirectory() = File(context.cacheDir, "crowdmeasure-call-exports")
 
     private suspend fun setting(transform: (CallSamplingSettings) -> CallSamplingSettings): CallSamplingResult<Unit> {
         val rt = runtime() ?: return CallSamplingResult.Failure(CallSamplingError.NotInstalled)
