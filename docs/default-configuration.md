@@ -34,7 +34,7 @@ Set `requireNotRoaming` to `true` to block new capture while the default data SI
 | Minimum interval | `20` minutes |
 | Maximum interval | `10080` minutes, or 7 days |
 
-Installing background support schedules nothing. Hosts still call `enable()`.
+Installing background support schedules nothing. Because the persisted setting defaults to enabled, `reschedule()` and `enqueueRunNow()` start collection without a prior `enable()`. Call `disable()` first if collection must wait for consent.
 
 ## Measurement Uploads
 
@@ -48,7 +48,7 @@ Installing background support schedules nothing. Hosts still call `enable()`.
 | Minimum interval | `20` minutes |
 | Maximum interval | `10080` minutes, or 7 days |
 
-Installing upload support schedules nothing. Hosts still call `enable()`.
+Installing upload support schedules nothing. Because the persisted setting defaults to enabled, `reschedule()`, `uploadNow()`, and `enqueueUploadNow()` upload without a prior `enable()`. Call `disable()` first if uploads must wait for consent.
 
 ## Calls
 

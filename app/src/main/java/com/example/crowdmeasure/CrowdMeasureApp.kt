@@ -4,14 +4,10 @@ import android.app.Application
 import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.example.crowdmeasure.data.prefs.AppPreferences
+import com.example.crowdmeasure.domain.usecase.ApplyCollectionSettingsUseCase
 import com.example.crowdmeasure.workers.AppBackgroundMigration
 import com.example.crowdmeasure.workers.AppUploadMigration
 import com.example.crowdmeasure.workers.AppCallsMigration
-import com.crowdmeasure.sdk.calls.CallSamplingClient
-import com.crowdmeasure.sdk.calls.upload.CallUploadClient
-import com.crowdmeasure.sdk.background.BackgroundCollectionClient
-import com.crowdmeasure.sdk.background.CrowdMeasureBackground
 import com.example.crowdmeasure.update.UpdateScheduler
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -33,13 +29,7 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
     @Inject
     lateinit var appCallsMigration: AppCallsMigration
     @Inject
-    lateinit var appPreferences: AppPreferences
-    @Inject
-    lateinit var calls: CallSamplingClient
-    @Inject
-    lateinit var background: BackgroundCollectionClient
-    @Inject
-    lateinit var callUploads: CallUploadClient
+    lateinit var applyCollectionSettings: ApplyCollectionSettingsUseCase
     @Inject
     lateinit var updateScheduler: UpdateScheduler
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -61,20 +51,8 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
             appBackgroundMigration.migrateOnce()
             appUploadMigration.migrateOnce()
             appCallsMigration.migrateOnce()
-            val settings = appPreferences.settingsFirst()
-            if (settings.autoRunEnabled) {
-                background.enable(
-                    settings.autoRunIntervalMinutes.toLong().coerceIn(
-                        CrowdMeasureBackground.MIN_INTERVAL_MINUTES,
-                        CrowdMeasureBackground.MAX_INTERVAL_MINUTES,
-                    ),
-                    settings.collectOnlyWifi,
-                )
-            } else {
-                background.disable()
-            }
-            calls.activateEnabledFeatures()
-            callUploads.reschedule()
+            // Starts the enabled features only if the current consent is accepted; stops them otherwise.
+            applyCollectionSettings()
             updateScheduler.schedulePeriodicChecks()
         }
     }

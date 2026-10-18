@@ -413,7 +413,9 @@ private fun DeleteConfirmationDialog(
         },
         text = {
             Text(
-                text = "This will permanently delete all local measurements stored on this device. This action cannot be undone."
+                text = "This permanently deletes the measurements, call sessions and exported files " +
+                    "stored on this device, and ends any call being sampled. Data that was already " +
+                    "uploaded is not affected. This action cannot be undone."
             )
         },
         confirmButton = {

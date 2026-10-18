@@ -68,6 +68,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.crowdmeasure.presentation.ui.theme.ExtendedColors
 import com.example.crowdmeasure.presentation.util.AppPermissions
+import com.example.crowdmeasure.presentation.util.UiState
 
 
 @Composable
@@ -79,6 +80,8 @@ fun ConsentGateScreen(
 ) {
     val context = LocalContext.current
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     var fineLocationGranted by remember { mutableStateOf(false) }
     var phoneStateGranted by remember { mutableStateOf(false) }
@@ -122,8 +125,39 @@ fun ConsentGateScreen(
         onRequestFineLocation = { requestFine.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
         onRequestBackgroundLocation = { showBackgroundLocationDisclosure = true },
         onRequestPhoneState = { requestPhone.launch(Manifest.permission.READ_PHONE_STATE) },
-        onRequestNotifications = { requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS) }
+        onRequestNotifications = { requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS) },
+        // Only a user who accepted an earlier consent version can have data on the device.
+        showDeleteData = (settings?.consentAcceptedVersion ?: 0) > 0,
+        deleteState = deleteState,
+        onDeleteData = { showDeleteDialog = true }
     )
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete data on this device?") },
+            text = {
+                Text(
+                    "This permanently deletes the measurements, call sessions and exported files " +
+                        "stored on this device. Data that was already uploaded is not affected."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteAllData()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     if (showBackgroundLocationDisclosure) {
         BackgroundLocationDisclosureDialog(
@@ -203,7 +237,10 @@ private fun ConsentGateContent(
     onRequestFineLocation: () -> Unit,
     onRequestBackgroundLocation: () -> Unit,
     onRequestPhoneState: () -> Unit,
-    onRequestNotifications: () -> Unit
+    onRequestNotifications: () -> Unit,
+    showDeleteData: Boolean = false,
+    deleteState: UiState<Unit> = UiState.Idle,
+    onDeleteData: () -> Unit = {}
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -245,6 +282,10 @@ private fun ConsentGateContent(
                         notificationsGranted = notificationsGranted,
                         onRequestNotifications = onRequestNotifications,
                     )
+
+                    if (showDeleteData) {
+                        DeleteDataRow(deleteState = deleteState, onDeleteData = onDeleteData)
+                    }
                 }
 
                 // Sticky bottom CTA
@@ -321,7 +362,7 @@ private fun ConsentHero() {
 private val privacyBullets = listOf(
     "No personal identifiers (name, email, phone number) are collected",
     "Network measurements are anonymized before upload",
-//    "You can pause or stop collection anytime",
+    "You can pause collection or uploads anytime in Settings",
     "Data is used only for improving network quality insights"
 )
 
@@ -609,6 +650,38 @@ private fun PermissionItem(
     }
 }
 
+
+@Composable
+private fun DeleteDataRow(deleteState: UiState<Unit>, onDeleteData: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        TextButton(
+            onClick = onDeleteData,
+            enabled = deleteState !is UiState.Loading,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            )
+        ) {
+            Text(if (deleteState is UiState.Loading) "Deleting..." else "Delete data on this device")
+        }
+        when (deleteState) {
+            is UiState.Success -> Text(
+                text = "Local data deleted.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            is UiState.Error -> Text(
+                text = deleteState.message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+            else -> Unit
+        }
+    }
+}
 
 @Composable
 private fun GetStartedBar(canComplete: Boolean, onComplete: () -> Unit) {

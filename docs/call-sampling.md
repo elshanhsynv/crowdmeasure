@@ -11,9 +11,9 @@ val calls = CrowdMeasureCalls.install(
 )
 ```
 
-Installation starts nothing. Persisted enabled features are restored only after the host calls `activateEnabledFeatures()` during application startup.
+Installation starts nothing for VoIP: the VoIP monitor is restored only after the host calls `activateEnabledFeatures()` during application startup. Cellular sampling is different. It is driven by a manifest-registered phone-state receiver, and `cellularEnabled` defaults to `true`. Cellular calls are therefore sampled as soon as the required permissions are granted, unless the host calls `setCellularSamplingEnabled(false)` first.
 
-Cellular sampling uses phone-state events. Generic VoIP sampling observes Android audio communication mode on a best-effort basis. Both collect cellular, data-usage, and best-effort location snapshots in a foreground location service. Carrier/SIM metadata is stored on the call session because it is stable for the call; per-sample cell snapshots omit repeated carrier lists. Location and data usage are omitted from an individual sample when unavailable. Battery-optimization exemption improves reliability but is not a start requirement.
+Cellular sampling uses phone-state events. Generic VoIP sampling observes Android audio communication mode on a best-effort basis. Both collect cellular, data-usage, and best-effort location snapshots in a foreground location service. When Android refuses to start a foreground service (background-start restrictions on Android 12+), sampling still runs, but in-process and without the foreground service. The process can then be killed during a long call. Carrier/SIM metadata is stored on the call session because it is stable for the call; per-sample cell snapshots omit repeated carrier lists. Location and data usage are omitted from an individual sample when unavailable. Battery-optimization exemption improves reliability but is not a start requirement.
 
 When core sets `requiredDefaultDataMnoId`, call sessions start only while the default data SIM's home MCC+MNC matches it. A mismatch creates no session and starts no foreground service. During an active session, a default-data-subscription change or the next sample check ends the session with `target_mno_not_eligible`; no later samples are stored. Roaming does not change the decision.
 

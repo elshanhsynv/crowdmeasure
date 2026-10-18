@@ -94,7 +94,9 @@ fun SettingsRoute(
             onClearCallExportState = viewModel::clearCallExportState,
             onDelete = viewModel::deleteAllData,
             onClearDeleteState = viewModel::clearDeleteState,
-            onCallUpload = { viewModel.runUploadCallSampleNow(context) }
+            onCallUpload = { viewModel.runUploadCallSampleNow(context) },
+            onSetAutoRunEnabled = viewModel::setAutoRunEnabled,
+            onSetUploadsEnabled = viewModel::setUploadsEnabled
         )
     )
 }
@@ -175,7 +177,9 @@ private fun SettingsTabPage(
                 callSamplingStatus = state.callSamplingStatus,
                 onSetCallSamplingEnabled = actions.onSetCallSamplingEnabled,
                 onSetVoipCallSamplingEnabled = actions.onSetVoipCallSamplingEnabled,
-                onCallUpload = actions.onCallUpload
+                onCallUpload = actions.onCallUpload,
+                onSetAutoRunEnabled = actions.onSetAutoRunEnabled,
+                onSetUploadsEnabled = actions.onSetUploadsEnabled
             )
         }
 
@@ -313,7 +317,9 @@ private data class SettingsScreenActions(
     val onClearCallExportState: () -> Unit,
     val onDelete: () -> Unit,
     val onClearDeleteState: () -> Unit,
-    val onCallUpload: () -> Unit
+    val onCallUpload: () -> Unit,
+    val onSetAutoRunEnabled: (Boolean) -> Unit = {},
+    val onSetUploadsEnabled: (Boolean) -> Unit = {}
 )
 
 @Immutable

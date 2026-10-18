@@ -10,7 +10,8 @@ import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.DeleteAllDataUseCase
 import com.example.crowdmeasure.domain.usecase.ExportCallSessionsUseCase
 import com.example.crowdmeasure.domain.usecase.ExportMeasurementsUseCase
-import com.example.crowdmeasure.domain.usecase.SetEndpointUrlUseCase
+import com.example.crowdmeasure.domain.usecase.SetAutoRunUseCase
+import com.example.crowdmeasure.domain.usecase.SetFirestoreUploadsEnabledUseCase
 import com.example.crowdmeasure.presentation.util.UiState
 import com.crowdmeasure.sdk.background.BackgroundCollectionClient
 import com.crowdmeasure.sdk.background.BackgroundCollectionStatus
@@ -43,7 +44,9 @@ class SettingsViewModel @Inject constructor(
     private val background: BackgroundCollectionClient,
     private val uploads: MeasurementUploadClient,
     private val calls: CallSamplingClient,
-    private val callUpload: CallUploadClient
+    private val callUpload: CallUploadClient,
+    private val setAutoRunUseCase: SetAutoRunUseCase,
+    private val setFirestoreUploadsEnabledUseCase: SetFirestoreUploadsEnabledUseCase,
 ) : ViewModel() {
     private val timeFormatter = DateTimeFormatter
         .ofPattern("MMM dd • HH:mm")
@@ -194,6 +197,16 @@ class SettingsViewModel @Inject constructor(
             uploads.reschedule()
             calls.activateEnabledFeatures()
         }
+    }
+
+    fun setAutoRunEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setAutoRunUseCase(enabled, userSessionRepository.settings.first().autoRunIntervalMinutes)
+        }
+    }
+
+    fun setUploadsEnabled(enabled: Boolean) {
+        viewModelScope.launch { setFirestoreUploadsEnabledUseCase(enabled) }
     }
 
     fun setCallSamplingEnabled(enabled: Boolean) {

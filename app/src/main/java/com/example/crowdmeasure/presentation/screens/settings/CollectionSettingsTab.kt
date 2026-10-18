@@ -45,6 +45,7 @@ import com.example.crowdmeasure.domain.repo.AppSettings
 import com.example.crowdmeasure.presentation.screens.settings.components.BackgroundReliabilityCard
 import com.example.crowdmeasure.presentation.screens.settings.components.BackgroundWorkStatusCard
 import com.example.crowdmeasure.presentation.screens.settings.components.CallSamplingSettingsCard
+import com.example.crowdmeasure.presentation.screens.settings.components.DataCollectionCard
 import com.example.crowdmeasure.presentation.ui.components.cards.SettingsSectionCard
 import com.example.crowdmeasure.presentation.ui.theme.CrowdMeasureTheme
 import com.example.crowdmeasure.presentation.util.AppPermissions
@@ -60,7 +61,9 @@ internal fun CollectionSettingsTab(
     callSamplingStatus: CallSamplingStatusUiState,
     onSetCallSamplingEnabled: (Boolean) -> Unit,
     onSetVoipCallSamplingEnabled: (Boolean) -> Unit,
-    onCallUpload: () -> Unit
+    onCallUpload: () -> Unit,
+    onSetAutoRunEnabled: (Boolean) -> Unit = {},
+    onSetUploadsEnabled: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     var phoneGranted by remember { mutableStateOf(AppPermissions.hasPhoneState(context)) }
@@ -93,6 +96,16 @@ internal fun CollectionSettingsTab(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Spacer(Modifier.height(4.dp))
+
+        if (settings != null) {
+            DataCollectionCard(
+                autoRunEnabled = settings.autoRunEnabled,
+                autoRunIntervalMinutes = settings.autoRunIntervalMinutes,
+                uploadsEnabled = settings.firestoreUploadsEnabled,
+                onAutoRunChanged = onSetAutoRunEnabled,
+                onUploadsChanged = onSetUploadsEnabled
+            )
+        }
 
         CallSamplingSettingsCard(
             enabled = settings?.callSamplingEnabled == true,

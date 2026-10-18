@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -26,7 +27,7 @@ internal class MeasurementExporter(
     suspend fun export(measurements: List<Measurement>): CrowdMeasureResult<Uri> =
         withContext(Dispatchers.IO) {
             try {
-                val directory = File(context.cacheDir, "crowdmeasure-sdk-exports").apply { mkdirs() }
+                val directory = exportDirectory().apply { mkdirs() }
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
                 val file = File(directory, "crowdmeasure_export_$timestamp.json")
                 file.writeText(json.encodeToString(measurements))
@@ -41,4 +42,16 @@ internal class MeasurementExporter(
                 CrowdMeasureResult.Failure(CrowdMeasureError.ExportFailed(error))
             }
         }
+
+    /** Removes previously exported files; they contain the same data as the measurement store. */
+    suspend fun deleteExports() {
+        withContext(Dispatchers.IO) {
+            val directory = exportDirectory()
+            if (directory.exists() && !directory.deleteRecursively()) {
+                throw IOException("Could not delete $directory")
+            }
+        }
+    }
+
+    private fun exportDirectory() = File(context.cacheDir, "crowdmeasure-sdk-exports")
 }

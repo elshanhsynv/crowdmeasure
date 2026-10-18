@@ -1,6 +1,7 @@
 package com.example.crowdmeasure.data.prefs
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.crowdmeasure.domain.repo.AppSettings
 import kotlinx.coroutines.flow.Flow
@@ -8,10 +9,16 @@ import kotlinx.coroutines.flow.map
 import java.util.UUID
 import kotlinx.coroutines.flow.first
 
+/** The consent version the user accepted; users who completed the gate before versioning accepted 1. */
+internal fun Preferences.consentAcceptedVersion(): Int =
+    this[DataStoreKeys.CONSENT_ACCEPTED_VERSION]
+        ?: if (this[DataStoreKeys.CONSENT_GATE_DISMISSED] == true) 1 else 0
+
 class AppPreferences(private val context: Context) {
     suspend fun settingsFirst(): AppSettings = settings.first()
 
     companion object {
+        /** Bump when the consent text changes; collection pauses until the user accepts again. */
         const val CONSENT_VERSION = 1
         const val DEFAULT_ENDPOINT = "https://www.bakcell.com/"
         const val DEFAULT_RETENTION_DAYS = 7
@@ -22,22 +29,24 @@ class AppPreferences(private val context: Context) {
         const val DEFAULT_CALL_SAMPLING_ENABLED = true
         const val DEFAULT_VOIP_CALL_SAMPLING_ENABLED = true
         const val DEFAULT_WHATSAPP_CALL_SAMPLING_ENABLED = true
-        const val DEFAULT_CONSENT_GATE_DISMISSED = false
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
         val installId = prefs[DataStoreKeys.INSTALL_ID] ?: ""
         val minutes = prefs[DataStoreKeys.AUTO_RUN_INTERVAL_MINUTES] ?: DEFAULT_AUTORUN_MINUTES
+        val acceptedVersion = prefs.consentAcceptedVersion()
 
         AppSettings(
             consentVersion = CONSENT_VERSION,
+            consentAcceptedVersion = acceptedVersion,
+            consentAcceptedAtUtcMs = prefs[DataStoreKeys.CONSENT_ACCEPTED_AT_UTC_MS],
             endpointUrl = prefs[DataStoreKeys.ENDPOINT_URL] ?: DEFAULT_ENDPOINT,
             collectOnlyWifi = prefs[DataStoreKeys.COLLECT_ONLY_WIFI] ?: DEFAULT_COLLECT_ONLY_ON_WIFI,
             autoRunEnabled = prefs[DataStoreKeys.AUTO_RUN_ENABLED] ?: DEFAULT_AUTO_RUN_ENABLED,
             autoRunIntervalMinutes = minutes.coerceIn(15, 7 * 24 * 60),
             retentionDays = prefs[DataStoreKeys.RETENTION_DAYS] ?: DEFAULT_RETENTION_DAYS,
             installId = installId,
-            consentGateDismissed = prefs[DataStoreKeys.CONSENT_GATE_DISMISSED] ?: DEFAULT_CONSENT_GATE_DISMISSED,
+            consentGateDismissed = acceptedVersion >= CONSENT_VERSION,
             firestoreUploadsEnabled = prefs[DataStoreKeys.FIRESTORE_UPLOADS_ENABLED] ?: DEFAULT_FIRESTORE_UPLOADS_ENABLED,
             callSamplingEnabled = prefs[DataStoreKeys.CALL_SAMPLING_ENABLED] ?: DEFAULT_CALL_SAMPLING_ENABLED,
             // Retained for existing-data compatibility; WhatsApp detection is not available.
@@ -79,8 +88,12 @@ class AppPreferences(private val context: Context) {
         context.dataStore.edit { it[DataStoreKeys.RETENTION_DAYS] = days.coerceIn(1, 60) }
     }
 
-    suspend fun setConsentGateDismissed(dismissed: Boolean) {
-        context.dataStore.edit { it[DataStoreKeys.CONSENT_GATE_DISMISSED] = dismissed }
+    suspend fun acceptConsent(atUtcMs: Long) {
+        context.dataStore.edit {
+            it[DataStoreKeys.CONSENT_ACCEPTED_VERSION] = CONSENT_VERSION
+            it[DataStoreKeys.CONSENT_ACCEPTED_AT_UTC_MS] = atUtcMs
+            it[DataStoreKeys.CONSENT_GATE_DISMISSED] = true
+        }
     }
 
     suspend fun setFirestoreUploadsEnabled(enabled: Boolean) {
