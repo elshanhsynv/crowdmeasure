@@ -23,4 +23,11 @@ object DataStoreKeys {
         longPreferencesKey("battery_optimization_recommendation_dismissed_until")
     val UPDATE_LAST_NOTIFIED_VERSION_CODE =
         intPreferencesKey("update_last_notified_version_code")
+    val CONTINUOUS_ENDS_AT_UTC_MS = longPreferencesKey("continuous_ends_at_utc_ms")
+    val CONTINUOUS_COLLECTED_COUNT = intPreferencesKey("continuous_collected_count")
+    val CONTINUOUS_LAST_ERROR = stringPreferencesKey("continuous_last_error")
+    val CONTINUOUS_ARMED_DURATION_MINUTES = intPreferencesKey("continuous_armed_duration_minutes")
+    val CONTINUOUS_ARMED_GAP_SECONDS = intPreferencesKey("continuous_armed_gap_seconds")
+    val CONTINUOUS_ARMED_AFTER_MEASUREMENT_ID =
+        stringPreferencesKey("continuous_armed_after_measurement_id")
 }

@@ -4,6 +4,11 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.crowdmeasure.sdk.model.Measurement
+import com.example.crowdmeasure.domain.model.ArmedContinuousSession
+import com.example.crowdmeasure.domain.model.ContinuousSessionStatus
+import com.example.crowdmeasure.domain.model.DEFAULT_CONTINUOUS_SESSION_GAP_SECONDS
+import com.example.crowdmeasure.domain.model.DEFAULT_CONTINUOUS_SESSION_MINUTES
+import com.example.crowdmeasure.domain.repo.ContinuousSessionRepository
 import com.example.crowdmeasure.domain.repo.MeasurementRepository
 import com.example.crowdmeasure.domain.repo.UserSessionRepository
 import com.example.crowdmeasure.domain.usecase.RunMeasurementUseCase
@@ -19,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,6 +33,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val runMeasurementUseCase: RunMeasurementUseCase,
     private val measurementRepository: MeasurementRepository,
+    private val continuousSessions: ContinuousSessionRepository,
     private val uploads: MeasurementUploadClient,
     userSessionRepository: UserSessionRepository,
     @ApplicationContext context: Context
@@ -36,6 +43,15 @@ class HomeViewModel @Inject constructor(
     private var currentMeasurementJob: Job? = null
     private val measurementState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
     private val uploadState = MutableStateFlow<UiState<Int>>(UiState.Idle)
+    private val selectedSessionMinutes = MutableStateFlow(DEFAULT_CONTINUOUS_SESSION_MINUTES)
+    private val selectedSessionGapSeconds = MutableStateFlow(DEFAULT_CONTINUOUS_SESSION_GAP_SECONDS)
+
+    private val sessionState = combine(
+        continuousSessions.observeStatus(),
+        continuousSessions.observeArmed(),
+        selectedSessionMinutes,
+        selectedSessionGapSeconds,
+    ) { status, armed, minutes, gap -> SessionState(status, armed, minutes, gap) }
 
     private val baseState = combine(
         userSessionRepository.settings,
@@ -58,11 +74,16 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         baseState,
         measurementState,
-        uploadState
-    ) { state, measurementOp, uploadOp ->
+        uploadState,
+        sessionState,
+    ) { state, measurementOp, uploadOp, session ->
         state.copy(
             measurementState = measurementOp,
-            uploadState = uploadOp
+            uploadState = uploadOp,
+            continuous = session.status,
+            armedSession = session.armed,
+            selectedSessionMinutes = session.minutes,
+            selectedSessionGapSeconds = session.gapSeconds,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -121,6 +142,40 @@ class HomeViewModel @Inject constructor(
         measurementState.value = UiState.Idle
     }
 
+    fun selectSessionDuration(minutes: Int) {
+        selectedSessionMinutes.value = minutes
+    }
+
+    fun selectSessionGap(seconds: Int) {
+        selectedSessionGapSeconds.value = seconds
+    }
+
+    fun startContinuousSession() {
+        viewModelScope.launch {
+            AppLog.i("Home", "Continuous session started for ${selectedSessionMinutes.value} minutes.")
+            continuousSessions.start(selectedSessionMinutes.value, selectedSessionGapSeconds.value)
+        }
+    }
+
+    fun stopContinuousSession() {
+        viewModelScope.launch {
+            AppLog.i("Home", "Continuous session stopped by user.")
+            continuousSessions.stop()
+        }
+    }
+
+    /** Starts a session of the selected length when the next measurement finishes. */
+    fun armContinuousSession() {
+        viewModelScope.launch {
+            val latestId = measurementRepository.observeLastMeasurement().first()?.meta?.measurementId
+            continuousSessions.arm(selectedSessionMinutes.value, selectedSessionGapSeconds.value, latestId)
+        }
+    }
+
+    fun cancelArmedSession() {
+        viewModelScope.launch { continuousSessions.disarm() }
+    }
+
     fun uploadNow() {
         viewModelScope.launch {
             uploadState.value = UiState.Loading
@@ -140,6 +195,13 @@ class HomeViewModel @Inject constructor(
         currentMeasurementJob?.cancel()
     }
 }
+
+private data class SessionState(
+    val status: ContinuousSessionStatus,
+    val armed: ArmedContinuousSession?,
+    val minutes: Int,
+    val gapSeconds: Int,
+)
 
 private fun Measurement.toUiModel() = MeasurementUi(
     meta = this.meta,

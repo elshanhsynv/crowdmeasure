@@ -83,7 +83,13 @@ fun HomeScreen(
         onStartMeasurement = viewModel::startMeasurement,
         onStopMeasurement = viewModel::stopMeasurement,
         onUploadNow = viewModel::uploadNow,
-        onNavigateToDetail = onNavigateToDetail
+        onNavigateToDetail = onNavigateToDetail,
+        onSelectSessionDuration = viewModel::selectSessionDuration,
+        onSelectSessionGap = viewModel::selectSessionGap,
+        onStartSession = viewModel::startContinuousSession,
+        onStopSession = viewModel::stopContinuousSession,
+        onArmSession = viewModel::armContinuousSession,
+        onCancelArmedSession = viewModel::cancelArmedSession,
     )
 }
 
@@ -95,6 +101,12 @@ private fun HomeContent(
     onStopMeasurement: () -> Unit,
     onUploadNow: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    onSelectSessionDuration: (Int) -> Unit,
+    onSelectSessionGap: (Int) -> Unit,
+    onStartSession: () -> Unit,
+    onStopSession: () -> Unit,
+    onArmSession: () -> Unit,
+    onCancelArmedSession: () -> Unit,
 ) {
     val spacing = LocalSpacing.current
 
@@ -112,6 +124,15 @@ private fun HomeContent(
             state = state,
             onStart = onStartMeasurement,
             onStop = onStopMeasurement
+        )
+        ContinuousSessionCard(
+            state = state,
+            onSelectDuration = onSelectSessionDuration,
+            onSelectGap = onSelectSessionGap,
+            onStart = onStartSession,
+            onStop = onStopSession,
+            onArm = onArmSession,
+            onCancelArmed = onCancelArmedSession,
         )
         UploadQueueCard(state = state, onUpload = onUploadNow)
         LastMeasurementCard(state = state, onOpenDetail = onNavigateToDetail)
@@ -164,6 +185,7 @@ fun MeasurementCard(
 
     val description = when {
         !state.canCollect -> "Enable collection in Settings to start."
+        state.continuous.running -> "Paused while a continuous session is running."
         state.isMeasuring -> "Collecting a fresh network snapshot."
         else -> "Capture current network performance data."
     }
@@ -213,7 +235,7 @@ fun MeasurementCard(
                 } else {
                     Button(
                         onClick = onStart,
-                        enabled = state.canCollect,
+                        enabled = state.canCollect && !state.continuous.running,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 52.dp)
@@ -524,6 +546,12 @@ fun HomeScreenPreview() {
         onStartMeasurement = {},
         onStopMeasurement = {},
         onUploadNow = {},
-        onNavigateToDetail = {}
+        onNavigateToDetail = {},
+        onSelectSessionDuration = {},
+        onSelectSessionGap = {},
+        onStartSession = {},
+        onStopSession = {},
+        onArmSession = {},
+        onCancelArmedSession = {},
     )
 }

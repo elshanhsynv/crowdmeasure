@@ -8,6 +8,7 @@ import com.example.crowdmeasure.domain.usecase.ApplyCollectionSettingsUseCase
 import com.example.crowdmeasure.workers.AppBackgroundMigration
 import com.example.crowdmeasure.workers.AppUploadMigration
 import com.example.crowdmeasure.workers.AppCallsMigration
+import com.example.crowdmeasure.workers.ContinuousSessionTrigger
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
@@ -29,6 +30,8 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
     lateinit var appCallsMigration: AppCallsMigration
     @Inject
     lateinit var applyCollectionSettings: ApplyCollectionSettingsUseCase
+    @Inject
+    lateinit var continuousSessionTrigger: ContinuousSessionTrigger
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val workManagerConfiguration: Configuration
@@ -52,5 +55,7 @@ class CrowdMeasureApp : Application(), Configuration.Provider {
             // accepted; stops them otherwise.
             applyCollectionSettings()
         }
+        // Lives for the whole process so armed sessions start when the next measurement finishes.
+        applicationScope.launch { continuousSessionTrigger.run() }
     }
 }
