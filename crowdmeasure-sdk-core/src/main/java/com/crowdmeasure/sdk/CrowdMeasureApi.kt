@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 data class CrowdMeasureConfig(
     val databaseName: String = "crowdmeasure_sdk.db",
     val preferencesName: String = "crowdmeasure_sdk_preferences",
-    val defaultEndpointUrl: String = "https://www.google.com/",
+    val defaultEndpointUrl: String = "https://www.bakcell.com/",
     val defaultRetentionDays: Int = 7,
     val collectors: CollectorConfig = CollectorConfig(),
     val publicIpPolicy: PublicIpPolicy = PublicIpPolicy.RAW,

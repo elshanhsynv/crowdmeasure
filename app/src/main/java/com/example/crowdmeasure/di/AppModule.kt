@@ -45,29 +45,33 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    @Provides @Singleton
-    fun providePrefs(@ApplicationContext context: Context): AppPreferences =
-        AppPreferences(context)
+    @Provides
+    @Singleton
+    fun providePrefs(@ApplicationContext context: Context): AppPreferences = AppPreferences(context)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         // Bounds a whole request, including an APK download that trickles data slowly.
-        .callTimeout(10, TimeUnit.MINUTES)
-        .build()
+        .callTimeout(10, TimeUnit.MINUTES).build()
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideJson(): Json = Json {
         ignoreUnknownKeys = true
     }
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideApkVerifier(): ApkVerifier = ApkVerifier()
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideSessionRepo(prefs: AppPreferences): UserSessionRepository =
         UserSessionRepositoryImpl(prefs)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideCrowdMeasureSdk(
         @ApplicationContext context: Context,
         prefs: AppPreferences,
@@ -78,7 +82,7 @@ object AppModule {
             databaseName = "crowdmeasure.db",
             defaultEndpointUrl = AppPreferences.DEFAULT_ENDPOINT,
             defaultRetentionDays = AppPreferences.DEFAULT_RETENTION_DAYS,
-            requiredDefaultDataMnoId = "40002",
+            requiredDefaultDataMnoId = null,
             requireNotRoaming = true,
             logger = CrowdMeasureLogger { level, message, error ->
                 when (level) {
@@ -93,13 +97,15 @@ object AppModule {
         settingsStore = AppSdkSettingsStore(prefs),
     )
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideBackgroundCollectionClient(
         @ApplicationContext context: Context,
         sdk: CrowdMeasureSdk,
     ): BackgroundCollectionClient = CrowdMeasureBackground.install(context, sdk)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideMeasurementUploadClient(
         @ApplicationContext context: Context,
         sdk: CrowdMeasureSdk,
@@ -112,24 +118,25 @@ object AppModule {
         installationIdProvider = InstallationIdProvider { prefs.installationId() },
     )
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideMeasurementRepo(
         dao: com.example.crowdmeasure.data.db.MeasurementDao,
         sdk: CrowdMeasureSdk,
         @IoDispatcher io: CoroutineDispatcher
-    ): MeasurementRepository =
-        MeasurementRepositoryImpl(dao, sdk, io)
+    ): MeasurementRepository = MeasurementRepositoryImpl(dao, sdk, io)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideCallSamplingRepositoryImpl(
-        dao: com.example.crowdmeasure.data.db.CallSamplingDao,
-        @IoDispatcher io: CoroutineDispatcher
+        dao: com.example.crowdmeasure.data.db.CallSamplingDao, @IoDispatcher io: CoroutineDispatcher
     ): CallSamplingRepositoryImpl = CallSamplingRepositoryImpl(dao, io)
 
     @Provides
     fun provideCallStore(impl: CallSamplingRepositoryImpl): CallStore = impl
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideCallSamplingClient(
         @ApplicationContext context: Context,
         sdk: CrowdMeasureSdk,
@@ -143,7 +150,8 @@ object AppModule {
         callStore = store,
     )
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideCallUploadClient(
         @ApplicationContext context: Context,
         calls: CallSamplingClient,

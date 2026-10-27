@@ -17,7 +17,7 @@ val crowdMeasure = CrowdMeasureSdk.create(
     context = applicationContext,
     config = CrowdMeasureConfig(
         databaseName = "crowdmeasure_sdk.db",
-        defaultEndpointUrl = "https://www.google.com/",
+        defaultEndpointUrl = "https://www.bakcell.com/",
         defaultRetentionDays = 7,
     ),
 )

@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
             addAction("Use default endpoint") {
                 lifecycleScope.launch {
                     status.text = sdk.settings
-                        .setEndpointUrl("https://www.google.com/")
+                        .setEndpointUrl("https://www.bakcell.com/")
                         .describe()
                 }
             }

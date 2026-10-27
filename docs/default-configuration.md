@@ -8,7 +8,7 @@ These are the SDK defaults used when a host does not pass a custom config.
 |---|---|
 | `databaseName` | `crowdmeasure_sdk.db` |
 | `preferencesName` | `crowdmeasure_sdk_preferences` |
-| `defaultEndpointUrl` | `https://www.google.com/` |
+| `defaultEndpointUrl` | `https://www.bakcell.com/` |
 | `defaultRetentionDays` | `7` |
 | `publicIpPolicy` | `RAW` |
 | `logger` | `CrowdMeasureLogger.NONE` |
