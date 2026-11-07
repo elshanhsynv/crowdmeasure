@@ -28,6 +28,7 @@ internal class MeasurementExporter(
         withContext(Dispatchers.IO) {
             try {
                 val directory = exportDirectory().apply { mkdirs() }
+                deleteExpiredFiles(directory, System.currentTimeMillis())
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
                 val file = File(directory, "crowdmeasure_export_$timestamp.json")
                 file.writeText(json.encodeToString(measurements))
@@ -53,5 +54,23 @@ internal class MeasurementExporter(
         }
     }
 
+    /** Removes exports older than [EXPORT_TTL_MS]; called by export and by retention pruning. */
+    suspend fun deleteExpiredExports(nowMs: Long = System.currentTimeMillis()) {
+        withContext(Dispatchers.IO) { deleteExpiredFiles(exportDirectory(), nowMs) }
+    }
+
     private fun exportDirectory() = File(context.cacheDir, "crowdmeasure-sdk-exports")
+}
+
+/**
+ * How long an export file stays readable through its content URI. Share targets read the file
+ * when the user picks them; keeping it longer only leaves a copy of the location history behind.
+ */
+internal const val EXPORT_TTL_MS = 60L * 60L * 1_000L
+
+/** Deletes the files in [directory] last modified more than [ttlMs] before [nowMs]. */
+internal fun deleteExpiredFiles(directory: File, nowMs: Long, ttlMs: Long = EXPORT_TTL_MS) {
+    directory.listFiles()?.forEach { file ->
+        if (file.isFile && nowMs - file.lastModified() > ttlMs) file.delete()
+    }
 }

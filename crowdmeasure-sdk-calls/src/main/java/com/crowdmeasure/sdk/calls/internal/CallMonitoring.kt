@@ -213,6 +213,9 @@ internal class CallSampler(
         }
         store.finishActiveSession(System.currentTimeMillis(), "service_restarted")
         store.deleteOlderThan(System.currentTimeMillis() - config.retentionDays * 86_400_000L)
+        withContext(Dispatchers.IO) {
+            deleteExpiredCallExports(context.callExportDirectory(), System.currentTimeMillis())
+        }
         active.value = store.startSession(type, source, config.sampleIntervalSeconds, context.transportFor(source))
         settings.clearMissed()
         if (requirements.defaultDataMnoEligibility.state !=
