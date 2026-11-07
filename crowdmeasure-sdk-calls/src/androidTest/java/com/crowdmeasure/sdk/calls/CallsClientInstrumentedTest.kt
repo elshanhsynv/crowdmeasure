@@ -3,6 +3,7 @@ package com.crowdmeasure.sdk.calls
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.crowdmeasure.sdk.CrowdMeasureConfig
 import com.crowdmeasure.sdk.CrowdMeasureSdk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -18,7 +19,7 @@ class CallsClientInstrumentedTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val client = CrowdMeasureCalls.install(
             context,
-            CrowdMeasureSdk.create(context),
+            CrowdMeasureSdk.create(context, CrowdMeasureConfig(defaultEndpointUrl = "https://probe.example.com/")),
             CallSamplingConfig(notificationIconResId = android.R.drawable.ic_dialog_info),
         )
         client.setCellularSamplingEnabled(false)

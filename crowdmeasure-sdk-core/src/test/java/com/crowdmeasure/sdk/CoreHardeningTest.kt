@@ -7,7 +7,7 @@ import org.junit.Test
 class CoreHardeningTest {
     @Test
     fun publicIpCollectionDefaultsToRawIp() {
-        assertEquals(PublicIpPolicy.RAW, CrowdMeasureConfig().publicIpPolicy)
+        assertEquals(PublicIpPolicy.RAW, CrowdMeasureConfig(defaultEndpointUrl = "https://probe.example.com/").publicIpPolicy)
     }
 
     @Test(expected = IllegalArgumentException::class)

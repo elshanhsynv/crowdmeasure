@@ -3,8 +3,13 @@
 Create and retain one SDK instance, usually from `Application.onCreate`:
 
 ```kotlin
-val sdk = CrowdMeasureSdk.create(applicationContext)
+val sdk = CrowdMeasureSdk.create(
+    applicationContext,
+    CrowdMeasureConfig(defaultEndpointUrl = "https://measure.example.com/"),
+)
 ```
+
+`defaultEndpointUrl` is required: it is the HTTPS server the performance probe measures against, and the SDK has no built-in one.
 
 Check prerequisites. The SDK reports what is missing; the host app owns permission UI and consent.
 

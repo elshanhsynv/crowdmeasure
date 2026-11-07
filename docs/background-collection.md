@@ -3,7 +3,10 @@
 Add `:crowdmeasure-sdk-background`, then install it in `Application.onCreate`:
 
 ```kotlin
-val sdk = CrowdMeasureSdk.create(applicationContext)
+val sdk = CrowdMeasureSdk.create(
+    applicationContext,
+    CrowdMeasureConfig(defaultEndpointUrl = "https://measure.example.com/"),
+)
 val background = CrowdMeasureBackground.install(
     context = applicationContext,
     sdk = sdk,

@@ -8,10 +8,15 @@ import com.crowdmeasure.sdk.model.Measurement
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 
+/**
+ * @property defaultEndpointUrl HTTPS URL the performance probe measures against until the user
+ * picks another one with [SettingsClient.setEndpointUrl]. There is no SDK default: every host
+ * chooses the server its users' traffic goes to.
+ */
 data class CrowdMeasureConfig(
     val databaseName: String = "crowdmeasure_sdk.db",
     val preferencesName: String = "crowdmeasure_sdk_preferences",
-    val defaultEndpointUrl: String = "https://www.bakcell.com/",
+    val defaultEndpointUrl: String,
     val defaultRetentionDays: Int = 7,
     val collectors: CollectorConfig = CollectorConfig(),
     val publicIpPolicy: PublicIpPolicy = PublicIpPolicy.RAW,
