@@ -1,0 +1,322 @@
+[
+  {
+    "meta": {
+      "measurementId": "c16613fc-0c0a-4db5-911c-0794af15a6fe",
+      "timestampUtcMs": 1788954478214,
+      "appName": "CrowdMeasure",
+      "appVersion": "1.14",
+      "androidRelease": "16",
+      "androidSdk": 36,
+      "deviceModel": "samsung SM-S918B",
+      "brand": "samsung",
+      "deviceManufacturer": "samsung",
+      "deviceOS": "Android",
+      "buildID": "BP4A.52545.006",
+      "hardware": "qcom",
+      "chipset": "SM8550",
+      "chipsetManufacturer": "QTI",
+      "userPhoneNumber": "+15555550123"
+    },
+    "environment": {
+      "location": {
+        "lat": 40.380531,
+        "lon": 49.8799429,
+        "accuracyMeters": 13.807
+      },
+      "network": {
+        "transport": "WIFI",
+        "ip": {
+          "publicIp": "5.44.35.148",
+          "ispName": "BAKCELL LLC",
+          "asn": 197830
+        },
+        "validatedInternet": true,
+        "captivePortal": false,
+        "vpn": false,
+        "metered": false,
+        "wifi": {
+          "ssid": "Bakcell-5G",
+          "bssidHash": "9d4e2b7a1c6f083e5a2d9b4c7f1e6a3d0b8c5e2f7a4d9c1b6e3f8a0d5c2b7e41",
+          "standard": "WIFI_5",
+          "frequencyMhz": 5180,
+          "channelWidthMhz": 80,
+          "rssiDbm": -42,
+          "linkSpeedMbps": 702,
+          "txLinkSpeedMbps": 702,
+          "rxLinkSpeedMbps": 585
+        },
+        "cell": {
+          "simCarriers": [
+            {
+              "carrierName": "BAKCELL",
+              "mcc": "250",
+              "mnc": "15",
+              "simOperatorId": "25015",
+              "simOperatorName": "Bakcell",
+              "countryIso": "az",
+              "duplexMode": "FDD",
+              "subscriptionId": 1,
+              "simSlotIndex": 0,
+              "displayName": "Bakcell",
+              "carrierId": 358,
+              "dataRoaming": false,
+              "isEmbedded": false,
+              "cardId": 1,
+              "isDefaultData": true,
+              "isDefaultVoice": true,
+              "isDefaultSms": true,
+              "isActiveData": true
+            },
+            {
+              "carrierName": "Nar",
+              "mcc": "879",
+              "mnc": "69",
+              "simOperatorId": "87969",
+              "simOperatorName": "Nar",
+              "countryIso": "az",
+              "duplexMode": "FDD",
+              "subscriptionId": 2,
+              "simSlotIndex": 1,
+              "displayName": "Nar",
+              "carrierId": 8945,
+              "dataRoaming": false,
+              "isEmbedded": false,
+              "cardId": 2,
+              "isDefaultData": false,
+              "isDefaultVoice": false,
+              "isDefaultSms": false,
+              "isActiveData": false
+            }
+          ],
+          "collectedSubscriptionId": 1,
+          "collectedSimSlotIndex": 0,
+          "dataNetworkType": "LTE",
+          "voiceNetworkType": "LTE",
+          "roaming": false,
+          "rat": "LTE",
+          "nrState": "nsa",
+          "serving": {
+            "timestampOffsetMs": 154,
+            "radio": {
+              "type": "lte",
+              "cellId": 55451545,
+              "tac": 549865,
+              "pci": 48,
+              "earfcn": 1400,
+              "bands": [
+                3
+              ],
+              "bandwidthKhz": 20000,
+              "rsrpDbm": -64,
+              "rsrqDb": -7,
+              "rssnrDb": 14,
+              "rssiDbm": -51,
+              "cqi": 11,
+              "timingAdvance": 2,
+              "mimoLayers": 2
+            },
+            "dbm": -64,
+            "asuLevel": 76,
+            "level": 4,
+            "subscriptionId": 1,
+            "isRegistered": true
+          },
+          "neighbors": [
+            {
+              "timestampOffsetMs": 171,
+              "radio": {
+                "type": "lte",
+                "cellId": 11111515,
+                "tac": 54895,
+                "pci": 271,
+                "earfcn": 1600,
+                "bands": [
+                  3
+                ],
+                "bandwidthKhz": 20000,
+                "rsrpDbm": -66,
+                "rsrqDb": -7,
+                "rssnrDb": 11,
+                "rssiDbm": -53,
+                "cqi": 10,
+                "timingAdvance": 2,
+                "mimoLayers": 2
+              },
+              "dbm": -66,
+              "asuLevel": 74,
+              "level": 4,
+              "subscriptionId": 1,
+              "isRegistered": false
+            },
+            {
+              "timestampOffsetMs": 188,
+              "radio": {
+                "type": "lte",
+                "cellId": 15489821,
+                "tac": 65959,
+                "pci": 5,
+                "earfcn": 1600,
+                "bands": [
+                  3
+                ],
+                "bandwidthKhz": 20000,
+                "rsrpDbm": -91,
+                "rsrqDb": -20,
+                "rssnrDb": 2,
+                "rssiDbm": -53,
+                "cqi": 5,
+                "timingAdvance": 4,
+                "mimoLayers": 1
+              },
+              "dbm": -91,
+              "asuLevel": 49,
+              "level": 3,
+              "subscriptionId": 1,
+              "isRegistered": false
+            },
+            {
+              "timestampOffsetMs": 205,
+              "radio": {
+                "type": "gsm",
+                "cellId": 9278,
+                "lac": 52154,
+                "bsic": 22,
+                "arfcn": 64,
+                "rssiDbm": -113,
+                "timingAdvance": 0
+              },
+              "dbm": -113,
+              "asuLevel": 0,
+              "level": 0,
+              "subscriptionId": 1,
+              "isRegistered": false
+            },
+            {
+              "timestampOffsetMs": 219,
+              "radio": {
+                "type": "gsm",
+                "cellId": 1455,
+                "lac": 51548,
+                "bsic": 35,
+                "arfcn": 74,
+                "rssiDbm": -113,
+                "timingAdvance": 0
+              },
+              "dbm": -113,
+              "asuLevel": 0,
+              "level": 0,
+              "subscriptionId": 1,
+              "isRegistered": false
+            },
+            {
+              "timestampOffsetMs": 233,
+              "radio": {
+                "type": "gsm",
+                "cellId": 1548,
+                "lac": 154445,
+                "bsic": 14,
+                "arfcn": 88,
+                "rssiDbm": -113,
+                "timingAdvance": 0
+              },
+              "dbm": -113,
+              "asuLevel": 0,
+              "level": 0,
+              "subscriptionId": 1,
+              "isRegistered": false
+            },
+            {
+              "timestampOffsetMs": 247,
+              "radio": {
+                "type": "wcdma",
+                "cellId": 1564,
+                "lac": 155,
+                "psc": 128,
+                "uarfcn": 10700,
+                "ecNoDb": -7
+              },
+              "dbm": -92,
+              "asuLevel": 28,
+              "level": 3,
+              "subscriptionId": 1,
+              "isRegistered": false
+            },
+            {
+              "timestampOffsetMs": 262,
+              "radio": {
+                "type": "nr",
+                "cellId": 1234567890,
+                "tac": 14121,
+                "pci": 512,
+                "nrarfcn": 628500,
+                "bands": [
+                  78
+                ],
+                "ss": {
+                  "rsrpDbm": -101,
+                  "rsrqDb": -12,
+                  "sinrDb": 9
+                },
+                "csi": {
+                  "rsrpDbm": -103,
+                  "rsrqDb": -13,
+                  "sinrDb": 7
+                },
+                "bandwidthKhz": 100000,
+                "mimoLayers": 2
+              },
+              "dbm": -101,
+              "asuLevel": 39,
+              "level": 2,
+              "subscriptionId": 1,
+              "isRegistered": false
+            }
+          ]
+        },
+        "dataUsage": {
+          "dlMB": 0.42,
+          "ulMB": 0.03,
+          "dlKbps": 1843.7,
+          "ulKbps": 131.2
+        }
+      },
+      "device": {
+        "batteryPct": 100,
+        "charging": false,
+        "batterySaver": false,
+        "screenOn": true,
+        "dozeMode": false,
+        "dataSaver": false,
+        "thermalState": "NONE",
+        "cpuUsagePct": 14.6,
+        "memoryUsagePct": 73.28
+      }
+    },
+    "performance": {
+      "endpointId": "https://www.bakcell.com/",
+      "dnsMs": 76,
+      "connectMs": 246,
+      "tlsMs": 182,
+      "ttfbAvgMs": 233,
+      "ttfbP95Ms": 254,
+      "httpLatencyAvgMs": 408,
+      "httpLatencyP95Ms": 539,
+      "jitterMs": 54,
+      "pingAvgMs": 70,
+      "pingMinMs": 52,
+      "pingMaxMs": 80,
+      "pingJitterMs": 8,
+      "pingPacketLossPct": 0.0,
+      "probeFailurePct": 0.0,
+      "probesAttempted": 8,
+      "probesSucceeded": 8,
+      "probesFailed": 0,
+      "stallsCount": 0,
+      "maxStallMs": 0,
+      "httpStatus": 200,
+      "serverRegion": "FRA",
+      "firstResponseBodyStarted": true,
+      "protocol": "HTTP1_1"
+    }
+  }
+]
