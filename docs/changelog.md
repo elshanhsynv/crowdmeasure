@@ -2,6 +2,7 @@
 
 ## 0.1.0 Unreleased
 
+- Measurement and call export files are now deleted one hour after they are created, on the next export, retention pruning, or call start, instead of staying in the cache until `deleteAll`.
 - `CrowdMeasureConfig.defaultEndpointUrl` is now required and `CrowdMeasureSdk.create` no longer has a default config, so every host chooses its own probe server instead of sending probe traffic to a built-in one.
 - Call sampling no longer falls back to in-process sampling when Android refuses the location foreground service; the call is skipped and the foreground-service failure is reported as the last missed start.
 - Measurement-upload and call-upload installation IDs are now stored in `noBackupFilesDir` and never backed up or transferred. Existing IDs are moved there on first use and keep their value.

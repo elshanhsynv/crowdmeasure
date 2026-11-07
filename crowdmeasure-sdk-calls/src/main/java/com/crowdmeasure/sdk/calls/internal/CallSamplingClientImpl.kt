@@ -111,7 +111,8 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
         val rt = runtime() ?: return CallSamplingResult.Failure(CallSamplingError.NotInstalled)
         return try {
             val sessions = rt.store.getRecentSessions(lastN.coerceIn(1, 10_000))
-            val dir = exportDirectory().apply { mkdirs() }
+            val dir = context.callExportDirectory().apply { mkdirs() }
+            deleteExpiredCallExports(dir, System.currentTimeMillis())
             val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val file = File(dir, "crowdmeasure_call_sessions_$stamp.json")
             file.writeText(jsonP.encodeToString(JsonObject.serializer(), callExportJson(sessions)))
@@ -136,15 +137,13 @@ internal class CallSamplingClientImpl(private val context: Context) : CallSampli
             rt.sampler.stop(CallSource.UNKNOWN)
             rt.store.deleteAll()
             withContext(Dispatchers.IO) {
-                val exports = exportDirectory()
+                val exports = context.callExportDirectory()
                 if (exports.exists() && !exports.deleteRecursively()) {
                     throw IOException("Could not delete $exports")
                 }
             }
         }
     }
-
-    private fun exportDirectory() = File(context.cacheDir, "crowdmeasure-call-exports")
 
     private suspend fun setting(transform: (CallSamplingSettings) -> CallSamplingSettings): CallSamplingResult<Unit> {
         val rt = runtime() ?: return CallSamplingResult.Failure(CallSamplingError.NotInstalled)
@@ -172,5 +171,20 @@ private fun callExportJson(items: List<CallSessionExport>) = buildJsonObject {
                 JsonObject(session)
             })
         }
+    }
+}
+
+internal fun Context.callExportDirectory() = File(cacheDir, "crowdmeasure-call-exports")
+
+/**
+ * How long a call export stays readable through its content URI. Share targets read the file
+ * when the user picks them; keeping it longer only leaves a copy of the call history behind.
+ */
+internal const val CALL_EXPORT_TTL_MS = 60L * 60L * 1_000L
+
+/** Deletes the files in [directory] last modified more than [ttlMs] before [nowMs]. */
+internal fun deleteExpiredCallExports(directory: File, nowMs: Long, ttlMs: Long = CALL_EXPORT_TTL_MS) {
+    directory.listFiles()?.forEach { file ->
+        if (file.isFile && nowMs - file.lastModified() > ttlMs) file.delete()
     }
 }

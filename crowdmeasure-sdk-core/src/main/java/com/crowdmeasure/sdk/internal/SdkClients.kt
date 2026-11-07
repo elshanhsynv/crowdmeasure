@@ -129,7 +129,10 @@ internal class SdkDataClient(
         try {
             val retentionDays = settingsStore.settings.first().retentionDays
             val cutoffUtcMs = nowUtcMs - TimeUnit.DAYS.toMillis(retentionDays.toLong())
-            CrowdMeasureResult.Success(measurementStore.deleteOlderThan(cutoffUtcMs))
+            val deleted = measurementStore.deleteOlderThan(cutoffUtcMs)
+            // Export files are dated by the device clock, not by the caller's nowUtcMs.
+            exporter.deleteExpiredExports()
+            CrowdMeasureResult.Success(deleted)
         } catch (error: Exception) {
             CrowdMeasureResult.Failure(CrowdMeasureError.PersistenceFailed(error))
         }

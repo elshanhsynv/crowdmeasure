@@ -12,7 +12,7 @@ Calls use `crowdmeasure_calls.db` and a calls-specific DataStore by default. Cal
 
 The SDK databases and preferences hold location history, call history and per-device settings. A library cannot change the host's backup rules, so on a host with `android:allowBackup="true"` (the Android default) these files go into cloud backup and device-to-device transfer unless the host excludes them. `CrowdMeasureSdk.create` logs a `WARN` through the configured `CrowdMeasureLogger` whenever backup is enabled; hosts that already exclude the files below can ignore it.
 
-Installation IDs (measurement uploads and call uploads) are stored in `noBackupFilesDir/crowdmeasure/` and are never backed up, so a restored or transferred device gets a new ID. IDs written by earlier SDK versions are moved there on first use and keep their value. Export files live in the cache directory, which Android never backs up.
+Installation IDs (measurement uploads and call uploads) are stored in `noBackupFilesDir/crowdmeasure/` and are never backed up, so a restored or transferred device gets a new ID. IDs written by earlier SDK versions are moved there on first use and keep their value. Export files live in the cache directory, which Android never backs up, and are deleted an hour after they are created (see [Export and Deletion](export-and-deletion.md)).
 
 With the default names, exclude these files. If you changed `databaseName` or `preferencesName`, use your names instead; omit modules you do not install.
 
