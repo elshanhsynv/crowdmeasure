@@ -1,6 +1,7 @@
 package com.crowdmeasure.sdk
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import com.crowdmeasure.sdk.internal.isValidHttpsEndpoint
 import com.crowdmeasure.sdk.internal.DefaultCrowdMeasureSettingsStore
 import com.crowdmeasure.sdk.internal.DefaultDataMnoEligibilityEvaluator
@@ -46,6 +47,7 @@ class CrowdMeasureSdk private constructor(
                 "requiredDefaultDataMnoId must not be blank"
             }
             val appContext = context.applicationContext
+            warnIfBackupAllowed(appContext, config.logger)
             val resolvedSettingsStore = settingsStore ?: DefaultCrowdMeasureSettingsStore(
                 context = appContext,
                 preferencesName = config.preferencesName,
@@ -87,6 +89,21 @@ class CrowdMeasureSdk private constructor(
                 dataUsage = {
                     withContext(Dispatchers.IO) { DataUsageCollector.collect(scope = "calls") }
                 },
+            )
+        }
+
+        /**
+         * A library cannot override the host's backup rules, and the SDK databases hold location
+         * and call history. The SDK cannot read the host's exclusion rules, so this warns whenever
+         * backup is on; hosts that already exclude the SDK files can ignore it.
+         */
+        private fun warnIfBackupAllowed(context: Context, logger: CrowdMeasureLogger) {
+            if ((context.applicationInfo.flags and ApplicationInfo.FLAG_ALLOW_BACKUP) == 0) return
+            logger.log(
+                CrowdMeasureLogger.Level.WARN,
+                "android:allowBackup is enabled. Exclude the CrowdMeasure databases and " +
+                    "preferences from backup and device transfer; see docs/data-storage.md.",
+                null,
             )
         }
     }

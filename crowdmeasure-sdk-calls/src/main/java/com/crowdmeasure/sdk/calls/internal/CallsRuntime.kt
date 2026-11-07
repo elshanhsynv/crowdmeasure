@@ -15,10 +15,23 @@ import com.crowdmeasure.sdk.DefaultDataMnoEligibilityState
 import com.crowdmeasure.sdk.calls.*
 import kotlinx.coroutines.flow.map
 
-internal class CallsSettingsStore(context: Context, preferencesName: String) {
-    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
-        context.preferencesDataStoreFile(preferencesName)
+/**
+ * One DataStore per file for the whole process. DataStore throws when two instances are active
+ * for the same file, which would crash the host if it called [CrowdMeasureCalls.install] twice.
+ */
+private object CallsDataStores {
+    private val stores = mutableMapOf<String, DataStore<Preferences>>()
+
+    fun get(context: Context, preferencesName: String): DataStore<Preferences> {
+        val file = context.applicationContext.preferencesDataStoreFile(preferencesName)
+        return synchronized(stores) {
+            stores.getOrPut(file.absolutePath) { PreferenceDataStoreFactory.create { file } }
+        }
     }
+}
+
+internal class CallsSettingsStore(context: Context, preferencesName: String) {
+    private val dataStore: DataStore<Preferences> = CallsDataStores.get(context, preferencesName)
 
     private object Keys {
         val cellular = booleanPreferencesKey("cellular_enabled")

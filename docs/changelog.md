@@ -2,6 +2,10 @@
 
 ## 0.1.0 Unreleased
 
+- Call sampling no longer falls back to in-process sampling when Android refuses the location foreground service; the call is skipped and the foreground-service failure is reported as the last missed start.
+- Measurement-upload and call-upload installation IDs are now stored in `noBackupFilesDir` and never backed up or transferred. Existing IDs are moved there on first use and keep their value.
+- `CrowdMeasureSdk.create` logs a warning when the host allows backup; see the backup section of [Data Storage](data-storage.md) for the files to exclude.
+- Creating the core SDK or installing call sampling more than once in a process no longer crashes with "multiple DataStores active for the same file".
 - Added optional `requireNotRoaming` capture policy. It blocks new manual, background, and call capture while the default data subscription is roaming.
 - Added an opt-in default-data-SIM home-MCC+MNC gate for manual, background, and call capture. The CrowdMeasure app currently uses placeholder `A`; normal SDK hosts remain unrestricted.
 - Added per-sample data-usage snapshots to call sampling and moved stable carrier/SIM metadata to call sessions.
