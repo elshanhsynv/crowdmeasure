@@ -30,7 +30,7 @@ class CrowdMeasureSdk private constructor(
     companion object {
         fun create(
             context: Context,
-            config: CrowdMeasureConfig = CrowdMeasureConfig(),
+            config: CrowdMeasureConfig,
             measurementStore: MeasurementStore? = null,
             settingsStore: CrowdMeasureSettingsStore? = null,
         ): CrowdMeasureSdk {

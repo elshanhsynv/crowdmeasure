@@ -41,7 +41,10 @@ class SampleApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        sdk = CrowdMeasureSdk.create(this)
+        sdk = CrowdMeasureSdk.create(
+            this,
+            CrowdMeasureConfig(defaultEndpointUrl = "https://www.bakcell.com/"),
+        )
         background = CrowdMeasureBackground.install(this, sdk)
         // The sample ships without google-services.json; without Firebase both uploaders report
         // a backend failure instead of crashing the app at startup.

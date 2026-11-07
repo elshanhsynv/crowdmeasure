@@ -30,7 +30,11 @@ class DefaultStorageInstrumentedTest {
             context = context,
             databaseName = databaseName,
         )
-        val sdk = CrowdMeasureSdk.create(context, measurementStore = store)
+        val sdk = CrowdMeasureSdk.create(
+            context,
+            CrowdMeasureConfig(defaultEndpointUrl = "https://probe.example.com/"),
+            measurementStore = store,
+        )
 
         store.save(testMeasurement())
         assertEquals("test-id", sdk.measurements.observeLatest().first()?.meta?.measurementId)

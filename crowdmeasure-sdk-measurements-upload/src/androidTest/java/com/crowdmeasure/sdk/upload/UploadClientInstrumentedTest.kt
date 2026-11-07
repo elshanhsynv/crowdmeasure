@@ -2,6 +2,7 @@ package com.crowdmeasure.sdk.upload
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.crowdmeasure.sdk.CrowdMeasureConfig
 import com.crowdmeasure.sdk.CrowdMeasureSdk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -17,7 +18,7 @@ class UploadClientInstrumentedTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val client = CrowdMeasureUploads.install(
             context,
-            CrowdMeasureSdk.create(context),
+            CrowdMeasureSdk.create(context, CrowdMeasureConfig(defaultEndpointUrl = "https://probe.example.com/")),
             MeasurementUploader { MeasurementUploaderResult.Success(UploadBatchResult()) },
         )
 

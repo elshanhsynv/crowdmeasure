@@ -3,6 +3,7 @@ package com.crowdmeasure.sdk.background
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.crowdmeasure.sdk.CrowdMeasureConfig
 import com.crowdmeasure.sdk.CrowdMeasureSdk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -15,7 +16,11 @@ class BackgroundClientInstrumentedTest {
     @Test
     fun validatesPersistsAndDisablesSettings() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val client = CrowdMeasureBackground.install(context, CrowdMeasureSdk.create(context))
+        val sdk = CrowdMeasureSdk.create(
+            context,
+            CrowdMeasureConfig(defaultEndpointUrl = "https://probe.example.com/"),
+        )
+        val client = CrowdMeasureBackground.install(context, sdk)
 
         Assert.assertTrue(client.enable(19, false) is BackgroundResult.Failure)
         Assert.assertTrue(client.enable(60, true) is BackgroundResult.Success)
