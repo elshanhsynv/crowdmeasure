@@ -12,6 +12,7 @@ import com.crowdmeasure.sdk.calls.upload.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.withLock
+import java.io.File
 import java.util.concurrent.TimeUnit
 import java.util.UUID
 
@@ -21,6 +22,20 @@ private object CallUploadDataStores {
     fun get(context: Context, preferencesName: String): DataStore<Preferences> {
         val appContext = context.applicationContext
         val file = appContext.preferencesDataStoreFile(preferencesName)
+        return synchronized(stores) {
+            stores.getOrPut(file.absolutePath) {
+                PreferenceDataStoreFactory.create { file }
+            }
+        }
+    }
+
+    /**
+     * A DataStore in [Context.getNoBackupFilesDir], so its contents are never part of cloud
+     * backup or device-to-device transfer, whatever the host's backup rules say.
+     */
+    fun getNoBackup(context: Context, preferencesName: String): DataStore<Preferences> {
+        val appContext = context.applicationContext
+        val file = File(appContext.noBackupFilesDir, "crowdmeasure/$preferencesName.preferences_pb")
         return synchronized(stores) {
             stores.getOrPut(file.absolutePath) {
                 PreferenceDataStoreFactory.create { file }
@@ -38,6 +53,8 @@ internal class CallUploadClientImpl(context: Context, private val config: CallUp
     private val appContext = context.applicationContext
     private val workManager = WorkManager.getInstance(appContext)
     private val dataStore: DataStore<Preferences> = CallUploadDataStores.get(appContext, config.preferencesName)
+    private val noBackupDataStore: DataStore<Preferences> =
+        CallUploadDataStores.getNoBackup(appContext, config.preferencesName)
     private object Keys {
         val enabled = booleanPreferencesKey("enabled")
         val interval = longPreferencesKey("interval")
@@ -139,11 +156,21 @@ internal class CallUploadClientImpl(context: Context, private val config: CallUp
         it[Keys.wifi] = value.wifiOnly
     }
 
+    /**
+     * Kept out of backups so a restored or transferred device gets its own ID. An ID written by
+     * earlier SDK versions to the backed-up settings file is moved over once and kept.
+     */
     private suspend fun installationId(): String {
-        dataStore.data.first()[Keys.installationId]?.takeIf(String::isNotBlank)?.let { return it }
-        val generated = UUID.randomUUID().toString()
-        dataStore.edit { if (it[Keys.installationId].isNullOrBlank()) it[Keys.installationId] = generated }
-        return dataStore.data.first()[Keys.installationId] ?: generated
+        noBackupDataStore.data.first()[Keys.installationId]?.takeIf(String::isNotBlank)?.let { return it }
+        val legacy = dataStore.data.first()[Keys.installationId]?.takeIf(String::isNotBlank)
+        // Generate inside edit() so concurrent first calls agree on a single ID.
+        val updated = noBackupDataStore.edit {
+            if (it[Keys.installationId].isNullOrBlank()) {
+                it[Keys.installationId] = legacy ?: UUID.randomUUID().toString()
+            }
+        }
+        if (legacy != null) dataStore.edit { it.remove(Keys.installationId) }
+        return checkNotNull(updated[Keys.installationId])
     }
 
     private fun schedule(value: CallUploadSettings) {

@@ -26,15 +26,28 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
+/**
+ * One DataStore per file for the whole process. DataStore throws when two instances are active
+ * for the same file, which would crash the host if it called `CrowdMeasureSdk.create` twice.
+ */
+private object CoreDataStores {
+    private val stores = mutableMapOf<String, DataStore<Preferences>>()
+
+    fun get(context: Context, preferencesName: String): DataStore<Preferences> {
+        val file = context.applicationContext.preferencesDataStoreFile(preferencesName)
+        return synchronized(stores) {
+            stores.getOrPut(file.absolutePath) { PreferenceDataStoreFactory.create { file } }
+        }
+    }
+}
+
 internal class DefaultCrowdMeasureSettingsStore(
     context: Context,
     preferencesName: String,
     private val defaultEndpointUrl: String,
     private val defaultRetentionDays: Int,
 ) : CrowdMeasureSettingsStore {
-    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create {
-        context.preferencesDataStoreFile(preferencesName)
-    }
+    private val dataStore: DataStore<Preferences> = CoreDataStores.get(context, preferencesName)
 
     override val settings: Flow<CrowdMeasureSettings> = dataStore.data.map { preferences ->
         CrowdMeasureSettings(

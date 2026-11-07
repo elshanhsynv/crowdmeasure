@@ -9,6 +9,7 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import com.crowdmeasure.sdk.upload.*
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.firstOrNull
+import java.io.File
 import java.util.UUID
 
 private object UploadDataStores {
@@ -23,20 +24,45 @@ private object UploadDataStores {
             }
         }
     }
+
+    /**
+     * A DataStore in [Context.getNoBackupFilesDir], so its contents are never part of cloud
+     * backup or device-to-device transfer, whatever the host's backup rules say.
+     */
+    fun getNoBackup(context: Context, preferencesName: String): DataStore<Preferences> {
+        val appContext = context.applicationContext
+        val file = File(appContext.noBackupFilesDir, "crowdmeasure/$preferencesName.preferences_pb")
+        return synchronized(stores) {
+            stores.getOrPut(file.absolutePath) {
+                PreferenceDataStoreFactory.create { file }
+            }
+        }
+    }
 }
 
+/**
+ * Keeps the installation ID out of backups: a restored or transferred device must get its own ID
+ * instead of a copy of the old device's. IDs written by earlier SDK versions to the backed-up
+ * preferences file are moved over once, so existing installations keep their ID.
+ */
 internal class DefaultInstallationIdProvider(context: Context, preferencesName: String) :
     InstallationIdProvider {
-    private val dataStore: DataStore<Preferences> = UploadDataStores.get(context, preferencesName)
+    private val dataStore: DataStore<Preferences> = UploadDataStores.getNoBackup(context, preferencesName)
+    private val legacyDataStore: DataStore<Preferences> = UploadDataStores.get(context, preferencesName)
 
     override suspend fun getInstallationId(): String {
         dataStore.data.map { it[Keys.installId] }.firstOrNull()
             ?.takeIf { it.isNotBlank() }
             ?.let { return it }
+        val legacy = legacyDataStore.data.map { it[Keys.installId] }.firstOrNull()
+            ?.takeIf { it.isNotBlank() }
         // Generate inside edit() so concurrent first calls agree on a single ID.
         val updated = dataStore.edit {
-            if (it[Keys.installId].isNullOrBlank()) it[Keys.installId] = UUID.randomUUID().toString()
+            if (it[Keys.installId].isNullOrBlank()) {
+                it[Keys.installId] = legacy ?: UUID.randomUUID().toString()
+            }
         }
+        if (legacy != null) legacyDataStore.edit { it.remove(Keys.installId) }
         return checkNotNull(updated[Keys.installId])
     }
 }

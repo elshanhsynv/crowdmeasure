@@ -156,9 +156,9 @@ internal class VoipCallMonitor(
 }
 
 /**
- * The single owner of call sampling state. [CallSamplingService] only keeps the process in the
- * foreground while a session is active; when the service cannot be started, the sampler runs
- * in-process on its own.
+ * The single owner of call sampling state. [CallSamplingService] keeps the process in the
+ * foreground while a session is active. Sampling only runs inside that service, so the user
+ * always sees the ongoing notification while location is collected.
  */
 internal class CallSampler(
     private val context: Context,
@@ -174,9 +174,10 @@ internal class CallSampler(
     private val mnoFinishMutex = Mutex()
     private val lifecycleMutex = Mutex()
 
-    fun launchStart(type: CallType, source: CallSource): Job = scope.launch { start(type, source) }
-
     fun launchStop(source: CallSource): Job = scope.launch { stop(source) }
+
+    /** Records a call that was not sampled, without touching any active session. */
+    fun launchRecordMissed(code: CallRunCode): Job = scope.launch { recordMissedSafely(code) }
 
     /** Suspends until no session is active. */
     suspend fun awaitIdle() {
@@ -442,8 +443,11 @@ internal class CallSamplingService : Service() {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             )
         } catch (error: RuntimeException) {
-            Log.w(TAG, "Foreground start failed (${error.foregroundFailureCode()}); sampling in-process", error)
-            rt.sampler.launchStart(type, source)
+            // Collecting location in the background without the ongoing notification is not
+            // allowed, so this call is skipped and the reason recorded.
+            val code = error.foregroundFailureCode()
+            Log.w(TAG, "Foreground start failed ($code); call not sampled", error)
+            rt.sampler.launchRecordMissed(code)
             stopSelf(startId)
             return START_NOT_STICKY
         }
@@ -493,7 +497,8 @@ internal class CallSamplingService : Service() {
 
         /**
          * Starts sampling in the foreground service. When Android refuses a foreground start
-         * (e.g. background start restrictions on Android 12+), sampling still runs in-process.
+         * (e.g. background start restrictions on Android 12+), the call is not sampled and the
+         * reason is recorded as the last missed start.
          */
         fun start(context: Context, type: CallType, source: CallSource) {
             val rt = CallsRuntime.get() ?: return
@@ -505,8 +510,9 @@ internal class CallSamplingService : Service() {
                         .putExtra(EXTRA_SOURCE, source.name)
                 )
             } catch (error: RuntimeException) {
-                Log.w(TAG, "Foreground service unavailable (${error.foregroundFailureCode()}); sampling in-process", error)
-                rt.sampler.launchStart(type, source)
+                val code = error.foregroundFailureCode()
+                Log.w(TAG, "Foreground service unavailable ($code); call not sampled", error)
+                rt.sampler.launchRecordMissed(code)
             }
         }
 
