@@ -104,7 +104,7 @@ All three are null when the lookup failed or timed out.
 
 | Key | Type | Null? | Notes |
 |---|---|---|---|
-| `bssidHash` | string | **yes** | |
+| `bssidHash` | string | **yes** | Raw access-point BSSID (MAC address, e.g. `aa:bb:cc:dd:ee:ff`); not hashed despite the name |
 | `ssid` | string | **yes** | Network name |
 | `standard` | enum `WifiStandard` | no | `UNKNOWN`, `WIFI_4`, `WIFI_5`, `WIFI_6`, `WIFI_6E`, `WIFI_7` |
 | `frequencyMhz` | int32 | **yes** | e.g. `5180` |

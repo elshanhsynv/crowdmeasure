@@ -165,9 +165,9 @@ internal object MeasurementSectionCatalog {
             sensitiveValues = listOf(
                 sensitive(
                     "bssid_hash",
-                    "BSSID hash",
-                    "A pseudonymous access-point identifier that can correlate measurements from the same network.",
-                    "Pseudonymous"
+                    "BSSID",
+                    "The raw MAC address of the connected access point. It uniquely identifies the network and can be used to locate it.",
+                    "Identifying"
                 )
             ),
             metrics = definitions(
@@ -179,7 +179,7 @@ internal object MeasurementSectionCatalog {
                 "Channel Width" to "The width of the Wi-Fi radio channel in MHz.",
                 "Wi-Fi Standard" to "The Wi-Fi generation reported by Android.",
                 "SSID" to "The Wi-Fi access point name.",
-                "BSSID Hash" to "A hashed identifier representing the connected Wi-Fi access point."
+                "BSSID" to "The MAC address of the connected Wi-Fi access point."
             )
         ), content(
             section = MeasurementSection.Cellular,

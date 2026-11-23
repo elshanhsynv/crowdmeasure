@@ -15,7 +15,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import com.crowdmeasure.sdk.model.WifiInfo
 import com.crowdmeasure.sdk.model.WifiStandard
-import java.security.MessageDigest
 
 object WifiCollector {
 
@@ -37,8 +36,7 @@ object WifiCollector {
 
         return WifiInfo(
             bssidHash = wifiInfo?.bssid
-                ?.takeIf { it.isNotBlank() && it !in BSSID_PLACEHOLDER_VALUES }
-                ?.let { hashBssid(it) },
+                ?.takeIf { it.isNotBlank() && it !in BSSID_PLACEHOLDER_VALUES },
             ssid = ssid,
             standard = deriveStandard(wifiInfo, frequencyMhz, channelWidthMhz),
             frequencyMhz = frequencyMhz,
@@ -150,13 +148,5 @@ object WifiCollector {
 
             else -> WifiStandard.UNKNOWN
         }
-    }
-
-    private fun hashBssid(bssid: String): String {
-        val salt = "crowdmeasure_wifi_salt_v1"
-        val digest = MessageDigest.getInstance("SHA-256")
-        return digest.digest((bssid + salt).toByteArray(Charsets.UTF_8))
-            .take(8)
-            .joinToString("") { "%02x".format(it) }
     }
 }

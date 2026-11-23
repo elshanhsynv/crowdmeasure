@@ -10,7 +10,7 @@ Successful sample:
 
 ```json
 {
-  "bssidHash": "b1f9c8a2f5a4",
+  "bssidHash": "a4:2b:b0:c1:7e:19",
   "ssid": "Office WiFi",
   "standard": "WIFI_6",
   "frequencyMhz": 5180,
